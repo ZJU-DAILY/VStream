@@ -1,0 +1,32 @@
+含有 ColumnFamilyOptions/MutableCFOptions/ImmutableCFOptions 的类
+
+- ColumnFamilyData
+    - const ColumnFamilyOptions initial_cf_options_;
+    - MutableCFOptions mutable_cf_options_;
+- SuperVersion
+    - MutableCFOptions mutable_cf_options;
+- ColumnFamilyDescriptor
+    - ColumnFamilyOptions options;
+- Version
+    - const MutableCFOptions mutable_cf_options_;
+- VersionBuilder::Rep
+    - const ImmutableCFOptions* const ioptions_;
+- FlushJob
+    - const MutableCFOptions& mutable_cf_options_;
+- VersionSet::ManifestWriter
+    - const MutableCFOptions mutable_cf_options;
+- Compaction
+    - const MutableCFOptions mutable_cf_options;
+- ConfigurableMutableCFOptions
+    - MutableCFOptions mutable_;
+- ConfigurableCFOptions
+    - ImmutableCFOptions immutable_;
+    - ColumnFamilyOptions cf_options_;
+- SstFileDumper
+    - const MutableCFOptions moptions_;
+- SstFileReader::Rep
+    - MutableCFOptions moptions;
+- SstFileWriter::Rep
+    - MutableCFOptions mutable_cf_options;
+- TableBuilderOptions
+    - const MutableCFOptions& moptions;

@@ -1,0 +1,63 @@
+size_t max_elements_            8 bit
+mutable std::atomic<size_t> cur_element_count   sizeof(cur_element_count)
+size_t size_data_per_element_ 8 bit
+size_t size_links_per_element_  8 bit
+mutable std::atomic<size_t> num_deleted_  sizeof(num_deleted_)
+size_t M_  8 bit
+size_t maxM_  8 bit
+size_t maxM0_  8 bit
+size_t ef_construction_  8 bit
+size_t ef_  8 bit
+
+double mult_    8 bit
+double revSize_ 8 bit
+int maxlevel_   4 bit
+
+size_t visit_list_pool_size    8 bit
+VisitedListPool *visited_list_pool_ pointer 8 bit
+-   std::deque<VisitedList *> pool; sizeof(pool) + numelements * (8 + sizeof(VisitedList))
+    - VisitedList  16 bit
+    std::mutex poolguard;   sizeof(poolguard)
+    size_t numelements; 8 bit
+    rocksdb::Allocator *allocator_{nullptr};    8 bit
+
+mutable std::vector<std::mutex> label_op_locks_;  sizeof(label_op_locks_) + 65536 * sizeof(std::mutex)
+
+std::mutex global  sizeof(global)
+std::vector<std::mutex> link_list_locks_    sizeof(link_list_locks) + max_elements_ * sizeof(std::mutex)
+
+tableint enterpoint_node_   4 bit
+
+size_t size_links_level0_   8 bit
+size_t offsetData_  8 bit
+size_t offsetLevel0_    8 bit
+size_t label_offset_    8 bit
+size_t version_offset_  8 bit
+value_type_offset_  8 bit
+
+std::vector<int> element_levels_    sizeof(element_levels) + max_elements * 4 bit
+
+size_t data_size_   8 bit
+
+DISTFUNC<dist_t> fstdistfunc_   8 bit
+void *dist_func_param_  8 bit
+
+mutable std::shared_mutex label_lookup_lock_  sizeof(label_lookup_lock_)
+*** std::unordered_map<labeltype, tableint> label_lookup_;  sizeof(label_lookup_) + cur_element_count * (8 + 4 bit)
+
+std::default_random_engine level_generator_;    sizeof(level_generator_)
+std::default_random_engine update_probability_generator_;   sizeof(update_probability_generator_)
+
+mutable std::atomic<size_t> metric_distance_computations    sizeof(metric_distance_computations)
+mutable std::atomic<long> metric_hops   sizeof(metric_hops)
+
+bool allow_replace_deleted_     1 bit
+
+std::mutex deleted_elements_lock    sizeof(deleted_elements_lock)
+*** std::unordered_set<tableint> deleted_elements;  sizeof(deleted_elements) + num_deleted_ * 4 bit
+
+rocksdb::Allocator *const allocator_  sizeof(allocator_) + sizeof(*allocator_)
+
+std::atomic<size_t> approximate_init_memory_usage   sizeof(approximate_init_memory_usage)
+
+bool readonly_  1 bit
