@@ -10,7 +10,7 @@ VStream is a distributed streaming vector search system with the following featu
 - Vector compression
 - Hot-cold separation
 
-## Build
+## Build & Run
 
 ### Requirements
 
@@ -19,6 +19,7 @@ VStream is a distributed streaming vector search system with the following featu
 - cmake >= 3.10
 - Java 8
 - Maven >= 3.8.6
+- Flink 1.18
 
 ### Build
 
