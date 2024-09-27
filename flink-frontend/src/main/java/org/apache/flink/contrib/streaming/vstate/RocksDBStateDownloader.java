@@ -17,18 +17,6 @@
 
 package org.apache.flink.contrib.streaming.vstate;
 
-import org.apache.flink.core.fs.CloseableRegistry;
-import org.apache.flink.core.fs.FSDataInputStream;
-import org.apache.flink.runtime.state.StreamStateHandle;
-import org.apache.flink.util.ExceptionUtils;
-import org.apache.flink.util.FileUtils;
-import org.apache.flink.util.FlinkRuntimeException;
-import org.apache.flink.util.IOUtils;
-import org.apache.flink.util.concurrent.FutureUtils;
-import org.apache.flink.util.function.ThrowingRunnable;
-
-import org.apache.flink.shaded.guava31.com.google.common.collect.Streams;
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
@@ -38,6 +26,16 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.flink.core.fs.CloseableRegistry;
+import org.apache.flink.core.fs.FSDataInputStream;
+import org.apache.flink.runtime.state.StreamStateHandle;
+import org.apache.flink.shaded.guava31.com.google.common.collect.Streams;
+import org.apache.flink.util.ExceptionUtils;
+import org.apache.flink.util.FileUtils;
+import org.apache.flink.util.FlinkRuntimeException;
+import org.apache.flink.util.IOUtils;
+import org.apache.flink.util.concurrent.FutureUtils;
+import org.apache.flink.util.function.ThrowingRunnable;
 
 /** Help class for downloading RocksDB state files. */
 public class RocksDBStateDownloader extends RocksDBStateDataTransfer {
@@ -96,9 +94,13 @@ public class RocksDBStateDownloader extends RocksDBStateDataTransfer {
                         downloadRequest ->
                                 // Take all files from shared and private state.
                                 Streams.concat(
-                                                downloadRequest.getStateHandle().getSharedState()
+                                                downloadRequest
+                                                        .getStateHandle()
+                                                        .getSharedState()
                                                         .stream(),
-                                                downloadRequest.getStateHandle().getPrivateState()
+                                                downloadRequest
+                                                        .getStateHandle()
+                                                        .getPrivateState()
                                                         .stream())
                                         .map(
                                                 // Create one runnable for each StreamStateHandle

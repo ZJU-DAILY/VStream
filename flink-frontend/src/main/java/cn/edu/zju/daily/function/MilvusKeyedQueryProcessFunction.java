@@ -1,11 +1,15 @@
 package cn.edu.zju.daily.function;
 
+import static java.util.stream.Collectors.toList;
+
 import cn.edu.zju.daily.data.PartitionedData;
 import cn.edu.zju.daily.data.result.SearchResult;
 import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.util.MilvusUtil;
 import cn.edu.zju.daily.util.Parameters;
 import io.milvus.response.SearchResultsWrapper;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.state.ValueState;
@@ -16,21 +20,16 @@ import org.apache.flink.util.Collector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import static java.util.stream.Collectors.toList;
-
-/**
- * Milvus search function.
- */
-public class MilvusKeyedQueryProcessFunction extends KeyedProcessFunction<Integer, PartitionedData, SearchResult> {
+/** Milvus search function. */
+public class MilvusKeyedQueryProcessFunction
+        extends KeyedProcessFunction<Integer, PartitionedData, SearchResult> {
 
     private final Parameters params;
     ListState<PartitionedData> buffer;
     ValueState<Integer> count;
     private MilvusUtil milvusUtil = null;
-    private static final Logger LOG = LoggerFactory.getLogger(MilvusKeyedQueryProcessFunction.class);
+    private static final Logger LOG =
+            LoggerFactory.getLogger(MilvusKeyedQueryProcessFunction.class);
 
     public MilvusKeyedQueryProcessFunction(Parameters params) {
         this.params = params;
@@ -39,18 +38,22 @@ public class MilvusKeyedQueryProcessFunction extends KeyedProcessFunction<Intege
     @Override
     public void open(Configuration parameters) throws Exception {
         super.open(parameters);
-        ListStateDescriptor<PartitionedData> listStateDescriptor = new ListStateDescriptor<>("buffer", PartitionedData.class);
+        ListStateDescriptor<PartitionedData> listStateDescriptor =
+                new ListStateDescriptor<>("buffer", PartitionedData.class);
         buffer = getRuntimeContext().getListState(listStateDescriptor);
-        ValueStateDescriptor<Integer> countState = new ValueStateDescriptor<>("count", Integer.class);
+        ValueStateDescriptor<Integer> countState =
+                new ValueStateDescriptor<>("count", Integer.class);
         count = getRuntimeContext().getState(countState);
         milvusUtil = new MilvusUtil();
         milvusUtil.connect(params.getMilvusHost(), params.getMilvusPort());
     }
 
     @Override
-    public void processElement(PartitionedData value,
-                               KeyedProcessFunction<Integer, PartitionedData, SearchResult>.Context ctx,
-                               Collector<SearchResult> out) throws Exception {
+    public void processElement(
+            PartitionedData value,
+            KeyedProcessFunction<Integer, PartitionedData, SearchResult>.Context ctx,
+            Collector<SearchResult> out)
+            throws Exception {
 
         // initialize state
         if (count.value() == null) {
@@ -90,8 +93,9 @@ public class MilvusKeyedQueryProcessFunction extends KeyedProcessFunction<Intege
         List<FloatVector> vectors = data.stream().map(PartitionedData::getVector).collect(toList());
 
         long start = System.currentTimeMillis();
-        SearchResultsWrapper resultsWrapper = milvusUtil.search(vectors, k,
-                efSearch, collectionName, partitionName, metricType, 0);
+        SearchResultsWrapper resultsWrapper =
+                milvusUtil.search(
+                        vectors, k, efSearch, collectionName, partitionName, metricType, 0);
         if (resultsWrapper != null) {
             List<SearchResult> results = new ArrayList<>();
 
@@ -105,15 +109,29 @@ public class MilvusKeyedQueryProcessFunction extends KeyedProcessFunction<Intege
                     ids.add(pair.getLongID());
                     scores.add(pair.getScore());
                 }
-                results.add(new SearchResult(partitionId, vectors.get(i).getId(), ids, scores, 1,
-                        data.get(i).getNumPartitionsSent(), vectors.get(i).getEventTime()));
+                results.add(
+                        new SearchResult(
+                                partitionId,
+                                vectors.get(i).getId(),
+                                ids,
+                                scores,
+                                1,
+                                data.get(i).getNumPartitionsSent(),
+                                vectors.get(i).getEventTime()));
             }
 
             if (vectors.size() == 1) {
-                LOG.info("Partition {}: Query #{} (one of {} partitions) returned in {} ms.", partitionId,
-                        vectors.get(0).id(), data.get(0).getNumPartitionsSent(), System.currentTimeMillis() - start);
+                LOG.info(
+                        "Partition {}: Query #{} (one of {} partitions) returned in {} ms.",
+                        partitionId,
+                        vectors.get(0).id(),
+                        data.get(0).getNumPartitionsSent(),
+                        System.currentTimeMillis() - start);
             } else {
-                LOG.info("Partition {}: {} queries returned in {} ms.", partitionId, vectors.size(),
+                LOG.info(
+                        "Partition {}: {} queries returned in {} ms.",
+                        partitionId,
+                        vectors.size(),
                         System.currentTimeMillis() - start);
             }
             return results;

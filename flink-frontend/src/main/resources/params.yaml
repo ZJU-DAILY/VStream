@@ -1,6 +1,6 @@
 hdfsAddress: "hdfs://10.214.151.20:9000"
 hdfsUser: "auroflow"
-sourcePath: "/user/auroflow/vector_search/dataset/vectors/bigann_100M_base.txt"
+sourcePath: "/user/auroflow/vector_search/dataset/vectors/bigann_base.txt"
 queryPath: "/user/auroflow/vector_search/dataset/vectors/bigann_query.txt"
 vectorDim: 128
 # To control the insert rate in a staged manner, set the thresholds for the number of vectors inserted, where the rate changes

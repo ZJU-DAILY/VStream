@@ -1,7 +1,6 @@
 package cn.edu.zju.daily.data;
 
 import cn.edu.zju.daily.data.vector.FloatVector;
-
 import java.io.Serializable;
 
 public class PartitionedData implements Serializable {
@@ -47,9 +46,6 @@ public class PartitionedData implements Serializable {
 
     @Override
     public String toString() {
-        return "PartitionedData{" +
-            "dataType=" + dataType +
-            ", partitionId=" + partitionId +
-            '}';
+        return "PartitionedData{" + "dataType=" + dataType + ", partitionId=" + partitionId + '}';
     }
 }

@@ -18,6 +18,22 @@
 
 package org.apache.flink.contrib.streaming.vstate.snapshot;
 
+import static org.apache.flink.contrib.streaming.vstate.snapshot.RocksSnapshotUtil.SST_FILE_SUFFIX;
+
+import java.io.File;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.SortedMap;
+import java.util.TreeMap;
+import java.util.UUID;
+import javax.annotation.Nonnegative;
+import javax.annotation.Nonnull;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.contrib.streaming.vstate.RocksDBKeyedStateBackend.RocksDbKvStateInfo;
 import org.apache.flink.contrib.streaming.vstate.RocksDBStateUploader;
@@ -38,28 +54,9 @@ import org.apache.flink.runtime.state.StreamStateHandle;
 import org.apache.flink.runtime.state.metainfo.StateMetaInfoSnapshot;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.ResourceGuard;
-
 import org.rocksdb.RocksDB;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.annotation.Nonnegative;
-import javax.annotation.Nonnull;
-
-import java.io.File;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.SortedMap;
-import java.util.TreeMap;
-import java.util.UUID;
-
-import static org.apache.flink.contrib.streaming.vstate.snapshot.RocksSnapshotUtil.SST_FILE_SUFFIX;
 
 /**
  * Snapshot strategy for {@link org.apache.flink.contrib.streaming.vstate.RocksDBKeyedStateBackend}

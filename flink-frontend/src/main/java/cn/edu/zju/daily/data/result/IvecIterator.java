@@ -1,21 +1,20 @@
 package cn.edu.zju.daily.data.result;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Iterator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class IvecIterator implements Iterator<int[]> {
 
     private static final Logger logger = LoggerFactory.getLogger(IvecIterator.class);
 
     private final RandomAccessFile file;
-    private final long length;  // file length in bytes
+    private final long length; // file length in bytes
     private final ByteBuffer intBuffer = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN);
     private ByteBuffer buffer;
 
@@ -26,10 +25,10 @@ public class IvecIterator implements Iterator<int[]> {
     /**
      * 创建向量读取器。
      *
-     * @param file      向量文件。假设所有向量的维度相同。
-     * @param numLoops  循环多少次
-     * @param skip      每个循环从第skip个向量开始
-     * @param limit     每个循环读取limit个向量
+     * @param file 向量文件。假设所有向量的维度相同。
+     * @param numLoops 循环多少次
+     * @param skip 每个循环从第skip个向量开始
+     * @param limit 每个循环读取limit个向量
      * @param inputType 读取float (4-bit) 或unsigned char (1-bit)向量
      * @throws IOException 读取文件失败
      */

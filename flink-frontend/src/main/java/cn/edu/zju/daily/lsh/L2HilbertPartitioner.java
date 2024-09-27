@@ -1,26 +1,22 @@
 package cn.edu.zju.daily.lsh;
 
 import cn.edu.zju.daily.data.vector.FloatVector;
+import java.io.Serializable;
+import java.math.BigInteger;
+import java.util.*;
 import org.davidmoten.hilbert.HilbertCurve;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.Serializable;
-import java.math.BigInteger;
-import java.util.*;
-import java.util.stream.IntStream;
-
-import static java.util.stream.Collectors.toList;
-
 public class L2HilbertPartitioner implements Serializable {
 
-    private final static Logger LOG = LoggerFactory.getLogger(L2HilbertPartitioner.class);
+    private static final Logger LOG = LoggerFactory.getLogger(L2HilbertPartitioner.class);
 
     private class HashFamilyRange {
         final int[] minValues;
         final int[] maxValues;
         long updateTime;
-        final LinkedList<int[]> history;  // last M hash value lists
+        final LinkedList<int[]> history; // last M hash value lists
         final HilbertCurve curve;
         final List<BigInteger> partitionHeads;
         boolean firstInterval;
@@ -33,7 +29,10 @@ public class L2HilbertPartitioner implements Serializable {
             this.history = new LinkedList<>();
             this.partitionHeads = new ArrayList<>();
             this.updateTime = -1;
-            curve = HilbertCurve.bits(hilbertBits).dimensions(numHashFunctions);  // OPTIM: use SmallHilbertCurve if possible
+            curve =
+                    HilbertCurve.bits(hilbertBits)
+                            .dimensions(
+                                    numHashFunctions); // OPTIM: use SmallHilbertCurve if possible
 
             if (firstInterval) {
                 for (int i = 0; i < numHashFunctions; i++) {
@@ -42,7 +41,10 @@ public class L2HilbertPartitioner implements Serializable {
                 }
                 this.firstInterval = true;
                 this.initialized = true;
-                BigInteger length = BigInteger.ONE.shiftLeft(hilbertBits * numHashFunctions).divide(BigInteger.valueOf(numPartitions));
+                BigInteger length =
+                        BigInteger.ONE
+                                .shiftLeft(hilbertBits * numHashFunctions)
+                                .divide(BigInteger.valueOf(numPartitions));
 
                 for (int i = 0; i < numPartitions; i++) {
                     partitionHeads.add(length.multiply(BigInteger.valueOf(i)));
@@ -58,7 +60,8 @@ public class L2HilbertPartitioner implements Serializable {
         }
 
         /**
-         * The range will be used to determine the partition of tuples from updateTime to updateTime + updateInterval
+         * The range will be used to determine the partition of tuples from updateTime to updateTime
+         * + updateInterval
          *
          * @param updateTime
          */
@@ -74,7 +77,8 @@ public class L2HilbertPartitioner implements Serializable {
             for (int i = 0; i < hash.length; i++) {
                 double percent = (double) (hash[i] - minValues[i]) / (maxValues[i] - minValues[i]);
                 percent = Math.max(0, Math.min(1, percent));
-                array[i] = Math.min((long) (percent * (1L << hilbertBits)), (1L << hilbertBits) - 1);
+                array[i] =
+                        Math.min((long) (percent * (1L << hilbertBits)), (1L << hilbertBits) - 1);
             }
             return array;
         }
@@ -130,7 +134,11 @@ public class L2HilbertPartitioner implements Serializable {
             }
             history.clear();
 
-            LOG.info("History of range {} summarized in {} ms, new partition heads: {}", updateTime, System.currentTimeMillis() - startTime, partitionHeads);
+            LOG.info(
+                    "History of range {} summarized in {} ms, new partition heads: {}",
+                    updateTime,
+                    System.currentTimeMillis() - startTime,
+                    partitionHeads);
         }
     }
 
@@ -139,7 +147,7 @@ public class L2HilbertPartitioner implements Serializable {
         private final LSHashFamily hashFamily;
         private final LinkedList<HashFamilyRange> ranges;
 
-        private HashFamilyRange rangeInEffect;  // second to last range
+        private HashFamilyRange rangeInEffect; // second to last range
 
         TrackedHashFamily(LSHashFamily hashFamily) {
             this.hashFamily = hashFamily;
@@ -170,7 +178,8 @@ public class L2HilbertPartitioner implements Serializable {
             // update time is the smallest timestamps that falls into the new interval
 
             // clear old ranges
-            while (!ranges.isEmpty() && ranges.getFirst().updateTime + updateInterval < updateTime - maxTTL) {
+            while (!ranges.isEmpty()
+                    && ranges.getFirst().updateTime + updateInterval < updateTime - maxTTL) {
                 ranges.removeFirst();
             }
 
@@ -192,7 +201,7 @@ public class L2HilbertPartitioner implements Serializable {
 
     private final TrackedHashFamily hashFamily;
     private final long updateInterval;
-    private long nextUpdateTime;  // next update time, in milli epoch. -1 means uninitialized
+    private long nextUpdateTime; // next update time, in milli epoch. -1 means uninitialized
     private final int numPartitions;
     private final int maxRetainedElements;
     private final long maxTTL;
@@ -202,16 +211,26 @@ public class L2HilbertPartitioner implements Serializable {
      * Constructor.
      *
      * @param numHashFunctions number of hash functions in a hash family
-     * @param hilbertBits      number of bits for hilbert curve
-     * @param updateInterval   interval for updating the partitioning strategy
+     * @param hilbertBits number of bits for hilbert curve
+     * @param updateInterval interval for updating the partitioning strategy
      */
-    public L2HilbertPartitioner(int dim, int numHashFunctions, float hashWidth, int hilbertBits, long updateInterval,
-                                int maxRetainedElements, long maxTTL, int numPartitions, Random random) {
+    public L2HilbertPartitioner(
+            int dim,
+            int numHashFunctions,
+            float hashWidth,
+            int hilbertBits,
+            long updateInterval,
+            int maxRetainedElements,
+            long maxTTL,
+            int numPartitions,
+            Random random) {
         if (numHashFunctions * hilbertBits > 63) {
-            LOG.warn("numHashFunctions * numHilbertBits > 63, cannot use small options for hilbert curve.");
+            LOG.warn(
+                    "numHashFunctions * numHilbertBits > 63, cannot use small options for hilbert curve.");
         }
 
-        this.hashFamily = new TrackedHashFamily(new L2HashFamily(dim, numHashFunctions, hashWidth, random));
+        this.hashFamily =
+                new TrackedHashFamily(new L2HashFamily(dim, numHashFunctions, hashWidth, random));
         this.updateInterval = updateInterval;
         this.nextUpdateTime = -1;
         this.numPartitions = numPartitions;
@@ -245,7 +264,7 @@ public class L2HilbertPartitioner implements Serializable {
         if (nextUpdateTime == -1) {
             long updateTime = Math.floorDiv(ts, updateInterval) * updateInterval;
             hashFamily.createNewInterval(updateTime);
-            nextUpdateTime = ts + Math.min(5 * 60 * 1000, updateInterval);  // <= 5 minutes
+            nextUpdateTime = ts + Math.min(5 * 60 * 1000, updateInterval); // <= 5 minutes
         }
 
         // initialize
@@ -255,7 +274,8 @@ public class L2HilbertPartitioner implements Serializable {
                 LOG.info("Skipping update interval: {} -> {}", ts, nextUpdateTime);
             }
 
-            long updateTime = Math.max(nextUpdateTime, Math.floorDiv(ts, updateInterval) * updateInterval);
+            long updateTime =
+                    Math.max(nextUpdateTime, Math.floorDiv(ts, updateInterval) * updateInterval);
             hashFamily.createNewInterval(updateTime);
             nextUpdateTime = updateTime + updateInterval;
         }
@@ -264,25 +284,26 @@ public class L2HilbertPartitioner implements Serializable {
         int[] hash = hashFamily.hash(vector);
         hashFamily.ranges.getLast().update(hash);
 
-//        LOG.info("hash: {} -> {}", vector.id(), Arrays.toString(hash));
+        //        LOG.info("hash: {} -> {}", vector.id(), Arrays.toString(hash));
 
         // 2. get hash in z-order space
         HashFamilyRange range = hashFamily.getRangeInEffect();
         long[] hashInZOrderSpace = range.toZOrderSpace(hash);
 
-//        LOG.info("hashInZOrderSpace: {} -> {}", vector.id(), Arrays.toString(hashInZOrderSpace));
+        //        LOG.info("hashInZOrderSpace: {} -> {}", vector.id(),
+        // Arrays.toString(hashInZOrderSpace));
 
         // 3. get z-order value
         BigInteger zOrderValue = range.zOrderValue(hashInZOrderSpace);
 
-//        LOG.info("zOrderValue: {} -> {}", vector.id(), zOrderValue);
+        //        LOG.info("zOrderValue: {} -> {}", vector.id(), zOrderValue);
 
         // 4. get partition
         int partition = range.partition(zOrderValue, numPartitions);
-//        LOG.info("partition: {} -> {} (partition heads: {})", vector.id(), partition, range.partitionHeads);
+        //        LOG.info("partition: {} -> {} (partition heads: {})", vector.id(), partition,
+        // range.partitionHeads);
         return partition;
     }
-
 
     public List<Integer> getQueryPartition(FloatVector vector) {
         long ts = vector.getEventTime();
@@ -294,7 +315,7 @@ public class L2HilbertPartitioner implements Serializable {
         Set<Integer> partitionIds = new HashSet<>();
         Iterator<HashFamilyRange> iter = hashFamily.ranges.descendingIterator();
         if (iter.hasNext()) {
-            iter.next();  // skip the range that is being updated
+            iter.next(); // skip the range that is being updated
             while (iter.hasNext()) {
                 HashFamilyRange range = iter.next();
                 if (!isFresh(range, vector)) {
@@ -304,7 +325,8 @@ public class L2HilbertPartitioner implements Serializable {
             }
         }
         if (partitionIds.isEmpty()) {
-            // there is no range, probably no data. Just send to a random partition, the search will return null which is correct.
+            // there is no range, probably no data. Just send to a random partition, the search will
+            // return null which is correct.
             partitionIds.add(Long.hashCode(vector.getId()) % numPartitions);
         }
         return new ArrayList<>(partitionIds);
@@ -321,7 +343,6 @@ public class L2HilbertPartitioner implements Serializable {
         // 4. get partition
         return Collections.singletonList(range.partition(zOrderValue, numPartitions));
     }
-
 
     private boolean isFresh(HashFamilyRange range, FloatVector query) {
         return range.updateTime + updateInterval >= query.getEventTime() - query.getTTL();

@@ -1,15 +1,13 @@
 package cn.edu.zju.daily.util;
 
-
-import org.yaml.snakeyaml.LoaderOptions;
-import org.yaml.snakeyaml.Yaml;
-import org.yaml.snakeyaml.constructor.Constructor;
-
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
+import org.yaml.snakeyaml.LoaderOptions;
+import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.constructor.Constructor;
 
 /**
  * Parameters regarding Flink vector search job.
@@ -55,10 +53,10 @@ public class Parameters implements Serializable {
     private int numCopies;
     private long maxTTL;
     private String metricType;
-    private int lshNumHilbertBits;  // for lsh+hilbert
-    private long lshPartitionUpdateInterval;  // for lsh+hilbert
-    private int lshHilbertMaxRetainedElements;  // for lsh+hilbert
-    private int lshNumFamilies;  // for lsh+hilbert
+    private int lshNumHilbertBits; // for lsh+hilbert
+    private long lshPartitionUpdateInterval; // for lsh+hilbert
+    private int lshHilbertMaxRetainedElements; // for lsh+hilbert
+    private int lshNumFamilies; // for lsh+hilbert
     private int lshNumHashes;
     private float lshBucketWidth;
     private int hnswM;
@@ -88,7 +86,6 @@ public class Parameters implements Serializable {
     private int milvusNumShards;
     private int milvusInsertBufferCapacity;
     private int milvusQueryBufferCapacity;
-
 
     /**
      * HDFS address.
@@ -221,6 +218,7 @@ public class Parameters implements Serializable {
 
     /**
      * Reduce parallelism.
+     *
      * @return
      */
     public int getReduceParallelism() {
@@ -265,7 +263,6 @@ public class Parameters implements Serializable {
         this.metricType = metricType;
     }
 
-
     public int getLshHilbertMaxRetainedElements() {
         return lshHilbertMaxRetainedElements;
     }
@@ -300,6 +297,7 @@ public class Parameters implements Serializable {
 
     /**
      * Number of hash functions in a hash family.
+     *
      * @return number of hash functions
      */
     public int getLshNumHashes() {
@@ -312,6 +310,7 @@ public class Parameters implements Serializable {
 
     /**
      * LSH bucket width.
+     *
      * @return bucket width
      */
     public float getLshBucketWidth() {
@@ -359,7 +358,8 @@ public class Parameters implements Serializable {
     // RocksDB related parameters
 
     /**
-     * Max elements per HNSW table. Currently, the memtable will be flushed when it reaches this limit.
+     * Max elements per HNSW table. Currently, the memtable will be flushed when it reaches this
+     * limit.
      *
      * @return max elements per HNSW table
      */
@@ -438,6 +438,7 @@ public class Parameters implements Serializable {
 
     /**
      * The minimum ratio of sstables that must be searched before termination.
+     *
      * @return termination lower bound
      */
     public float getRocksDBTerminationLowerBound() {
@@ -450,6 +451,7 @@ public class Parameters implements Serializable {
 
     /**
      * Size of block cache in bytes, which caches data blocks and vectors.
+     *
      * @return
      */
     public long getRocksDBBlockCacheSize() {
@@ -462,6 +464,7 @@ public class Parameters implements Serializable {
 
     /**
      * Local ground truth .ivecs file path. For testing only.
+     *
      * @return ground truth path
      */
     public String getGroundTruthPath() {
@@ -474,6 +477,7 @@ public class Parameters implements Serializable {
 
     /**
      * File sink directory path on HDFS.
+     *
      * @return file sink path
      */
     public String getFileSinkPath() {
@@ -486,6 +490,7 @@ public class Parameters implements Serializable {
 
     /**
      * Trigger SSTable sort every sortInterval queries.
+     *
      * @return sort interval
      */
     public long getSortInterval() {
@@ -506,6 +511,7 @@ public class Parameters implements Serializable {
 
     /**
      * LSH proximity.
+     *
      * @return LSH proximity
      */
     public int getProximity() {
@@ -518,6 +524,7 @@ public class Parameters implements Serializable {
 
     /**
      * Num of memtables before flush.
+     *
      * @return flush threshold
      */
     public int getRocksDBFlushThreshold() {
@@ -530,6 +537,7 @@ public class Parameters implements Serializable {
 
     /**
      * Num of memtables before write stall.
+     *
      * @return
      */
     public int getRocksDBMaxWriteBufferNumber() {
@@ -542,6 +550,7 @@ public class Parameters implements Serializable {
 
     /**
      * Max number of background flush threads on a single task manager.
+     *
      * @return
      */
     public int getRocksDBMaxBackgroundJobs() {
@@ -553,7 +562,9 @@ public class Parameters implements Serializable {
     }
 
     /**
-     * Block restart interval, i.e. number of vectors between restart points for Gorilla compression of vectors.
+     * Block restart interval, i.e. number of vectors between restart points for Gorilla compression
+     * of vectors.
+     *
      * @return
      */
     public int getRocksDBBlockRestartInterval() {
@@ -566,6 +577,7 @@ public class Parameters implements Serializable {
 
     /**
      * Milvus collection name.
+     *
      * @return
      */
     public String getMilvusCollectionName() {
@@ -578,6 +590,7 @@ public class Parameters implements Serializable {
 
     /**
      * Milvus host.
+     *
      * @return
      */
     public String getMilvusHost() {
@@ -590,6 +603,7 @@ public class Parameters implements Serializable {
 
     /**
      * Milvus port.
+     *
      * @return
      */
     public int getMilvusPort() {
@@ -626,6 +640,7 @@ public class Parameters implements Serializable {
 
     /**
      * Timestamp interval between data tuples, 0 means using system time.
+     *
      * @return
      */
     public long getFakeInsertRate() {
@@ -636,4 +651,3 @@ public class Parameters implements Serializable {
         this.fakeInsertRate = fakeInsertRate;
     }
 }
-

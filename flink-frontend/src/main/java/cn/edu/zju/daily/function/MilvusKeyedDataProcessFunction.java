@@ -4,6 +4,8 @@ import cn.edu.zju.daily.data.PartitionedData;
 import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.util.MilvusUtil;
 import cn.edu.zju.daily.util.Parameters;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.state.ValueState;
@@ -14,13 +16,9 @@ import org.apache.flink.util.Collector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
-
-/**
- * Milvus insert function.
- */
-public class MilvusKeyedDataProcessFunction extends KeyedProcessFunction<Integer, PartitionedData, Object> {
+/** Milvus insert function. */
+public class MilvusKeyedDataProcessFunction
+        extends KeyedProcessFunction<Integer, PartitionedData, Object> {
 
     private final Parameters params;
     ListState<FloatVector> buffer;
@@ -35,18 +33,22 @@ public class MilvusKeyedDataProcessFunction extends KeyedProcessFunction<Integer
     @Override
     public void open(Configuration parameters) throws Exception {
         super.open(parameters);
-        ListStateDescriptor<FloatVector> listStateDescriptor = new ListStateDescriptor<>("buffer", FloatVector.class);
+        ListStateDescriptor<FloatVector> listStateDescriptor =
+                new ListStateDescriptor<>("buffer", FloatVector.class);
         buffer = getRuntimeContext().getListState(listStateDescriptor);
-        ValueStateDescriptor<Integer> countState = new ValueStateDescriptor<>("count", Integer.class);
+        ValueStateDescriptor<Integer> countState =
+                new ValueStateDescriptor<>("count", Integer.class);
         count = getRuntimeContext().getState(countState);
         milvusUtil = new MilvusUtil();
         milvusUtil.connect(params.getMilvusHost(), params.getMilvusPort());
     }
 
     @Override
-    public void processElement(PartitionedData value,
-                               KeyedProcessFunction<Integer, PartitionedData, Object>.Context ctx,
-                               Collector<Object> out) throws Exception {
+    public void processElement(
+            PartitionedData value,
+            KeyedProcessFunction<Integer, PartitionedData, Object>.Context ctx,
+            Collector<Object> out)
+            throws Exception {
 
         // initialize state
         if (count.value() == null) {
@@ -67,10 +69,17 @@ public class MilvusKeyedDataProcessFunction extends KeyedProcessFunction<Integer
             long start = System.currentTimeMillis();
             milvusUtil.insert(vectors, params.getMilvusCollectionName(), partitionName, false);
             if (vectors.size() > 1) {
-                LOG.info("Partition {}: {} vectors (from #{}) inserted in {} ms.",  ctx.getCurrentKey(), vectors.size(),
-                        vectors.get(0).getId(), System.currentTimeMillis() - start);
+                LOG.info(
+                        "Partition {}: {} vectors (from #{}) inserted in {} ms.",
+                        ctx.getCurrentKey(),
+                        vectors.size(),
+                        vectors.get(0).getId(),
+                        System.currentTimeMillis() - start);
             } else {
-                LOG.info("Partition {}: Vector #{} inserted in {} ms.", ctx.getCurrentKey(), vectors.get(0).getId(),
+                LOG.info(
+                        "Partition {}: Vector #{} inserted in {} ms.",
+                        ctx.getCurrentKey(),
+                        vectors.get(0).getId(),
                         System.currentTimeMillis() - start);
             }
 

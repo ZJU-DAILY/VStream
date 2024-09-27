@@ -3,12 +3,9 @@ package cn.edu.zju.daily.data.vector;
 import cn.edu.zju.daily.data.PartitionedData;
 import cn.edu.zju.daily.data.PartitionedFloatVector;
 import cn.edu.zju.daily.data.PartitionedQuery;
-
 import java.io.Serializable;
 
-/**
- * Parse a line of vector from HDFS.
- */
+/** Parse a line of vector from HDFS. */
 public class HDFSVectorParser implements Serializable {
 
     private PartitionedData.DataType parseDataType(String str) {

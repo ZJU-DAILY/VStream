@@ -17,6 +17,7 @@
 
 package org.apache.flink.contrib.streaming.vstate;
 
+import java.io.IOException;
 import org.apache.flink.api.common.state.State;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -29,12 +30,9 @@ import org.apache.flink.runtime.state.internal.InternalKvState;
 import org.apache.flink.util.FlinkRuntimeException;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.StateMigrationException;
-
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.RocksDBException;
 import org.rocksdb.WriteOptions;
-
-import java.io.IOException;
 
 /**
  * Base class for {@link State} implementations that store state in a RocksDB database.

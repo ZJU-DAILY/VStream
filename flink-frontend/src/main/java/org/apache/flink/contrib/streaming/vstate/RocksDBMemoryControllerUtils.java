@@ -18,15 +18,13 @@
 
 package org.apache.flink.contrib.streaming.vstate;
 
+import java.io.Serializable;
 import org.apache.flink.annotation.VisibleForTesting;
-
 import org.rocksdb.Cache;
 import org.rocksdb.LRUCache;
 import org.rocksdb.WriteBufferManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.Serializable;
 
 /**
  * Utils to create {@link Cache} and {@link WriteBufferManager} which are used to control total

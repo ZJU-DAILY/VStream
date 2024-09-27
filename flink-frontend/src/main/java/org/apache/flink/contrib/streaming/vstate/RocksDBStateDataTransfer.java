@@ -17,13 +17,12 @@
 
 package org.apache.flink.contrib.streaming.vstate;
 
-import org.apache.flink.util.concurrent.ExecutorThreadFactory;
+import static org.apache.flink.util.concurrent.Executors.newDirectExecutorService;
 
 import java.io.Closeable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import static org.apache.flink.util.concurrent.Executors.newDirectExecutorService;
+import org.apache.flink.util.concurrent.ExecutorThreadFactory;
 
 /** Data transfer base class for {@link RocksDBKeyedStateBackend}. */
 class RocksDBStateDataTransfer implements Closeable {

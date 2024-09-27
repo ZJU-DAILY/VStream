@@ -18,10 +18,9 @@
 
 package org.apache.flink.contrib.streaming.vstate.iterator;
 
+import javax.annotation.Nonnull;
 import org.apache.flink.contrib.streaming.vstate.RocksIteratorWrapper;
 import org.apache.flink.util.IOUtils;
-
-import javax.annotation.Nonnull;
 
 /**
  * Wraps a RocksDB iterator to cache it's current key and assigns an id for the key/value state to

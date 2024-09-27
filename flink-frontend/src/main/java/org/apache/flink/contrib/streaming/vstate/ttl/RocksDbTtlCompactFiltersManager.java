@@ -18,6 +18,7 @@
 
 package org.apache.flink.contrib.streaming.vstate.ttl;
 
+import javax.annotation.Nonnull;
 import org.apache.flink.api.common.state.StateDescriptor;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.runtime.state.RegisteredStateMetaInfoBase;
@@ -25,33 +26,21 @@ import org.apache.flink.runtime.state.ttl.TtlTimeProvider;
 import org.rocksdb.ColumnFamilyOptions;
 import org.rocksdb.VectorColumnFamilyOptions;
 
-import javax.annotation.Nonnull;
-
 /** RocksDB compaction filter utils for state with TTL. */
 public class RocksDbTtlCompactFiltersManager {
 
-    public RocksDbTtlCompactFiltersManager(TtlTimeProvider ttlTimeProvider) {
-
-    }
+    public RocksDbTtlCompactFiltersManager(TtlTimeProvider ttlTimeProvider) {}
 
     public void setAndRegisterCompactFilterIfStateTtl(
             @Nonnull RegisteredStateMetaInfoBase metaInfoBase,
-            @Nonnull ColumnFamilyOptions options) {
-
-    }
+            @Nonnull ColumnFamilyOptions options) {}
 
     public void setAndRegisterCompactFilterIfStateTtl(
-        @Nonnull RegisteredStateMetaInfoBase metaInfoBase,
-        @Nonnull VectorColumnFamilyOptions options) {
-
-    }
+            @Nonnull RegisteredStateMetaInfoBase metaInfoBase,
+            @Nonnull VectorColumnFamilyOptions options) {}
 
     public void configCompactFilter(
-            @Nonnull StateDescriptor<?, ?> stateDesc, TypeSerializer<?> stateSerializer) {
+            @Nonnull StateDescriptor<?, ?> stateDesc, TypeSerializer<?> stateSerializer) {}
 
-    }
-
-    public void disposeAndClearRegisteredCompactionFactories() {
-
-    }
+    public void disposeAndClearRegisteredCompactionFactories() {}
 }

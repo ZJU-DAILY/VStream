@@ -1,28 +1,23 @@
 package cn.edu.zju.daily.util;
 
-import org.apache.commons.lang3.tuple.Pair;
-import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 
-
-/**
- * @author shenghao
- */
+/** @author shenghao */
 public class HadoopFileHelper {
 
     private final String remotePath;
 
     private final FileSystem fs;
 
-
-    public HadoopFileHelper(String hdfsAddress, String remotePath, String hdfsUserName) throws IOException {
+    public HadoopFileHelper(String hdfsAddress, String remotePath, String hdfsUserName)
+            throws IOException {
         this.remotePath = remotePath;
         System.setProperty("HADOOP_USER_NAME", hdfsUserName);
         Configuration conf = new Configuration();
@@ -54,7 +49,8 @@ public class HadoopFileHelper {
         return Pair.of(outputStream, new BufferedWriter(new OutputStreamWriter(outputStream)));
     }
 
-    public void endWrite(BufferedWriter bufferedWriter, OutputStream outputStream) throws IOException {
+    public void endWrite(BufferedWriter bufferedWriter, OutputStream outputStream)
+            throws IOException {
         // 关闭流
         bufferedWriter.close();
         outputStream.close();

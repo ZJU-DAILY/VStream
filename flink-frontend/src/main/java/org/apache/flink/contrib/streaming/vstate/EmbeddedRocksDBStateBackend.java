@@ -18,6 +18,28 @@
 
 package org.apache.flink.contrib.streaming.vstate;
 
+import static org.apache.flink.configuration.description.TextElement.text;
+import static org.apache.flink.contrib.streaming.vstate.RocksDBConfigurableOptions.RESTORE_OVERLAP_FRACTION_THRESHOLD;
+import static org.apache.flink.contrib.streaming.vstate.RocksDBConfigurableOptions.WRITE_BATCH_SIZE;
+import static org.apache.flink.contrib.streaming.vstate.RocksDBOptions.CHECKPOINT_TRANSFER_THREAD_NUM;
+import static org.apache.flink.contrib.streaming.vstate.RocksDBOptions.TIMER_SERVICE_FACTORY;
+import static org.apache.flink.util.Preconditions.checkArgument;
+import static org.apache.flink.util.Preconditions.checkNotNull;
+
+import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
+import java.util.Random;
+import java.util.UUID;
+import java.util.function.Supplier;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.ExecutionConfig;
@@ -56,35 +78,10 @@ import org.apache.flink.util.FileUtils;
 import org.apache.flink.util.FlinkRuntimeException;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.TernaryBoolean;
-
 import org.rocksdb.NativeLibraryLoader;
 import org.rocksdb.RocksDB;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
-import java.io.File;
-import java.io.IOException;
-import java.lang.reflect.Field;
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
-import java.util.Random;
-import java.util.UUID;
-import java.util.function.Supplier;
-
-import static org.apache.flink.configuration.description.TextElement.text;
-import static org.apache.flink.contrib.streaming.vstate.RocksDBConfigurableOptions.RESTORE_OVERLAP_FRACTION_THRESHOLD;
-import static org.apache.flink.contrib.streaming.vstate.RocksDBConfigurableOptions.WRITE_BATCH_SIZE;
-import static org.apache.flink.contrib.streaming.vstate.RocksDBOptions.CHECKPOINT_TRANSFER_THREAD_NUM;
-import static org.apache.flink.contrib.streaming.vstate.RocksDBOptions.TIMER_SERVICE_FACTORY;
-import static org.apache.flink.util.Preconditions.checkArgument;
-import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
  * A {@link org.apache.flink.runtime.state.StateBackend} that stores its state in an embedded {@code
@@ -960,9 +957,10 @@ public class EmbeddedRocksDBStateBackend extends AbstractManagedMemoryStateBacke
                         rocksLibFolder.mkdirs();
 
                         // explicitly load the JNI dependency if it has not been loaded before
-//                        nativeLibraryLoaderSupplier
-//                                .get()
-//                                .loadLibrary(rocksLibFolder.getAbsolutePath());
+                        //                        nativeLibraryLoaderSupplier
+                        //                                .get()
+                        //
+                        // .loadLibrary(rocksLibFolder.getAbsolutePath());
 
                         // this initialization here should validate that the loading succeeded
                         RocksDB.loadLibrary();

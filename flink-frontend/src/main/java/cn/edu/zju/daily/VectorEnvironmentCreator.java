@@ -1,14 +1,13 @@
 package cn.edu.zju.daily;
 
 import cn.edu.zju.daily.util.Parameters;
+import java.io.Serializable;
+import java.time.LocalDateTime;
+import java.util.Collection;
 import org.apache.flink.contrib.streaming.vstate.EmbeddedRocksDBStateBackend;
 import org.apache.flink.contrib.streaming.vstate.RocksDBOptionsFactory;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.rocksdb.*;
-
-import java.io.Serializable;
-import java.time.LocalDateTime;
-import java.util.Collection;
 
 public class VectorEnvironmentCreator implements Serializable {
 
@@ -17,15 +16,17 @@ public class VectorEnvironmentCreator implements Serializable {
 
     public VectorEnvironmentCreator(Parameters params) {
         this.params = params;
-        this.dbStoragePath = "/home/auroflow/code/vector-search/rocksdb-stream/tmp/rocksdb-backend-"
-            + LocalDateTime.now().toString().split("\\.")[0].replace(":", "-");
+        this.dbStoragePath =
+                "/home/auroflow/code/vector-search/rocksdb-stream/tmp/rocksdb-backend-"
+                        + LocalDateTime.now().toString().split("\\.")[0].replace(":", "-");
     }
 
     public RocksDBOptionsFactory getRocksDBOptionsFactory() {
         return new RocksDBOptionsFactory() {
             @Override
-            public DBOptions createDBOptions(DBOptions currentOptions, Collection<AutoCloseable> handlesToClose) {
-                currentOptions.setDbLogDir(dbStoragePath);  // log in rocksdb data dir
+            public DBOptions createDBOptions(
+                    DBOptions currentOptions, Collection<AutoCloseable> handlesToClose) {
+                currentOptions.setDbLogDir(dbStoragePath); // log in rocksdb data dir
                 currentOptions.setUseDirectIoForFlushAndCompaction(true);
                 currentOptions.setInfoLogLevel(InfoLogLevel.INFO_LEVEL);
                 currentOptions.setMaxBackgroundJobs(params.getRocksDBMaxBackgroundJobs());
@@ -40,7 +41,8 @@ public class VectorEnvironmentCreator implements Serializable {
 
             @Override
             public VectorColumnFamilyOptions createVectorColumnOptions(
-                    VectorColumnFamilyOptions currentOptions, Collection<AutoCloseable> handlesToClose) {
+                    VectorColumnFamilyOptions currentOptions,
+                    Collection<AutoCloseable> handlesToClose) {
                 currentOptions.setMaxElements(params.getRocksDBMaxElementsPerHnswTable() + 1);
                 currentOptions.setSpace(SpaceType.valueOf(params.getMetricType()));
                 currentOptions.setM(params.getHnswM());
@@ -52,14 +54,14 @@ public class VectorEnvironmentCreator implements Serializable {
                                 .setSpace(SpaceType.valueOf(params.getMetricType()))
                                 .setM(params.getHnswM())
                                 .setMaxElements(params.getRocksDBMaxElementsPerHnswTable() + 1));
-                currentOptions.setTableFormatConfig(new HnswTableOptions()
-                        .setDim(params.getVectorDim())
-                        .setSpace(SpaceType.valueOf(params.getMetricType()))
-                        .setM(params.getHnswM())
-                        .setBlockSize(params.getRocksDBBlockSize())
-                        .setBlockCache(new LRUCache(params.getRocksDBBlockCacheSize()))
-                        .setBlockRestartInterval(params.getRocksDBBlockRestartInterval())
-                );
+                currentOptions.setTableFormatConfig(
+                        new HnswTableOptions()
+                                .setDim(params.getVectorDim())
+                                .setSpace(SpaceType.valueOf(params.getMetricType()))
+                                .setM(params.getHnswM())
+                                .setBlockSize(params.getRocksDBBlockSize())
+                                .setBlockCache(new LRUCache(params.getRocksDBBlockCacheSize()))
+                                .setBlockRestartInterval(params.getRocksDBBlockRestartInterval()));
                 currentOptions.setTerminationWeight(params.getRocksDBTerminationWeight());
                 currentOptions.setTerminationThreshold(params.getRocksDBTerminationThreshold());
                 currentOptions.setTerminationLowerBound(params.getRocksDBTerminationLowerBound());
@@ -73,7 +75,7 @@ public class VectorEnvironmentCreator implements Serializable {
                     VectorSearchOptions currentOptions, Collection<AutoCloseable> handlesToClose) {
                 currentOptions.setK(params.getK());
                 currentOptions.setAsyncIO(true);
-                currentOptions.setSearchSST(true);   // skip sstables
+                currentOptions.setSearchSST(true); // skip sstables
                 currentOptions.setEvict(true);
                 currentOptions.setTerminationFactor(params.getRocksDBTerminationFactor());
                 return currentOptions;

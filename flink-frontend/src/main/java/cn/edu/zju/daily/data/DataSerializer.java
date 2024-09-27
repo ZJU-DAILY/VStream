@@ -2,14 +2,12 @@ package cn.edu.zju.daily.data;
 
 import cn.edu.zju.daily.data.result.SearchResult;
 import cn.edu.zju.daily.data.vector.FloatVector;
-
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
 
 public class DataSerializer {
-
 
     public static void serializeFloatVector(FloatVector value, byte[] id, byte[] array) {
         serializeLong(value.getId(), id);
@@ -22,11 +20,13 @@ public class DataSerializer {
 
     /**
      * Used for serializing data vectors when doing inserts.
+     *
      * @param value
      * @param id
      * @param array
      */
-    public static void serializeFloatVectorWithTimestamp(FloatVector value, byte[] id, byte[] array) {
+    public static void serializeFloatVectorWithTimestamp(
+            FloatVector value, byte[] id, byte[] array) {
         assert (array.length == value.dim() * Float.BYTES + Long.BYTES);
         serializeLong(value.getId(), id);
         ByteBuffer buffer = ByteBuffer.wrap(array);
@@ -38,7 +38,8 @@ public class DataSerializer {
     }
 
     /**
-     * Used for serializing query vectors. Format: [timestamp - TTL, vector]. The first item is used for constructing VectorSearchOptions.
+     * Used for serializing query vectors. Format: [timestamp - TTL, vector]. The first item is used
+     * for constructing VectorSearchOptions.
      *
      * @param value
      * @param array
@@ -101,16 +102,29 @@ public class DataSerializer {
         buffer.order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer().get(target);
     }
 
-
-    public static SearchResult deserializeSearchResult(byte[] resultBytes, int nodeId, long queryId, int numPartitionsToCombine, long queryEventTime) {
+    public static SearchResult deserializeSearchResult(
+            byte[] resultBytes,
+            int nodeId,
+            long queryId,
+            int numPartitionsToCombine,
+            long queryEventTime) {
         if (resultBytes == null) {
-            return new SearchResult(nodeId, queryId, new ArrayList<>(), new ArrayList<>(), 1, numPartitionsToCombine, queryEventTime);
+            return new SearchResult(
+                    nodeId,
+                    queryId,
+                    new ArrayList<>(),
+                    new ArrayList<>(),
+                    1,
+                    numPartitionsToCombine,
+                    queryEventTime);
         }
         assert (resultBytes.length % (Long.BYTES + Float.BYTES) == 0);
         int length = resultBytes.length / (Long.BYTES + Float.BYTES);
         List<Long> ids = new ArrayList<>(length);
         List<Float> distances = new ArrayList<>(length);
-        ByteBuffer buffer = ByteBuffer.wrap(resultBytes);  // [id1, distance1, id2, distance2, ...] in descending order
+        ByteBuffer buffer =
+                ByteBuffer.wrap(
+                        resultBytes); // [id1, distance1, id2, distance2, ...] in descending order
         buffer.order(ByteOrder.LITTLE_ENDIAN);
         for (int i = 0; i < length; i++) {
             ids.add(buffer.getLong());
@@ -125,7 +139,8 @@ public class DataSerializer {
             ids.set(length - i - 1, tmpId);
             distances.set(length - i - 1, tmpDistance);
         }
-        return new SearchResult(nodeId, queryId, ids, distances, 1, numPartitionsToCombine, queryEventTime);
+        return new SearchResult(
+                nodeId, queryId, ids, distances, 1, numPartitionsToCombine, queryEventTime);
     }
 
     public static void serializeResultArray(long[] ids, float[] distances, byte[] target) {

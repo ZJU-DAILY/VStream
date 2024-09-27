@@ -17,18 +17,16 @@
 
 package org.apache.flink.contrib.streaming.vstate;
 
+import static org.apache.flink.contrib.streaming.vstate.RocksDBOptions.FIX_PER_TM_MEMORY_SIZE;
+
+import javax.annotation.Nullable;
 import org.apache.flink.configuration.MemorySize;
 import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.memory.OpaqueMemoryResource;
 import org.apache.flink.runtime.memory.SharedResources;
 import org.apache.flink.util.function.LongFunctionWithException;
 import org.apache.flink.util.function.ThrowingRunnable;
-
 import org.slf4j.Logger;
-
-import javax.annotation.Nullable;
-
-import static org.apache.flink.contrib.streaming.vstate.RocksDBOptions.FIX_PER_TM_MEMORY_SIZE;
 
 /**
  * A factory of {@link RocksDBSharedResources}. Encapsulates memory share scope (e.g. TM, Slot) and

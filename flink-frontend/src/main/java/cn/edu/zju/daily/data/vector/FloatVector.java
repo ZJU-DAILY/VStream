@@ -1,7 +1,6 @@
 package cn.edu.zju.daily.data.vector;
 
 import com.github.jelmerk.knn.Item;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -9,10 +8,11 @@ import java.util.List;
 
 public class FloatVector implements Serializable, Item<Long, float[]> {
 
-    private final long _id;  // vector ID, or query ID
+    private final long _id; // vector ID, or query ID
     private final float[] value;
     private long eventTime = 0L; // event time
-    private long TTL; // for query, this means search vectors with event time in [eventTime - TTL, eventTime]; for data, this field is reserved
+    private long TTL; // for query, this means search vectors with event time in [eventTime - TTL,
+    // eventTime]; for data, this field is reserved
 
     public FloatVector(long id, float[] value) {
         this(id, value, 0L, Long.MAX_VALUE);
@@ -71,12 +71,16 @@ public class FloatVector implements Serializable, Item<Long, float[]> {
 
     @Override
     public String toString() {
-        return "FloatVector{" +
-                "_id=" + _id +
-                ", value=" + Arrays.toString(value) +
-                ", eventTime=" + eventTime +
-                ", TTL=" + TTL +
-                '}';
+        return "FloatVector{"
+                + "_id="
+                + _id
+                + ", value="
+                + Arrays.toString(value)
+                + ", eventTime="
+                + eventTime
+                + ", TTL="
+                + TTL
+                + '}';
     }
 
     @Override

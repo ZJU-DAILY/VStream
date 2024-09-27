@@ -1,22 +1,20 @@
 package cn.edu.zju.daily.data.vector;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Iterator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-/**
- * @author auroflow
- */
+/** @author auroflow */
 public class FvecIterator implements Iterator<float[]> {
 
     public enum InputType {
-        F_VEC, B_VEC
+        F_VEC,
+        B_VEC
     }
 
     private static final Logger logger = LoggerFactory.getLogger(FvecIterator.class);
@@ -24,7 +22,7 @@ public class FvecIterator implements Iterator<float[]> {
     private final RandomAccessFile file;
     private final int numLoops;
     private int loop = 0;
-    private final long length;  // file length in bytes
+    private final long length; // file length in bytes
     private final ByteBuffer intBuffer = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN);
     private ByteBuffer buffer;
     private final InputType inputType;
@@ -32,16 +30,25 @@ public class FvecIterator implements Iterator<float[]> {
     private final long limit;
     private long count = 0;
 
-
     public static FvecIterator fromFile(String filename) throws IOException {
         return fromFile(filename, 1);
     }
 
     public static FvecIterator fromFile(String filename, int numLoops) throws IOException {
         if (filename.endsWith(".fvecs")) {
-            return new FvecIterator(new RandomAccessFile(filename, "r"), numLoops, 0, Long.MAX_VALUE, InputType.F_VEC);
+            return new FvecIterator(
+                    new RandomAccessFile(filename, "r"),
+                    numLoops,
+                    0,
+                    Long.MAX_VALUE,
+                    InputType.F_VEC);
         } else if (filename.endsWith(".bvecs")) {
-            return new FvecIterator(new RandomAccessFile(filename, "r"), numLoops, 0, Long.MAX_VALUE, InputType.B_VEC);
+            return new FvecIterator(
+                    new RandomAccessFile(filename, "r"),
+                    numLoops,
+                    0,
+                    Long.MAX_VALUE,
+                    InputType.B_VEC);
         } else {
             throw new RuntimeException("Unknown file type.");
         }
@@ -57,7 +64,9 @@ public class FvecIterator implements Iterator<float[]> {
      * @param inputType 读取float (4-bit) 或unsigned char (1-bit)向量
      * @throws IOException 读取文件失败
      */
-    public FvecIterator(RandomAccessFile file, int numLoops, long skip, long limit, InputType inputType) throws IOException {
+    public FvecIterator(
+            RandomAccessFile file, int numLoops, long skip, long limit, InputType inputType)
+            throws IOException {
         this.file = file;
         this.numLoops = numLoops;
         this.limit = limit;
@@ -98,7 +107,7 @@ public class FvecIterator implements Iterator<float[]> {
                 }
             }
 
-            count += 1;  // we're reading a new vector
+            count += 1; // we're reading a new vector
             int dimension = readIntLittleEndian(file);
 
             if (inputType == InputType.F_VEC) {

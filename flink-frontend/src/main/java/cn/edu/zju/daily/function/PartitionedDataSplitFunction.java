@@ -5,7 +5,8 @@ import org.apache.flink.streaming.api.functions.ProcessFunction;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.OutputTag;
 
-public class PartitionedDataSplitFunction extends ProcessFunction<PartitionedData, PartitionedData> {
+public class PartitionedDataSplitFunction
+        extends ProcessFunction<PartitionedData, PartitionedData> {
 
     private final OutputTag<PartitionedData> queryOutput;
 
@@ -14,9 +15,11 @@ public class PartitionedDataSplitFunction extends ProcessFunction<PartitionedDat
     }
 
     @Override
-    public void processElement(PartitionedData value,
-                               ProcessFunction<PartitionedData, PartitionedData>.Context ctx,
-                               Collector<PartitionedData> out) throws Exception {
+    public void processElement(
+            PartitionedData value,
+            ProcessFunction<PartitionedData, PartitionedData>.Context ctx,
+            Collector<PartitionedData> out)
+            throws Exception {
         if (value.getDataType() == PartitionedData.DataType.QUERY) {
             ctx.output(queryOutput, value);
         } else {

@@ -6,10 +6,9 @@ import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.data.vector.FloatVectorIterator;
 import com.github.jelmerk.knn.DistanceFunctions;
 import com.github.jelmerk.knn.hnsw.HnswIndex;
-import org.junit.jupiter.api.Test;
-
 import java.io.IOException;
 import java.util.*;
+import org.junit.jupiter.api.Test;
 
 public class L2HilbertPartitionerTest {
 
@@ -20,12 +19,18 @@ public class L2HilbertPartitionerTest {
         int numPartitions = 160;
         int[] partitions = new int[numPartitions];
 
-        L2HilbertPartitioner partitioner = new L2HilbertPartitioner(128, 8, 1, 7, 1000000, 10000, TTL, numPartitions, new Random());
+        L2HilbertPartitioner partitioner =
+                new L2HilbertPartitioner(
+                        128, 8, 1, 7, 1000000, 10000, TTL, numPartitions, new Random());
 
-        FloatVectorIterator iter = FloatVectorIterator.fromFile("/home/auroflow/code/vector-search/data/sift/sift_base.fvecs");
+        FloatVectorIterator iter =
+                FloatVectorIterator.fromFile(
+                        "/home/auroflow/code/vector-search/data/sift/sift_base.fvecs");
         partitioner.initializeWith(iter, 0);
 
-        iter = FloatVectorIterator.fromFile("/home/auroflow/code/vector-search/data/sift/sift_base.fvecs");
+        iter =
+                FloatVectorIterator.fromFile(
+                        "/home/auroflow/code/vector-search/data/sift/sift_base.fvecs");
 
         for (int i = 0; i < 1000000; i++) {
             FloatVector vector = iter.next();
@@ -49,21 +54,43 @@ public class L2HilbertPartitionerTest {
         int k = 10;
         List<HnswIndex<Long, float[], FloatVector, Float>> indexes = new ArrayList<>();
         for (int i = 0; i < numPartitions; i++) {
-            indexes.add(HnswIndex.newBuilder(dim, DistanceFunctions.FLOAT_EUCLIDEAN_DISTANCE, numElements).build());
+            indexes.add(
+                    HnswIndex.newBuilder(
+                                    dim, DistanceFunctions.FLOAT_EUCLIDEAN_DISTANCE, numElements)
+                            .build());
         }
 
         int numHashFamilies = 8;
         List<L2HilbertPartitioner> partitioners = new ArrayList<>();
         for (int i = 0; i < numHashFamilies; i++) {
-            partitioners.add(new L2HilbertPartitioner(dim, 8, 1, 7, numElements, numElements, numElements, numPartitions, new Random()));
+            partitioners.add(
+                    new L2HilbertPartitioner(
+                            dim,
+                            8,
+                            1,
+                            7,
+                            numElements,
+                            numElements,
+                            numElements,
+                            numPartitions,
+                            new Random()));
         }
 
-        FloatVectorIterator vectors = FloatVectorIterator.fromFile("/home/auroflow/code/vector-search/data/siftsmall/siftsmall_base.fvecs");
-        FloatVectorIterator queries = FloatVectorIterator.fromFile("/home/auroflow/code/vector-search/data/siftsmall/siftsmall_query.fvecs");
-        GroundTruthResultIterator truth = GroundTruthResultIterator.fromFile("/home/auroflow/code/vector-search/data/siftsmall/siftsmall_groundtruth.ivecs", k);
+        FloatVectorIterator vectors =
+                FloatVectorIterator.fromFile(
+                        "/home/auroflow/code/vector-search/data/siftsmall/siftsmall_base.fvecs");
+        FloatVectorIterator queries =
+                FloatVectorIterator.fromFile(
+                        "/home/auroflow/code/vector-search/data/siftsmall/siftsmall_query.fvecs");
+        GroundTruthResultIterator truth =
+                GroundTruthResultIterator.fromFile(
+                        "/home/auroflow/code/vector-search/data/siftsmall/siftsmall_groundtruth.ivecs",
+                        k);
 
         for (L2HilbertPartitioner partitioner : partitioners) {
-            FloatVectorIterator initVectors = FloatVectorIterator.fromFile("/home/auroflow/code/vector-search/data/siftsmall/siftsmall_base.fvecs");
+            FloatVectorIterator initVectors =
+                    FloatVectorIterator.fromFile(
+                            "/home/auroflow/code/vector-search/data/siftsmall/siftsmall_base.fvecs");
             partitioner.initializeWith(initVectors, 0);
         }
 
@@ -102,9 +129,11 @@ public class L2HilbertPartitionerTest {
                 partitions.addAll(partition);
             }
             partitionCounts.add(partitions.size());
-            List<com.github.jelmerk.knn.SearchResult<FloatVector, Float>> results = new ArrayList<>();
+            List<com.github.jelmerk.knn.SearchResult<FloatVector, Float>> results =
+                    new ArrayList<>();
             for (int partition : partitions) {
-                List<com.github.jelmerk.knn.SearchResult<FloatVector, Float>> nearest = indexes.get(partition).findNearest(query.array(), k);
+                List<com.github.jelmerk.knn.SearchResult<FloatVector, Float>> nearest =
+                        indexes.get(partition).findNearest(query.array(), k);
                 results.addAll(nearest);
             }
             results.sort(Comparator.comparingDouble(com.github.jelmerk.knn.SearchResult::distance));
@@ -117,8 +146,10 @@ public class L2HilbertPartitionerTest {
             }
             accuracies.add((float) count / k);
         }
-        System.out.println(accuracies.stream().mapToDouble(Float::doubleValue).average().getAsDouble());
-        System.out.println(partitionCounts.stream().mapToDouble(Integer::doubleValue).average().getAsDouble());
+        System.out.println(
+                accuracies.stream().mapToDouble(Float::doubleValue).average().getAsDouble());
+        System.out.println(
+                partitionCounts.stream().mapToDouble(Integer::doubleValue).average().getAsDouble());
     }
 
     @Test
@@ -131,21 +162,42 @@ public class L2HilbertPartitionerTest {
         int k = 10;
         List<HnswIndex<Long, float[], FloatVector, Float>> indexes = new ArrayList<>();
         for (int i = 0; i < numPartitions; i++) {
-            indexes.add(HnswIndex.newBuilder(dim, DistanceFunctions.FLOAT_EUCLIDEAN_DISTANCE, numElements).build());
+            indexes.add(
+                    HnswIndex.newBuilder(
+                                    dim, DistanceFunctions.FLOAT_EUCLIDEAN_DISTANCE, numElements)
+                            .build());
         }
 
         int numHashFamilies = 1;
         List<L2HilbertPartitioner> partitioners = new ArrayList<>();
         for (int i = 0; i < numHashFamilies; i++) {
-            partitioners.add(new L2HilbertPartitioner(dim, 8, 1, 7, updateInterval, numElements, maxTTL, numPartitions, new Random()));
+            partitioners.add(
+                    new L2HilbertPartitioner(
+                            dim,
+                            8,
+                            1,
+                            7,
+                            updateInterval,
+                            numElements,
+                            maxTTL,
+                            numPartitions,
+                            new Random()));
         }
 
-        FloatVectorIterator vectors = FloatVectorIterator.fromFile("/home/auroflow/code/vector-search/data/sift/sift_base.fvecs");
-        FloatVectorIterator queries = FloatVectorIterator.fromFile("/home/auroflow/code/vector-search/data/sift/sift_query.fvecs");
-        GroundTruthResultIterator truth = GroundTruthResultIterator.fromFile("/home/auroflow/code/vector-search/data/sift/sift_groundtruth.ivecs", k);
+        FloatVectorIterator vectors =
+                FloatVectorIterator.fromFile(
+                        "/home/auroflow/code/vector-search/data/sift/sift_base.fvecs");
+        FloatVectorIterator queries =
+                FloatVectorIterator.fromFile(
+                        "/home/auroflow/code/vector-search/data/sift/sift_query.fvecs");
+        GroundTruthResultIterator truth =
+                GroundTruthResultIterator.fromFile(
+                        "/home/auroflow/code/vector-search/data/sift/sift_groundtruth.ivecs", k);
 
         for (L2HilbertPartitioner partitioner : partitioners) {
-            FloatVectorIterator initVectors = FloatVectorIterator.fromFile("/home/auroflow/code/vector-search/data/sift/sift_base.fvecs");
+            FloatVectorIterator initVectors =
+                    FloatVectorIterator.fromFile(
+                            "/home/auroflow/code/vector-search/data/sift/sift_base.fvecs");
             partitioner.initializeWith(initVectors, 0);
         }
 
@@ -178,6 +230,7 @@ public class L2HilbertPartitionerTest {
             }
         }
 
-        System.out.println(partitionCounts.stream().mapToDouble(Integer::doubleValue).average().getAsDouble());
+        System.out.println(
+                partitionCounts.stream().mapToDouble(Integer::doubleValue).average().getAsDouble());
     }
 }

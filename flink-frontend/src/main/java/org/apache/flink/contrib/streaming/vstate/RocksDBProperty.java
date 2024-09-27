@@ -19,7 +19,6 @@
 package org.apache.flink.contrib.streaming.vstate;
 
 import org.apache.flink.annotation.Internal;
-
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.RocksDB;
 

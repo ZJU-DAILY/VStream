@@ -6,10 +6,9 @@ import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.function.*;
 import cn.edu.zju.daily.function.partitioner.PartitionFunction;
 import cn.edu.zju.daily.util.Parameters;
+import java.util.Random;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
-
-import java.util.Random;
 
 public class RocksDBStreamingPipeline {
 
@@ -45,12 +44,11 @@ public class RocksDBStreamingPipeline {
             throw new RuntimeException("parallelism must be >= numCopies");
         }
         PartitionFunction partitioner = getPartitioner();
-        return applyToPartitionedData(vectors.connect(queries).flatMap(partitioner).name("partition"));
+        return applyToPartitionedData(
+                vectors.connect(queries).flatMap(partitioner).name("partition"));
     }
 
-    /**
-     * Apply the streaming pipeline to an unpartitioned PartitionedData stream.
-     */
+    /** Apply the streaming pipeline to an unpartitioned PartitionedData stream. */
     public SingleOutputStreamOperator<SearchResult> applyToHybridStream(
             SingleOutputStreamOperator<PartitionedData> data) {
 
@@ -78,7 +76,7 @@ public class RocksDBStreamingPipeline {
                 .slotSharingGroup("process")
                 .name("insert & search")
                 .keyBy(SearchResult::getQueryId)
-//            .countWindow(numPartitions)
+                //            .countWindow(numPartitions)
                 .process(new PartialResultProcessFunction(params.getK()))
                 .setParallelism(params.getReduceParallelism())
                 .name("reduce");

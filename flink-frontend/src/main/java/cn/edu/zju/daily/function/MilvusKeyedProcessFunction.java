@@ -6,6 +6,10 @@ import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.util.MilvusUtil;
 import cn.edu.zju.daily.util.Parameters;
 import io.milvus.response.SearchResultsWrapper;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.*;
 import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.state.ValueState;
@@ -16,14 +20,10 @@ import org.apache.flink.util.Collector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.*;
+public class MilvusKeyedProcessFunction
+        extends KeyedProcessFunction<Integer, PartitionedData, SearchResult> {
 
-public class MilvusKeyedProcessFunction extends KeyedProcessFunction<Integer, PartitionedData, SearchResult> {
-
-    private final static Logger LOG = LoggerFactory.getLogger(MilvusKeyedProcessFunction.class);
+    private static final Logger LOG = LoggerFactory.getLogger(MilvusKeyedProcessFunction.class);
 
     private ListState<FloatVector> state;
     private ValueState<Integer> count;
@@ -40,9 +40,11 @@ public class MilvusKeyedProcessFunction extends KeyedProcessFunction<Integer, Pa
     @Override
     public void open(Configuration parameters) throws Exception {
         super.open(parameters);
-        ListStateDescriptor<FloatVector> descriptor1 = new ListStateDescriptor<>("pending", FloatVector.class);
+        ListStateDescriptor<FloatVector> descriptor1 =
+                new ListStateDescriptor<>("pending", FloatVector.class);
         state = getRuntimeContext().getListState(descriptor1);
-        ValueStateDescriptor<Integer> descriptor2 = new ValueStateDescriptor<>("count", Integer.class);
+        ValueStateDescriptor<Integer> descriptor2 =
+                new ValueStateDescriptor<>("count", Integer.class);
         count = getRuntimeContext().getState(descriptor2);
         insertExecutor = Executors.newSingleThreadExecutor();
 
@@ -65,26 +67,28 @@ public class MilvusKeyedProcessFunction extends KeyedProcessFunction<Integer, Pa
     }
 
     @Override
-    public void processElement(PartitionedData data,
-                               KeyedProcessFunction<Integer, PartitionedData, SearchResult>.Context context,
-                               Collector<SearchResult> collector) throws Exception {
-
+    public void processElement(
+            PartitionedData data,
+            KeyedProcessFunction<Integer, PartitionedData, SearchResult>.Context context,
+            Collector<SearchResult> collector)
+            throws Exception {
 
         int currentKey = context.getCurrentKey();
         if (currentKey != data.getPartitionId()) {
-            throw new RuntimeException("Key mismatch: " + currentKey + " != " + data.getPartitionId());
+            throw new RuntimeException(
+                    "Key mismatch: " + currentKey + " != " + data.getPartitionId());
         }
 
         if (data.getDataType() == PartitionedData.DataType.QUERY) {
             // use another thread for searching?
-            SearchResult result = search(data.getVector(), data.getPartitionId(), data.getNumPartitionsSent());
+            SearchResult result =
+                    search(data.getVector(), data.getPartitionId(), data.getNumPartitionsSent());
             if (result != null) {
                 collector.collect(result);
             }
         } else if (data.getDataType() == PartitionedData.DataType.DATA) {
             insert(data.getVector(), currentKey);
         }
-
     }
 
     private class InsertRunnable implements Runnable {
@@ -99,7 +103,11 @@ public class MilvusKeyedProcessFunction extends KeyedProcessFunction<Integer, Pa
 
         @Override
         public void run() {
-            milvusUtil.insert(vectors, params.getMilvusCollectionName(), Integer.toString(partitionId), false);
+            milvusUtil.insert(
+                    vectors,
+                    params.getMilvusCollectionName(),
+                    Integer.toString(partitionId),
+                    false);
         }
     }
 
@@ -109,8 +117,15 @@ public class MilvusKeyedProcessFunction extends KeyedProcessFunction<Integer, Pa
         String collectionName = params.getMilvusCollectionName();
         String metricType = params.getMetricType();
         String partitionName = Integer.toString(partitionId);
-        SearchResultsWrapper resultsWrapper = milvusUtil.search(Collections.singletonList(vector), k,
-                efSearch, collectionName, partitionName, metricType, numSearchPartitions);
+        SearchResultsWrapper resultsWrapper =
+                milvusUtil.search(
+                        Collections.singletonList(vector),
+                        k,
+                        efSearch,
+                        collectionName,
+                        partitionName,
+                        metricType,
+                        numSearchPartitions);
         if (resultsWrapper != null) {
             List<SearchResultsWrapper.IDScore> pairs = resultsWrapper.getIDScore(0);
             List<Long> ids = new ArrayList<>();
@@ -121,7 +136,14 @@ public class MilvusKeyedProcessFunction extends KeyedProcessFunction<Integer, Pa
                 ids.add(pair.getLongID());
                 scores.add(pair.getScore());
             }
-            return new SearchResult(partitionId, vector.getId(), ids, scores, 1, numSearchPartitions, vector.getEventTime());
+            return new SearchResult(
+                    partitionId,
+                    vector.getId(),
+                    ids,
+                    scores,
+                    1,
+                    numSearchPartitions,
+                    vector.getEventTime());
         } else {
             return null;
         }

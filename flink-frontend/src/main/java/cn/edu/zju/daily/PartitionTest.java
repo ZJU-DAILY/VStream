@@ -1,8 +1,6 @@
 package cn.edu.zju.daily;
 
-
 import cn.edu.zju.daily.data.result.GroundTruthResultIterator;
-import cn.edu.zju.daily.data.result.IvecIterator;
 import cn.edu.zju.daily.data.result.SearchResult;
 import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.data.vector.FloatVectorIterator;
@@ -11,19 +9,18 @@ import cn.edu.zju.daily.util.Parameters;
 import com.github.jelmerk.knn.DistanceFunctions;
 import com.github.jelmerk.knn.Index;
 import com.github.jelmerk.knn.hnsw.HnswIndex;
-
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * Test the best NumHashFamilies.
- */
+/** Test the best NumHashFamilies. */
 public class PartitionTest {
 
     private static final String dataPath = "/home/auroflow/vector-search/data/sift/sift_base.fvecs";
-    private static final String queryPath = "/home/auroflow/vector-search/data/sift/sift_query.fvecs";
-    private static final String gtPath = "/home/auroflow/vector-search/data/sift/sift_groundtruth.ivecs";
+    private static final String queryPath =
+            "/home/auroflow/vector-search/data/sift/sift_query.fvecs";
+    private static final String gtPath =
+            "/home/auroflow/vector-search/data/sift/sift_groundtruth.ivecs";
 
     static class Buffer {
         private List<FloatVector> vectors = new ArrayList<>();
@@ -63,7 +60,17 @@ public class PartitionTest {
 
         Random random = new Random(38324);
         for (int i = 0; i < numPartitions; i++) {
-            L2HilbertPartitioner partitioner = new L2HilbertPartitioner(dim, lshNumFamilies, lshBucketWidth, hilbertBits, Integer.MAX_VALUE, 10000, Integer.MAX_VALUE, numPartitions, new Random(random.nextLong()));
+            L2HilbertPartitioner partitioner =
+                    new L2HilbertPartitioner(
+                            dim,
+                            lshNumFamilies,
+                            lshBucketWidth,
+                            hilbertBits,
+                            Integer.MAX_VALUE,
+                            10000,
+                            Integer.MAX_VALUE,
+                            numPartitions,
+                            new Random(random.nextLong()));
             Iterator<FloatVector> vectors = FloatVectorIterator.fromFile(dataPath, 1, 100000);
             partitioner.initializeWith(vectors, 0);
             partitioners.add(partitioner);
@@ -81,8 +88,13 @@ public class PartitionTest {
 
         List<Buffer> buffers = new ArrayList<>();
         for (int i = 0; i < numPartitions; i++) {
-            Index<Long, float[], FloatVector, Float> index = HnswIndex.newBuilder(dim, DistanceFunctions.FLOAT_EUCLIDEAN_DISTANCE, maxElements)
-                    .withM(m).withEf(efSearch).withEfConstruction(efConstruction).build();
+            Index<Long, float[], FloatVector, Float> index =
+                    HnswIndex.newBuilder(
+                                    dim, DistanceFunctions.FLOAT_EUCLIDEAN_DISTANCE, maxElements)
+                            .withM(m)
+                            .withEf(efSearch)
+                            .withEfConstruction(efConstruction)
+                            .build();
             buffers.add(new Buffer(index, 1000));
             indexes.add(index);
         }
@@ -128,24 +140,34 @@ public class PartitionTest {
                 partitions.add(partition.get(0));
             }
 
-            PriorityQueue<com.github.jelmerk.knn.SearchResult<FloatVector, Float>> aggResult = new PriorityQueue<>(params.getK(), Comparator.reverseOrder());
+            PriorityQueue<com.github.jelmerk.knn.SearchResult<FloatVector, Float>> aggResult =
+                    new PriorityQueue<>(params.getK(), Comparator.reverseOrder());
 
             for (int partition : partitions) {
-                List<com.github.jelmerk.knn.SearchResult<FloatVector, Float>> nearest = indexes.get(partition).findNearest(query.vector(), params.getK());
+                List<com.github.jelmerk.knn.SearchResult<FloatVector, Float>> nearest =
+                        indexes.get(partition).findNearest(query.vector(), params.getK());
                 aggResult.addAll(nearest);
                 while (aggResult.size() > params.getK()) {
                     aggResult.poll();
                 }
             }
-            SearchResult result = new SearchResult(query.getId(), aggResult.stream().map(r -> r.item().getId()).collect(Collectors.toList()), aggResult.stream().map(r -> r.distance()).collect(Collectors.toList()));
+            SearchResult result =
+                    new SearchResult(
+                            query.getId(),
+                            aggResult.stream()
+                                    .map(r -> r.item().getId())
+                                    .collect(Collectors.toList()),
+                            aggResult.stream().map(r -> r.distance()).collect(Collectors.toList()));
             float accuracy = SearchResult.getAccuracy(result, gtResult);
             System.out.println("Accuracy: " + accuracy);
         }
     }
 
     public static void main(String[] args) {
-        Parameters params = Parameters.load(
-                "/home/auroflow/code/vector-search/rocksdb-stream/src/main/resources/params.yaml", false);
+        Parameters params =
+                Parameters.load(
+                        "/home/auroflow/code/vector-search/rocksdb-stream/src/main/resources/params.yaml",
+                        false);
 
         PartitionTest test = new PartitionTest();
         try {

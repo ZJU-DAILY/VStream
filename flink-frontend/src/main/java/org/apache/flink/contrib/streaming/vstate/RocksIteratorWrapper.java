@@ -18,16 +18,13 @@
 
 package org.apache.flink.contrib.streaming.vstate;
 
+import java.io.Closeable;
+import java.nio.ByteBuffer;
+import javax.annotation.Nonnull;
 import org.apache.flink.util.FlinkRuntimeException;
-
 import org.rocksdb.RocksDBException;
 import org.rocksdb.RocksIterator;
 import org.rocksdb.RocksIteratorInterface;
-
-import javax.annotation.Nonnull;
-
-import java.io.Closeable;
-import java.nio.ByteBuffer;
 
 /**
  * This class was originally a wrapper around {@link RocksIterator} to check the iterator status for

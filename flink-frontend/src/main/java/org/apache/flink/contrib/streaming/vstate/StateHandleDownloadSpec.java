@@ -18,9 +18,8 @@
 
 package org.apache.flink.contrib.streaming.vstate;
 
-import org.apache.flink.runtime.state.IncrementalRemoteKeyedStateHandle;
-
 import java.nio.file.Path;
+import org.apache.flink.runtime.state.IncrementalRemoteKeyedStateHandle;
 
 /**
  * This class represents a download specification for the content of one {@link

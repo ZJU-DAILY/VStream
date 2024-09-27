@@ -18,15 +18,13 @@
 
 package org.apache.flink.contrib.streaming.vstate.iterator;
 
+import java.io.IOException;
+import javax.annotation.Nonnull;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.contrib.streaming.vstate.RocksIteratorWrapper;
 import org.apache.flink.core.memory.DataInputDeserializer;
 import org.apache.flink.runtime.state.CompositeKeySerializationUtils;
-
-import javax.annotation.Nonnull;
-
-import java.io.IOException;
 
 /**
  * Base class for iterators over RocksDB column families.

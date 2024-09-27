@@ -18,9 +18,8 @@
 
 package org.apache.flink.contrib.streaming.vstate;
 
-import org.rocksdb.*;
-
 import java.util.Collection;
+import org.rocksdb.*;
 
 /**
  * A factory for {@link DBOptions} and {@link ColumnFamilyOptions} to be passed to the {@link
@@ -94,7 +93,7 @@ public interface RocksDBOptionsFactory extends java.io.Serializable {
      * @return The options object on which the additional options are set.
      */
     VectorColumnFamilyOptions createVectorColumnOptions(
-        VectorColumnFamilyOptions currentOptions, Collection<AutoCloseable> handlesToClose);
+            VectorColumnFamilyOptions currentOptions, Collection<AutoCloseable> handlesToClose);
 
     /**
      * This method should enable certain RocksDB metrics to be forwarded to Flink's metrics
@@ -161,7 +160,7 @@ public interface RocksDBOptionsFactory extends java.io.Serializable {
      * @return The options object on which the additional options are set.
      */
     default VectorSearchOptions createVectorSearchOptions(
-        VectorSearchOptions currentOptions, Collection<AutoCloseable> handlesToClose) {
+            VectorSearchOptions currentOptions, Collection<AutoCloseable> handlesToClose) {
         return currentOptions;
     }
 }

@@ -18,18 +18,21 @@ public class PartitionedQuery extends PartitionedData {
         return vector;
     }
 
-
     public int getNumPartitionsSent() {
         return numPartitionsSent;
     }
 
     @Override
     public String toString() {
-        return "PartitionedFloatVector{" +
-            "dataType=" + getDataType() +
-            ", partitionId=" + getPartitionId() +
-            ", numPartitionsSent=" + numPartitionsSent +
-            ", vector=" + vector +
-            '}';
+        return "PartitionedFloatVector{"
+                + "dataType="
+                + getDataType()
+                + ", partitionId="
+                + getPartitionId()
+                + ", numPartitionsSent="
+                + numPartitionsSent
+                + ", vector="
+                + vector
+                + '}';
     }
 }

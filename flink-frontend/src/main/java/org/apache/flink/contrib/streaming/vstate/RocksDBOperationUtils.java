@@ -17,6 +17,15 @@
 
 package org.apache.flink.contrib.streaming.vstate;
 
+import static org.apache.flink.contrib.streaming.vstate.RocksDBKeyedStateBackend.MERGE_OPERATOR_NAME;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import javax.annotation.Nullable;
 import org.apache.flink.configuration.ConfigConstants;
 import org.apache.flink.contrib.streaming.vstate.ttl.RocksDbTtlCompactFiltersManager;
 import org.apache.flink.runtime.execution.Environment;
@@ -26,21 +35,9 @@ import org.apache.flink.util.FlinkRuntimeException;
 import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.OperatingSystem;
 import org.apache.flink.util.Preconditions;
-
 import org.rocksdb.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.annotation.Nullable;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-
-import static org.apache.flink.contrib.streaming.vstate.RocksDBKeyedStateBackend.MERGE_OPERATOR_NAME;
 
 /** Utils for RocksDB Operations. */
 public class RocksDBOperationUtils {
@@ -136,20 +133,20 @@ public class RocksDBOperationUtils {
      * ttlCompactFiltersManager} is not {@code null}.
      */
     public static RocksDBKeyedStateBackend.RocksDbKvStateInfo createVectorStateInfo(
-        RegisteredStateMetaInfoBase metaInfoBase,
-        RocksDB db,
-        Function<String, VectorColumnFamilyOptions> vectorColumnFamilyOptionsFactory,
-        @Nullable RocksDbTtlCompactFiltersManager ttlCompactFiltersManager,
-        @Nullable Long writeBufferManagerCapacity) {
+            RegisteredStateMetaInfoBase metaInfoBase,
+            RocksDB db,
+            Function<String, VectorColumnFamilyOptions> vectorColumnFamilyOptionsFactory,
+            @Nullable RocksDbTtlCompactFiltersManager ttlCompactFiltersManager,
+            @Nullable Long writeBufferManagerCapacity) {
 
         VectorCFDescriptor columnFamilyDescriptor =
-            createVectorColumnFamilyDescriptor(
-                metaInfoBase,
-                vectorColumnFamilyOptionsFactory,
-                ttlCompactFiltersManager,
-                writeBufferManagerCapacity);
+                createVectorColumnFamilyDescriptor(
+                        metaInfoBase,
+                        vectorColumnFamilyOptionsFactory,
+                        ttlCompactFiltersManager,
+                        writeBufferManagerCapacity);
         return new RocksDBKeyedStateBackend.RocksDbKvStateInfo(
-            createVectorColumnFamily(columnFamilyDescriptor, db), metaInfoBase);
+                createVectorColumnFamily(columnFamilyDescriptor, db), metaInfoBase);
     }
 
     /**
@@ -191,28 +188,28 @@ public class RocksDBOperationUtils {
      * <p>Sets TTL compaction filter if {@code ttlCompactFiltersManager} is not {@code null}.
      */
     public static VectorCFDescriptor createVectorColumnFamilyDescriptor(
-        RegisteredStateMetaInfoBase metaInfoBase,
-        Function<String, VectorColumnFamilyOptions> columnFamilyOptionsFactory,
-        @Nullable RocksDbTtlCompactFiltersManager ttlCompactFiltersManager,
-        @Nullable Long writeBufferManagerCapacity) {
+            RegisteredStateMetaInfoBase metaInfoBase,
+            Function<String, VectorColumnFamilyOptions> columnFamilyOptionsFactory,
+            @Nullable RocksDbTtlCompactFiltersManager ttlCompactFiltersManager,
+            @Nullable Long writeBufferManagerCapacity) {
 
         VectorColumnFamilyOptions options =
-            createVectorColumnFamilyOptions(columnFamilyOptionsFactory, metaInfoBase.getName());
+                createVectorColumnFamilyOptions(columnFamilyOptionsFactory, metaInfoBase.getName());
         if (ttlCompactFiltersManager != null) {
             ttlCompactFiltersManager.setAndRegisterCompactFilterIfStateTtl(metaInfoBase, options);
         }
         byte[] nameBytes = metaInfoBase.getName().getBytes(ConfigConstants.DEFAULT_CHARSET);
         Preconditions.checkState(
-            !Arrays.equals(RocksDB.DEFAULT_COLUMN_FAMILY, nameBytes),
-            "The chosen state name 'default' collides with the name of the default column family!");
+                !Arrays.equals(RocksDB.DEFAULT_COLUMN_FAMILY, nameBytes),
+                "The chosen state name 'default' collides with the name of the default column family!");
 
         if (writeBufferManagerCapacity != null) {
             // It'd be great to perform the check earlier, e.g. when creating write buffer manager.
             // Unfortunately the check needs write buffer size that was just calculated.
             sanityCheckArenaBlockSize(
-                options.writeBufferSize(),
-                options.arenaBlockSize(),
-                writeBufferManagerCapacity);
+                    options.writeBufferSize(),
+                    options.arenaBlockSize(),
+                    writeBufferManagerCapacity);
         }
 
         return new VectorCFDescriptor(nameBytes, options);
@@ -262,7 +259,8 @@ public class RocksDBOperationUtils {
     }
 
     public static VectorColumnFamilyOptions createVectorColumnFamilyOptions(
-            Function<String, VectorColumnFamilyOptions> vectorColumnFamilyOptionsFactory, String stateName) {
+            Function<String, VectorColumnFamilyOptions> vectorColumnFamilyOptionsFactory,
+            String stateName) {
 
         // ensure that we use the right merge operator, because other code relies on this
         return vectorColumnFamilyOptionsFactory
@@ -271,16 +269,17 @@ public class RocksDBOperationUtils {
     }
 
     public static ColumnFamilyOptions createColumnFamilyOptions(
-        Function<String, ColumnFamilyOptions> vectorColumnFamilyOptionsFactory, String stateName) {
+            Function<String, ColumnFamilyOptions> vectorColumnFamilyOptionsFactory,
+            String stateName) {
 
         // ensure that we use the right merge operator, because other code relies on this
         return vectorColumnFamilyOptionsFactory
-            .apply(stateName)
-            .setMergeOperatorName(MERGE_OPERATOR_NAME);
+                .apply(stateName)
+                .setMergeOperatorName(MERGE_OPERATOR_NAME);
     }
 
     private static VectorColumnFamilyHandle createVectorColumnFamily(
-        VectorCFDescriptor vectorColumnDescriptor, RocksDB db) {
+            VectorCFDescriptor vectorColumnDescriptor, RocksDB db) {
         try {
             return db.createVectorColumnFamily(vectorColumnDescriptor);
         } catch (RocksDBException e) {
@@ -319,7 +318,8 @@ public class RocksDBOperationUtils {
     }
 
     public static void addVectorColumnFamilyOptionsToCloseLater(
-        List<VectorColumnFamilyOptions> columnFamilyOptions, VectorColumnFamilyHandle columnFamilyHandle) {
+            List<VectorColumnFamilyOptions> columnFamilyOptions,
+            VectorColumnFamilyHandle columnFamilyHandle) {
         try {
             // IMPORTANT NOTE: Do not call ColumnFamilyHandle#getDescriptor() just to judge if it
             // return null and then call it again when it return is not null. That will cause

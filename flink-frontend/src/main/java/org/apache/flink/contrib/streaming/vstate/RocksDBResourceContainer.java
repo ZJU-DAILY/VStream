@@ -18,6 +18,12 @@
 
 package org.apache.flink.contrib.streaming.vstate;
 
+import static org.apache.flink.util.Preconditions.checkNotNull;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Collection;
+import javax.annotation.Nullable;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.Configuration;
@@ -25,18 +31,9 @@ import org.apache.flink.configuration.ReadableConfig;
 import org.apache.flink.runtime.memory.OpaqueMemoryResource;
 import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.Preconditions;
-
 import org.rocksdb.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.annotation.Nullable;
-
-import java.io.File;
-import java.util.ArrayList;
-import java.util.Collection;
-
-import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
  * The container for RocksDB resources, including predefined options, option factory and shared
@@ -230,12 +227,12 @@ public final class RocksDBResourceContainer implements AutoCloseable {
                 blockBasedTableConfig = new BlockBasedTableConfig();
             } else {
                 Preconditions.checkArgument(
-                    tableFormatConfig instanceof BlockBasedTableConfig,
-                    "We currently only support BlockBasedTableConfig When bounding total memory.");
+                        tableFormatConfig instanceof BlockBasedTableConfig,
+                        "We currently only support BlockBasedTableConfig When bounding total memory.");
                 blockBasedTableConfig = (BlockBasedTableConfig) tableFormatConfig;
             }
             if (rocksResources.isUsingPartitionedIndexFilters()
-                && overwriteFilterIfExist(blockBasedTableConfig)) {
+                    && overwriteFilterIfExist(blockBasedTableConfig)) {
                 blockBasedTableConfig.setIndexType(IndexType.kTwoLevelIndexSearch);
                 blockBasedTableConfig.setPartitionFilters(true);
                 blockBasedTableConfig.setPinTopLevelIndexAndFilter(true);
@@ -467,37 +464,35 @@ public final class RocksDBResourceContainer implements AutoCloseable {
 
     @SuppressWarnings("ConstantConditions")
     private VectorColumnFamilyOptions setVectorColumnFamilyOptionsFromConfigurableOptions(
-        VectorColumnFamilyOptions currentOptions, Collection<AutoCloseable> handlesToClose) {
+            VectorColumnFamilyOptions currentOptions, Collection<AutoCloseable> handlesToClose) {
 
-        currentOptions.setDim(
-            internalGetOption(RocksDBConfigurableOptions.VECTOR_DIM));
+        currentOptions.setDim(internalGetOption(RocksDBConfigurableOptions.VECTOR_DIM));
 
-        currentOptions.setM(
-            internalGetOption(RocksDBConfigurableOptions.HNSW_M));
+        currentOptions.setM(internalGetOption(RocksDBConfigurableOptions.HNSW_M));
 
         currentOptions.setEfConstruction(
-            internalGetOption(RocksDBConfigurableOptions.HNSW_EF_CONSTRUCTION));
+                internalGetOption(RocksDBConfigurableOptions.HNSW_EF_CONSTRUCTION));
 
         currentOptions.setCompactionStyle(
-            internalGetOption(RocksDBConfigurableOptions.COMPACTION_STYLE));
+                internalGetOption(RocksDBConfigurableOptions.COMPACTION_STYLE));
 
         currentOptions.setLevelCompactionDynamicLevelBytes(
-            internalGetOption(RocksDBConfigurableOptions.USE_DYNAMIC_LEVEL_SIZE));
+                internalGetOption(RocksDBConfigurableOptions.USE_DYNAMIC_LEVEL_SIZE));
 
         currentOptions.setTargetFileSizeBase(
-            internalGetOption(RocksDBConfigurableOptions.TARGET_FILE_SIZE_BASE).getBytes());
+                internalGetOption(RocksDBConfigurableOptions.TARGET_FILE_SIZE_BASE).getBytes());
 
         currentOptions.setMaxBytesForLevelBase(
-            internalGetOption(RocksDBConfigurableOptions.MAX_SIZE_LEVEL_BASE).getBytes());
+                internalGetOption(RocksDBConfigurableOptions.MAX_SIZE_LEVEL_BASE).getBytes());
 
         currentOptions.setWriteBufferSize(
-            internalGetOption(RocksDBConfigurableOptions.WRITE_BUFFER_SIZE).getBytes());
+                internalGetOption(RocksDBConfigurableOptions.WRITE_BUFFER_SIZE).getBytes());
 
         currentOptions.setMaxWriteBufferNumber(
-            internalGetOption(RocksDBConfigurableOptions.MAX_WRITE_BUFFER_NUMBER));
+                internalGetOption(RocksDBConfigurableOptions.MAX_WRITE_BUFFER_NUMBER));
 
         currentOptions.setMinWriteBufferNumberToMerge(
-            internalGetOption(RocksDBConfigurableOptions.MIN_WRITE_BUFFER_NUMBER_TO_MERGE));
+                internalGetOption(RocksDBConfigurableOptions.MIN_WRITE_BUFFER_NUMBER_TO_MERGE));
 
         TableFormatConfig tableFormatConfig = currentOptions.tableFormatConfig();
 
@@ -515,19 +510,19 @@ public final class RocksDBResourceContainer implements AutoCloseable {
         }
 
         blockBasedTableConfig.setBlockSize(
-            internalGetOption(RocksDBConfigurableOptions.BLOCK_SIZE).getBytes());
+                internalGetOption(RocksDBConfigurableOptions.BLOCK_SIZE).getBytes());
 
         blockBasedTableConfig.setMetadataBlockSize(
-            internalGetOption(RocksDBConfigurableOptions.METADATA_BLOCK_SIZE).getBytes());
+                internalGetOption(RocksDBConfigurableOptions.METADATA_BLOCK_SIZE).getBytes());
 
         blockBasedTableConfig.setBlockCacheSize(
-            internalGetOption(RocksDBConfigurableOptions.BLOCK_CACHE_SIZE).getBytes());
+                internalGetOption(RocksDBConfigurableOptions.BLOCK_CACHE_SIZE).getBytes());
 
         if (internalGetOption(RocksDBConfigurableOptions.USE_BLOOM_FILTER)) {
             final double bitsPerKey =
-                internalGetOption(RocksDBConfigurableOptions.BLOOM_FILTER_BITS_PER_KEY);
+                    internalGetOption(RocksDBConfigurableOptions.BLOOM_FILTER_BITS_PER_KEY);
             final boolean blockBasedMode =
-                internalGetOption(RocksDBConfigurableOptions.BLOOM_FILTER_BLOCK_BASED_MODE);
+                    internalGetOption(RocksDBConfigurableOptions.BLOOM_FILTER_BLOCK_BASED_MODE);
             BloomFilter bloomFilter = new BloomFilter(bitsPerKey, blockBasedMode);
             handlesToClose.add(bloomFilter);
             blockBasedTableConfig.setFilterPolicy(bloomFilter);
@@ -537,10 +532,9 @@ public final class RocksDBResourceContainer implements AutoCloseable {
     }
 
     private VectorSearchOptions setVectorSearchOptionsFromConfigurableOptions(
-        VectorSearchOptions currentOptions, Collection<AutoCloseable> handlesToClose) {
+            VectorSearchOptions currentOptions, Collection<AutoCloseable> handlesToClose) {
 
-        currentOptions.setK(
-            internalGetOption(RocksDBConfigurableOptions.HNSW_K));
+        currentOptions.setK(internalGetOption(RocksDBConfigurableOptions.HNSW_K));
 
         return currentOptions;
     }

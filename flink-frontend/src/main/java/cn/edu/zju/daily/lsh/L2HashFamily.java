@@ -1,12 +1,10 @@
 package cn.edu.zju.daily.lsh;
 
-import java.io.Serializable;
+import cn.edu.zju.daily.data.vector.FloatVector;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
-
-import cn.edu.zju.daily.data.vector.FloatVector;
 
 /**
  * A family of locality-sensitive hashing functions.
@@ -20,9 +18,9 @@ public class L2HashFamily implements LSHashFamily {
     /**
      * Creates a family of locality-sensitive hashing functions.
      *
-     * @param dim    dimension of the vector
-     * @param k      number of hash functions
-     * @param r      width of hash bucket (see paper)
+     * @param dim dimension of the vector
+     * @param k number of hash functions
+     * @param r width of hash bucket (see paper)
      * @param random
      */
     public L2HashFamily(int dim, int k, float r, Random random) {
@@ -61,7 +59,7 @@ public class L2HashFamily implements LSHashFamily {
      * Get the node number according to the hash values.
      *
      * @param hashValues hash values
-     * @param k          number of nodes
+     * @param k number of nodes
      * @return node number
      * @deprecated Inferior method. Do not use in new code.
      */

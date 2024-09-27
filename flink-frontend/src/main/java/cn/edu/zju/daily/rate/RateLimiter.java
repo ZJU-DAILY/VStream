@@ -1,21 +1,18 @@
 package cn.edu.zju.daily.rate;
 
+import java.util.List;
 import org.apache.flink.api.common.functions.RichMapFunction;
 import org.apache.flink.configuration.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
-
-/**
- * @author auroflow
- */
+/** @author auroflow */
 public abstract class RateLimiter<U, V> extends RichMapFunction<U, V> {
 
     private static final Logger logger = LoggerFactory.getLogger(RateLimiter.class);
 
     private final List<Long> thresholds;
-    private final List<Long> intervals;  // nanoseconds
+    private final List<Long> intervals; // nanoseconds
 
     // State: timestamp of last emission, in nanoseconds
     private long lastEmitted = 0L;
@@ -25,7 +22,8 @@ public abstract class RateLimiter<U, V> extends RichMapFunction<U, V> {
     private int index = 0;
 
     /**
-     * Creates a rate limiter. Thresholds and intervals define a set of stages, each with different rates.
+     * Creates a rate limiter. Thresholds and intervals define a set of stages, each with different
+     * rates.
      *
      * @param thresholds a list of numbers of processed elements
      * @param intervals corresponding process intervals
@@ -80,7 +78,7 @@ public abstract class RateLimiter<U, V> extends RichMapFunction<U, V> {
     /**
      * Transforms the input value into the output value.
      *
-     * @param value     the input value
+     * @param value the input value
      * @param timestamp the timestamp when the input value is emitted
      * @return the transformed value
      */

@@ -18,6 +18,7 @@
 
 package org.apache.flink.contrib.streaming.vstate;
 
+import java.util.Collection;
 import org.apache.flink.api.common.functions.AggregateFunction;
 import org.apache.flink.api.common.state.AggregatingState;
 import org.apache.flink.api.common.state.AggregatingStateDescriptor;
@@ -28,10 +29,7 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.state.RegisteredKeyValueStateBackendMetaInfo;
 import org.apache.flink.runtime.state.internal.InternalAggregatingState;
 import org.apache.flink.util.FlinkRuntimeException;
-
 import org.rocksdb.ColumnFamilyHandle;
-
-import java.util.Collection;
 
 /**
  * An {@link AggregatingState} implementation that stores state in RocksDB.

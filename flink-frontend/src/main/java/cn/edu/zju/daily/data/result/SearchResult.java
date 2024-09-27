@@ -1,15 +1,12 @@
 package cn.edu.zju.daily.data.result;
 
-import org.apache.flink.util.Preconditions;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import org.apache.flink.util.Preconditions;
 
-/**
- * Represents a (partial or complete) search result.
- */
+/** Represents a (partial or complete) search result. */
 public class SearchResult implements Serializable {
 
     private final int nodeId;
@@ -17,7 +14,7 @@ public class SearchResult implements Serializable {
     private final int numPartitionsToCombine;
     private final int numPartitionsCombined;
     private final List<Long> ids;
-    private final List<Float> distances;  // ascending
+    private final List<Float> distances; // ascending
     private final long queryEventTime;
     private long searchCompleteTime;
 
@@ -25,8 +22,15 @@ public class SearchResult implements Serializable {
         this(-1, queryId, ids, distances, 1, 1, 0L);
     }
 
-    public SearchResult(int nodeId, long queryId, List<Long> ids, List<Float> distances, int numPartitionsCombined, int numPartitionsToCombine, long queryEventTime) {
-        assert(ids.size() == distances.size());
+    public SearchResult(
+            int nodeId,
+            long queryId,
+            List<Long> ids,
+            List<Float> distances,
+            int numPartitionsCombined,
+            int numPartitionsToCombine,
+            long queryEventTime) {
+        assert (ids.size() == distances.size());
         this.nodeId = nodeId;
         this.queryId = queryId;
         this.ids = ids;
@@ -45,8 +49,9 @@ public class SearchResult implements Serializable {
         while (!ids.isEmpty()) {
             int minIndex = 0;
             for (int i = 1; i < ids.size(); i++) {
-                if (distances.get(i) < distances.get(minIndex) || (Objects.equals(distances.get(i),
-                        distances.get(minIndex)) && ids.get(i) < ids.get(minIndex))) {
+                if (distances.get(i) < distances.get(minIndex)
+                        || (Objects.equals(distances.get(i), distances.get(minIndex))
+                                && ids.get(i) < ids.get(minIndex))) {
                     minIndex = i;
                 }
             }
@@ -88,7 +93,8 @@ public class SearchResult implements Serializable {
     }
 
     private void append(long id, float distance) {
-        // assuming that the distances are sorted in ascending order, and that the inserted distance is no smaller than the
+        // assuming that the distances are sorted in ascending order, and that the inserted distance
+        // is no smaller than the
         // last distance in the array
         if (ids.isEmpty() || ids.get(ids.size() - 1) != id) {
             ids.add(id);
@@ -128,14 +134,22 @@ public class SearchResult implements Serializable {
         Preconditions.checkArgument(a.numPartitionsToCombine == b.numPartitionsToCombine);
         Preconditions.checkArgument(a.queryEventTime == b.queryEventTime);
         // combine the two lists
-        SearchResult r = new SearchResult(-1, mergeQueryId(a.queryId, b.queryId), new ArrayList<>(k), new ArrayList<>(k),
-                a.numPartitionsCombined + b.numPartitionsCombined, a.numPartitionsToCombine, a.queryEventTime);
+        SearchResult r =
+                new SearchResult(
+                        -1,
+                        mergeQueryId(a.queryId, b.queryId),
+                        new ArrayList<>(k),
+                        new ArrayList<>(k),
+                        a.numPartitionsCombined + b.numPartitionsCombined,
+                        a.numPartitionsToCombine,
+                        a.queryEventTime);
         int i = 0;
         int j = 0;
 
         while (r.size() < k && (i < a.size() || j < b.size())) {
             if (i < a.size() && j < b.size()) {
-                if (a.distance(i) < b.distance(j) || (Objects.equals(a.distance(i), b.distance(j)) && a.id(i) < b.id(j))) {
+                if (a.distance(i) < b.distance(j)
+                        || (Objects.equals(a.distance(i), b.distance(j)) && a.id(i) < b.id(j))) {
                     r.append(a.id(i), a.distance(i));
                     i++;
                 } else {
@@ -170,15 +184,23 @@ public class SearchResult implements Serializable {
 
     @Override
     public String toString() {
-        return "SearchResult{" +
-                "nodeId=" + nodeId +
-                ", queryId=" + queryId +
-                ", numPartitionsToCombine=" + numPartitionsToCombine +
-                ", numPartitionsCombined=" + numPartitionsCombined +
-                ", ids=" + ids +
-                ", distances=" + distances +
-                ", queryEventTime=" + queryEventTime +
-                ", searchCompleteTime=" + searchCompleteTime +
-                '}';
+        return "SearchResult{"
+                + "nodeId="
+                + nodeId
+                + ", queryId="
+                + queryId
+                + ", numPartitionsToCombine="
+                + numPartitionsToCombine
+                + ", numPartitionsCombined="
+                + numPartitionsCombined
+                + ", ids="
+                + ids
+                + ", distances="
+                + distances
+                + ", queryEventTime="
+                + queryEventTime
+                + ", searchCompleteTime="
+                + searchCompleteTime
+                + '}';
     }
 }

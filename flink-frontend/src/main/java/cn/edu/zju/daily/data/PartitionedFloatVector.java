@@ -18,10 +18,13 @@ public class PartitionedFloatVector extends PartitionedData {
 
     @Override
     public String toString() {
-        return "PartitionedFloatVector{" +
-            "dataType=" + getDataType() +
-            ", partitionId=" + getPartitionId() +
-            ", vector=" + vector +
-            '}';
+        return "PartitionedFloatVector{"
+                + "dataType="
+                + getDataType()
+                + ", partitionId="
+                + getPartitionId()
+                + ", vector="
+                + vector
+                + '}';
     }
 }

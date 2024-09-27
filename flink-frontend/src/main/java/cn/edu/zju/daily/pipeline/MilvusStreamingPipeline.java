@@ -8,13 +8,12 @@ import cn.edu.zju.daily.function.PartialResultProcessFunction;
 import cn.edu.zju.daily.function.partitioner.PartitionFunction;
 import cn.edu.zju.daily.util.MilvusUtil;
 import cn.edu.zju.daily.util.Parameters;
+import java.util.Map;
+import java.util.Random;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Map;
-import java.util.Random;
 
 public class MilvusStreamingPipeline {
 
@@ -38,14 +37,23 @@ public class MilvusStreamingPipeline {
                 throw new RuntimeException("Failed to delete existed collection.");
             }
         }
-        milvusUtil.createCollection(params.getMilvusCollectionName(), params.getVectorDim(), params.getMilvusNumShards());
+        milvusUtil.createCollection(
+                params.getMilvusCollectionName(),
+                params.getVectorDim(),
+                params.getMilvusNumShards());
         int numPartitions = params.getParallelism();
         Map<Integer, Integer> map = PartitionFunction.getNodeIdMap(numPartitions);
         for (int i = 0; i < numPartitions; i++) {
             String partitionName = Integer.toString(map.get(i));
             milvusUtil.createPartition(collectionName, partitionName);
         }
-        boolean indexBuilt = milvusUtil.buildHnswIndex(params.getMilvusCollectionName(), params.getMetricType(), params.getHnswM(), params.getHnswEfConstruction(), params.getHnswEfSearch());
+        boolean indexBuilt =
+                milvusUtil.buildHnswIndex(
+                        params.getMilvusCollectionName(),
+                        params.getMetricType(),
+                        params.getHnswM(),
+                        params.getHnswEfConstruction(),
+                        params.getHnswEfSearch());
         boolean loaded = milvusUtil.loadCollection(collectionName);
 
         if (indexBuilt && loaded) {
@@ -79,12 +87,11 @@ public class MilvusStreamingPipeline {
             throw new RuntimeException("parallelism must be >= numCopies");
         }
         PartitionFunction partitioner = getPartitioner();
-        return applyToPartitionedData(vectors.connect(queries).flatMap(partitioner).name("partition"));
+        return applyToPartitionedData(
+                vectors.connect(queries).flatMap(partitioner).name("partition"));
     }
 
-    /**
-     * Apply the streaming pipeline to an unpartitioned PartitionedData stream.
-     */
+    /** Apply the streaming pipeline to an unpartitioned PartitionedData stream. */
     public SingleOutputStreamOperator<SearchResult> applyToHybridStream(
             SingleOutputStreamOperator<PartitionedData> data) {
 
@@ -98,7 +105,8 @@ public class MilvusStreamingPipeline {
     public SingleOutputStreamOperator<SearchResult> applyToPartitionedData(
             SingleOutputStreamOperator<PartitionedData> data) {
 
-        KeyedProcessFunction<Integer, PartitionedData, SearchResult> processFunction = new MilvusKeyedProcessFunction(params);
+        KeyedProcessFunction<Integer, PartitionedData, SearchResult> processFunction =
+                new MilvusKeyedProcessFunction(params);
 
         return data.keyBy(PartitionedData::getPartitionId)
                 .process(processFunction)
@@ -106,7 +114,7 @@ public class MilvusStreamingPipeline {
                 .setMaxParallelism(params.getParallelism())
                 .name("insert & search")
                 .keyBy(SearchResult::getQueryId)
-//            .countWindow(numPartitions)
+                //            .countWindow(numPartitions)
                 .process(new PartialResultProcessFunction(params.getK()))
                 .setParallelism(params.getReduceParallelism())
                 .name("reduce");
