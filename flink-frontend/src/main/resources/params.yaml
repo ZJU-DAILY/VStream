@@ -52,7 +52,7 @@ milvusInsertBufferCapacity: 1000
 milvusQueryBufferCapacity: 10
 chromaCollectionName: "vector_collection"
 chromaAddressFile: "/home/auroflow/code/vector-search/VStream/flink-frontend/src/main/resources/chroma_addresses.txt"
-chromaInsertBatchSize: 100
+chromaInsertBatchSize: 1000
 groundTruthPath: "/home/auroflow/code/vector-search/data/sift/sift_groundtruth.ivecs"
 fileSinkPath: "hdfs://10.214.151.20:9000/user/auroflow/vector_search/rocksdb-logs"
 sortInterval: 100

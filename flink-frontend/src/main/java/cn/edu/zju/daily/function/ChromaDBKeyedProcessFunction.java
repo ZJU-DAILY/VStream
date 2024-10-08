@@ -123,10 +123,15 @@ public class ChromaDBKeyedProcessFunction
 
             if (!idsToDelete.isEmpty()) {
                 try {
+                    long now = System.currentTimeMillis();
                     collection.delete(
                             idsToDelete.stream().map(Object::toString).collect(toList()),
                             null,
                             null);
+                    LOG.info(
+                            "Deleted {} vectors in {} ms",
+                            idsToDelete.size(),
+                            System.currentTimeMillis() - now);
                 } catch (Exception e) {
                     LOG.error("Error deleting vectors", e);
                 }
@@ -141,7 +146,12 @@ public class ChromaDBKeyedProcessFunction
                                     .map(FloatVector::getId)
                                     .map(Object::toString)
                                     .collect(toList());
+                    long now = System.currentTimeMillis();
                     collection.add(vectors, null, ids, ids);
+                    LOG.info(
+                            "Inserted {} vectors in {} ms",
+                            vectorsToAdd.size(),
+                            System.currentTimeMillis() - now);
                 } catch (Exception e) {
                     LOG.error("Error inserting vectors", e);
                 }
@@ -152,9 +162,11 @@ public class ChromaDBKeyedProcessFunction
     private SearchResult search(FloatVector query, int partitionId, int numSearchPartitions)
             throws Exception {
 
+        long now = System.currentTimeMillis();
         CustomChromaCollection.QueryResponse queryResponse =
                 collection.queryEmbeddings(
                         Collections.singletonList(query.list()), params.getK(), null, null, null);
+        LOG.info("1 query returned in {} ms", System.currentTimeMillis() - now);
         List<Long> ids =
                 queryResponse.getIds().get(0).stream().map(Long::parseLong).collect(toList());
         List<Float> scores = queryResponse.getDistances().get(0);
