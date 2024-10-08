@@ -9,7 +9,7 @@ import java.util.Iterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** @author auroflow */
+/** This class reads a float or binary vector file in SIFT format as float arrays. */
 public class FvecIterator implements Iterator<float[]> {
 
     public enum InputType {
@@ -30,10 +30,25 @@ public class FvecIterator implements Iterator<float[]> {
     private final long limit;
     private long count = 0;
 
+    /**
+     * Reads from a fvec or bvec file.
+     *
+     * @param filename the file to read from
+     * @return a new FvecIterator
+     * @throws IOException if the file cannot be read
+     */
     public static FvecIterator fromFile(String filename) throws IOException {
         return fromFile(filename, 1);
     }
 
+    /**
+     * Reads from a fvec or bvec file that loops the file for a specified number of times.
+     *
+     * @param filename the file to read from
+     * @param numLoops the number of times to loop the file
+     * @return a new FvecIterator
+     * @throws IOException if the file cannot be read
+     */
     public static FvecIterator fromFile(String filename, int numLoops) throws IOException {
         if (filename.endsWith(".fvecs")) {
             return new FvecIterator(
@@ -55,14 +70,14 @@ public class FvecIterator implements Iterator<float[]> {
     }
 
     /**
-     * 创建向量读取器。
+     * Reads from a fvec or bvec file that loops the file for a specified number of times.
      *
-     * @param file 向量文件。假设所有向量的维度相同。
-     * @param numLoops 循环多少次
-     * @param skip 每个循环从第skip个向量开始
-     * @param limit 每个循环读取limit个向量
-     * @param inputType 读取float (4-bit) 或unsigned char (1-bit)向量
-     * @throws IOException 读取文件失败
+     * @param file the file to read from
+     * @param numLoops the number of times to loop the file
+     * @param skip start reading from the skip-th vector in each loop
+     * @param limit read limit vectors in each loop
+     * @param inputType file type (fvec or bvec)
+     * @throws IOException if the file cannot be read
      */
     public FvecIterator(
             RandomAccessFile file, int numLoops, long skip, long limit, InputType inputType)
@@ -77,10 +92,6 @@ public class FvecIterator implements Iterator<float[]> {
         int vectorWidth = 4 + dimension * (inputType == InputType.F_VEC ? 4 : 1);
         this.startPosition = vectorWidth * skip;
         this.file.seek(startPosition);
-    }
-
-    private boolean isEOF() throws IOException {
-        return (count != 0 && count % limit == 0) || file.getFilePointer() == length;
     }
 
     @Override
@@ -133,6 +144,10 @@ public class FvecIterator implements Iterator<float[]> {
             logger.error("Failed to read file.");
             throw new RuntimeException(e);
         }
+    }
+
+    private boolean isEOF() throws IOException {
+        return (count != 0 && count % limit == 0) || file.getFilePointer() == length;
     }
 
     private int readIntLittleEndian(RandomAccessFile file) throws IOException {

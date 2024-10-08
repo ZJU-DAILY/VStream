@@ -9,6 +9,11 @@ import java.util.Iterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * This class reads an integer vector file in SIFT format.
+ *
+ * @see <a href="ttp://corpus-texmex.irisa.fr">Datasets for approximate nearest neighbor search</a>
+ */
 public class IvecIterator implements Iterator<int[]> {
 
     private static final Logger logger = LoggerFactory.getLogger(IvecIterator.class);

@@ -7,6 +7,7 @@ import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
 
+/** This class serializes and deserializes some data types in a RocksDB-compatible way. */
 public class DataSerializer {
 
     public static void serializeFloatVector(FloatVector value, byte[] id, byte[] array) {
@@ -54,7 +55,7 @@ public class DataSerializer {
         }
     }
 
-    static void serializeLong(long value, byte[] target) {
+    public static void serializeLong(long value, byte[] target) {
         assert (target.length == Long.BYTES);
         ByteBuffer buffer = ByteBuffer.wrap(target);
         buffer.order(ByteOrder.LITTLE_ENDIAN);

@@ -1,5 +1,6 @@
 package cn.edu.zju.daily.util;
 
+import cn.edu.zju.daily.function.ChromaDBKeyedProcessFunction;
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Files;
@@ -86,6 +87,9 @@ public class Parameters implements Serializable {
     private int milvusNumShards;
     private int milvusInsertBufferCapacity;
     private int milvusQueryBufferCapacity;
+    private String chromaCollectionName;
+    private String chromaAddressFile;
+    private int chromaInsertBatchSize;
 
     /**
      * HDFS address.
@@ -216,11 +220,7 @@ public class Parameters implements Serializable {
         this.parallelism = parallelism;
     }
 
-    /**
-     * Reduce parallelism.
-     *
-     * @return
-     */
+    /** Reduce parallelism. */
     public int getReduceParallelism() {
         return reduceParallelism;
     }
@@ -449,11 +449,7 @@ public class Parameters implements Serializable {
         this.rocksDBTerminationLowerBound = rocksDBTerminationLowerBound;
     }
 
-    /**
-     * Size of block cache in bytes, which caches data blocks and vectors.
-     *
-     * @return
-     */
+    /** Size of block cache in bytes, which caches data blocks and vectors. */
     public long getRocksDBBlockCacheSize() {
         return rocksDBBlockCacheSize;
     }
@@ -535,11 +531,7 @@ public class Parameters implements Serializable {
         this.rocksDBFlushThreshold = rocksDBFlushThreshold;
     }
 
-    /**
-     * Num of memtables before write stall.
-     *
-     * @return
-     */
+    /** Num of memtables before write stall. */
     public int getRocksDBMaxWriteBufferNumber() {
         return rocksDBMaxWriteBufferNumber;
     }
@@ -548,11 +540,7 @@ public class Parameters implements Serializable {
         this.rocksDBMaxWriteBufferNumber = rocksDBMaxWriteBufferNumber;
     }
 
-    /**
-     * Max number of background flush threads on a single task manager.
-     *
-     * @return
-     */
+    /** Max number of background flush threads on a single task manager. */
     public int getRocksDBMaxBackgroundJobs() {
         return rocksDBMaxBackgroundJobs;
     }
@@ -564,8 +552,6 @@ public class Parameters implements Serializable {
     /**
      * Block restart interval, i.e. number of vectors between restart points for Gorilla compression
      * of vectors.
-     *
-     * @return
      */
     public int getRocksDBBlockRestartInterval() {
         return rocksDBBlockRestartInterval;
@@ -575,11 +561,7 @@ public class Parameters implements Serializable {
         this.rocksDBBlockRestartInterval = rocksDBBlockRestartInterval;
     }
 
-    /**
-     * Milvus collection name.
-     *
-     * @return
-     */
+    /** Milvus collection name. */
     public String getMilvusCollectionName() {
         return milvusCollectionName;
     }
@@ -588,11 +570,7 @@ public class Parameters implements Serializable {
         this.milvusCollectionName = milvusCollectionName;
     }
 
-    /**
-     * Milvus host.
-     *
-     * @return
-     */
+    /** Milvus host. */
     public String getMilvusHost() {
         return milvusHost;
     }
@@ -601,11 +579,7 @@ public class Parameters implements Serializable {
         this.milvusHost = milvusHost;
     }
 
-    /**
-     * Milvus port.
-     *
-     * @return
-     */
+    /** Milvus port. */
     public int getMilvusPort() {
         return milvusPort;
     }
@@ -638,11 +612,42 @@ public class Parameters implements Serializable {
         this.milvusQueryBufferCapacity = milvusQueryBufferCapacity;
     }
 
+    // =========================
+    // ChromaDB related parameters
+    // =========================
+
     /**
-     * Timestamp interval between data tuples, 0 means using system time.
-     *
-     * @return
+     * A list of ChromaDB addresses such as "localhost:8000" for the {@link
+     * ChromaDBKeyedProcessFunction} to choose from. The list size should be at least equal to the
+     * combiner parallelism. Each subtask will choose an address sequentially from the list.
      */
+    public void setChromaAddressFile(String chromaAddressFile) {
+        this.chromaAddressFile = chromaAddressFile;
+    }
+
+    public String getChromaAddressFile() {
+        return chromaAddressFile;
+    }
+
+    /** ChromaDB collection name. */
+    public String getChromaCollectionName() {
+        return chromaCollectionName;
+    }
+
+    public void setChromaCollectionName(String chromaCollectionName) {
+        this.chromaCollectionName = chromaCollectionName;
+    }
+
+    /** ChromaDB insert batch size. */
+    public int getChromaInsertBatchSize() {
+        return chromaInsertBatchSize;
+    }
+
+    public void setChromaInsertBatchSize(int chromaInsertBatchSize) {
+        this.chromaInsertBatchSize = chromaInsertBatchSize;
+    }
+
+    /** Timestamp interval between data tuples, 0 means using system time. */
     public long getFakeInsertRate() {
         return fakeInsertRate;
     }

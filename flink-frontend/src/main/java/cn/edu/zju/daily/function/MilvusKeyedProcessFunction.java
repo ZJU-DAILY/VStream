@@ -6,9 +6,7 @@ import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.util.MilvusUtil;
 import cn.edu.zju.daily.util.Parameters;
 import io.milvus.response.SearchResultsWrapper;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.*;
 import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
@@ -29,7 +27,7 @@ public class MilvusKeyedProcessFunction
     private ValueState<Integer> count;
     private final int insertBatchSize;
     private MilvusUtil milvusUtil;
-    private Parameters params;
+    private final Parameters params;
     private ExecutorService insertExecutor;
 
     public MilvusKeyedProcessFunction(Parameters params) {
@@ -86,32 +84,54 @@ public class MilvusKeyedProcessFunction
             if (result != null) {
                 collector.collect(result);
             }
-        } else if (data.getDataType() == PartitionedData.DataType.DATA) {
-            insert(data.getVector(), currentKey);
+        } else if (data.getDataType() == PartitionedData.DataType.INSERT_OR_DELETE) {
+            insertOrDelete(data.getVector(), currentKey);
         }
     }
 
-    private class InsertRunnable implements Runnable {
+    private class InsertAndDeleteRunnable implements Runnable {
 
         final List<FloatVector> vectors;
         final int partitionId;
 
-        InsertRunnable(List<FloatVector> vectors, int partitionId) {
+        InsertAndDeleteRunnable(List<FloatVector> vectors, int partitionId) {
             this.vectors = vectors;
             this.partitionId = partitionId;
         }
 
         @Override
         public void run() {
-            milvusUtil.insert(
-                    vectors,
-                    params.getMilvusCollectionName(),
-                    Integer.toString(partitionId),
-                    false);
+            Set<Long> idsToDelete = new HashSet<>();
+            List<FloatVector> vectorsToAdd = new ArrayList<>();
+            for (int i = vectors.size() - 1; i >= 0; i--) {
+                FloatVector v = vectors.get(i);
+                if (v.isDeletion()) {
+                    idsToDelete.add(v.getId());
+                } else {
+                    if (!idsToDelete.contains(v.getId())) {
+                        vectorsToAdd.add(v);
+                    }
+                }
+            }
+
+            if (!idsToDelete.isEmpty()) {
+                milvusUtil.delete(
+                        new ArrayList<>(idsToDelete),
+                        params.getMilvusCollectionName(),
+                        Integer.toString(partitionId));
+            }
+
+            if (!vectorsToAdd.isEmpty()) {
+                milvusUtil.insert(
+                        vectorsToAdd,
+                        params.getMilvusCollectionName(),
+                        Integer.toString(partitionId),
+                        false);
+            }
         }
     }
 
-    private SearchResult search(FloatVector vector, int partitionId, int numSearchPartitions) {
+    private SearchResult search(FloatVector query, int partitionId, int numSearchPartitions) {
         int k = params.getK();
         int efSearch = params.getHnswEfSearch();
         String collectionName = params.getMilvusCollectionName();
@@ -119,7 +139,7 @@ public class MilvusKeyedProcessFunction
         String partitionName = Integer.toString(partitionId);
         SearchResultsWrapper resultsWrapper =
                 milvusUtil.search(
-                        Collections.singletonList(vector),
+                        Collections.singletonList(query),
                         k,
                         efSearch,
                         collectionName,
@@ -138,18 +158,18 @@ public class MilvusKeyedProcessFunction
             }
             return new SearchResult(
                     partitionId,
-                    vector.getId(),
+                    query.getId(),
                     ids,
                     scores,
                     1,
                     numSearchPartitions,
-                    vector.getEventTime());
+                    query.getEventTime());
         } else {
             return null;
         }
     }
 
-    private void insert(FloatVector vector, int partitionId) throws Exception {
+    private void insertOrDelete(FloatVector vector, int partitionId) throws Exception {
 
         if (count.value() == null) {
             // initialize
@@ -162,7 +182,8 @@ public class MilvusKeyedProcessFunction
                 vectors.add(v);
             }
             vectors.add(vector);
-            InsertRunnable runnable = new InsertRunnable(vectors, partitionId);
+
+            InsertAndDeleteRunnable runnable = new InsertAndDeleteRunnable(vectors, partitionId);
             insertExecutor.execute(runnable);
             state.clear();
             count.update(0);

@@ -61,10 +61,16 @@ public class RocksDBKeyedProcessFunction
                     vector.getEventTime(),
                     vector.getId());
         }
-        byte[] id = new byte[8];
+        byte[] id = new byte[Long.BYTES];
         byte[] array = new byte[vector.dim() * Float.BYTES + Long.BYTES];
         serializeFloatVectorWithTimestamp(vector, id, array);
         mapState.put(id, array);
+    }
+
+    private void delete(FloatVector vector, int nodeId) throws Exception {
+        byte[] id = new byte[Long.BYTES];
+        serializeLong(vector.getId(), id);
+        mapState.remove(id);
     }
 
     public void search(
@@ -157,8 +163,12 @@ public class RocksDBKeyedProcessFunction
 
         if (data.getDataType() == PartitionedData.DataType.QUERY) {
             search(record, currentKey, data.getNumPartitionsSent(), context, collector);
-        } else if (data.getDataType() == PartitionedData.DataType.DATA) {
-            insert(data.getVector(), currentKey);
+        } else if (data.getDataType() == PartitionedData.DataType.INSERT_OR_DELETE) {
+            if (data.getVector().isDeletion()) {
+                delete(data.getVector(), currentKey);
+            } else {
+                insert(data.getVector(), currentKey);
+            }
         } else {
             dump(currentKey);
         }

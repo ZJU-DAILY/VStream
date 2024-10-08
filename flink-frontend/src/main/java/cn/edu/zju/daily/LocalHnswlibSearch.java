@@ -2,12 +2,10 @@ package cn.edu.zju.daily;
 
 import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.data.vector.FloatVectorIterator;
-import cn.edu.zju.daily.data.vector.FvecIterator;
 import com.github.jelmerk.knn.DistanceFunctions;
 import com.github.jelmerk.knn.Index;
 import com.github.jelmerk.knn.hnsw.HnswIndex;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import me.tongfei.progressbar.ProgressBar;
@@ -30,15 +28,8 @@ public class LocalHnswlibSearch {
     public static void main(String[] args) throws IOException {
 
         FloatVectorIterator queries =
-                new FloatVectorIterator(
-                        new FvecIterator(
-                                new RandomAccessFile(
-                                        "/home/auroflow/code/vector-search/data/twitter7/queries.fvecs",
-                                        "r"),
-                                1,
-                                0,
-                                1_000_000,
-                                FvecIterator.InputType.F_VEC));
+                FloatVectorIterator.fromFile(
+                        "/home/auroflow/code/vector-search/data/twitter7/queries.fvecs", 1_000_000);
 
         if (!indexBuilt) {
             index =
@@ -51,15 +42,9 @@ public class LocalHnswlibSearch {
                             .withEfConstruction(efConstruction)
                             .build();
             FloatVectorIterator vectors =
-                    new FloatVectorIterator(
-                            new FvecIterator(
-                                    new RandomAccessFile(
-                                            "/home/auroflow/code/vector-search/data/twitter7/vectors.fvecs",
-                                            "r"),
-                                    1,
-                                    0,
-                                    5_000_000,
-                                    FvecIterator.InputType.F_VEC));
+                    FloatVectorIterator.fromFile(
+                            "/home/auroflow/code/vector-search/data/twitter7/queries.fvecs",
+                            5_000_000);
             try (ProgressBar bar = new ProgressBar("Indexing", 5_000_000)) {
                 for (FloatVector vector : vectors) {
                     index.add(vector);

@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Objects;
 import org.apache.flink.util.Preconditions;
 
-/** Represents a (partial or complete) search result. */
+/** This class represents a partial or complete k-NN search result. */
 public class SearchResult implements Serializable {
 
     private final int nodeId;
@@ -22,6 +22,17 @@ public class SearchResult implements Serializable {
         this(-1, queryId, ids, distances, 1, 1, 0L);
     }
 
+    /**
+     * Construct a search result.
+     *
+     * @param nodeId the node id which generates this (partial) result
+     * @param queryId query id
+     * @param ids vector ids
+     * @param distances distances to the query vector
+     * @param numPartitionsCombined number of partitions combined into this result
+     * @param numPartitionsToCombine total number of partitions to combine
+     * @param queryEventTime query event time
+     */
     public SearchResult(
             int nodeId,
             long queryId,
@@ -124,10 +135,10 @@ public class SearchResult implements Serializable {
     /**
      * Combines two search results into one.
      *
-     * @param a
-     * @param b
+     * @param a search result a
+     * @param b search result b
      * @param k number of results to keep
-     * @return
+     * @return combined search result
      */
     public static SearchResult combine(SearchResult a, SearchResult b, int k) {
         Preconditions.checkArgument(a.queryId == -1 || b.queryId == -1 || a.queryId == b.queryId);
@@ -171,6 +182,13 @@ public class SearchResult implements Serializable {
         return r;
     }
 
+    /**
+     * Calculate the accuracy of the search result.
+     *
+     * @param result search result
+     * @param groundTruth ground truth
+     * @return accuracy
+     */
     public static float getAccuracy(SearchResult result, SearchResult groundTruth) {
         int k = result.size();
         int count = 0;

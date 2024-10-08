@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import org.apache.flink.api.common.serialization.Encoder;
 
+/** Outputs {@link SearchResult} objects to an output stream for sinking. */
 public class SearchResultEncoder implements Encoder<SearchResult> {
 
     private final String charsetName;

@@ -2,6 +2,7 @@ package cn.edu.zju.daily.data;
 
 import cn.edu.zju.daily.data.vector.FloatVector;
 
+/** A query {@link FloatVector} which has been assigned to a partition. */
 public class PartitionedQuery extends PartitionedData {
 
     public PartitionedQuery(int partitionId, int numPartitionsSent, FloatVector vector) {

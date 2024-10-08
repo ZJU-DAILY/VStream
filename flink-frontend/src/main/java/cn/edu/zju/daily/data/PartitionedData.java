@@ -3,6 +3,9 @@ package cn.edu.zju.daily.data;
 import cn.edu.zju.daily.data.vector.FloatVector;
 import java.io.Serializable;
 
+/**
+ * This class represents a partitioned data object, which can be a data vector or a query vector.
+ */
 public class PartitionedData implements Serializable {
 
     public PartitionedData(DataType dataType, int partitionId) {
@@ -11,8 +14,11 @@ public class PartitionedData implements Serializable {
     }
 
     public enum DataType {
+        /** Query vector. */
         QUERY,
-        DATA,
+        /** Data vector or delete marker. */
+        INSERT_OR_DELETE,
+        /** An operation for the dummy backend to dump the data. */
         DUMP
     }
 

@@ -2,6 +2,7 @@ package cn.edu.zju.daily.data;
 
 import cn.edu.zju.daily.data.vector.FloatVector;
 
+/** This class represents a query that spans multiple partitions. */
 public class MultiPartitionQuery {
 
     private final int[] partitions;

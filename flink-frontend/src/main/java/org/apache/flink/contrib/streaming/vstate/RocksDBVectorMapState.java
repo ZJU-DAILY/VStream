@@ -187,12 +187,16 @@ public class RocksDBVectorMapState<K, N> extends AbstractRocksDBState<K, N, Map<
         }
     }
 
+    /**
+     * Performs vector delete.
+     *
+     * @param userKey The byte array containing the vector ID to remove.
+     * @throws IOException
+     * @throws RocksDBException
+     */
     @Override
     public void remove(byte[] userKey) throws IOException, RocksDBException {
-        byte[] rawKeyBytes =
-                serializeCurrentKeyWithGroupAndNamespacePlusUserKey(userKey, userKeySerializer);
-
-        backend.db.delete(columnFamily, writeOptions, rawKeyBytes);
+        backend.db.delete(columnFamily, writeOptions, userKey);
     }
 
     @Override

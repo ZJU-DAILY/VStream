@@ -5,24 +5,60 @@ import cn.edu.zju.daily.data.PartitionedFloatVector;
 import cn.edu.zju.daily.data.PartitionedQuery;
 import java.io.Serializable;
 
-/** Parse a line of vector from HDFS. */
+/** Parse or unparse a line of vector from HDFS. */
 public class HDFSVectorParser implements Serializable {
 
-    private PartitionedData.DataType parseDataType(String str) {
-        if ("i".equals(str)) {
-            return PartitionedData.DataType.DATA;
-        } else if ("q".equals(str)) {
-            return PartitionedData.DataType.QUERY;
-        } else {
-            throw new RuntimeException("Invalid data type: " + str);
+    private enum DataType {
+        /** Query vector. */
+        QUERY("q"),
+        /** Insert vector. */
+        INSERT("i"),
+        /**
+         * Delete marker. A line represents a delete marker if it starts with "d", or only includes
+         * the vector ID.
+         */
+        DELETE("d");
+
+        final String prefix;
+
+        DataType(String prefix) {
+            this.prefix = prefix;
         }
     }
 
+    private DataType parseDataType(String str) {
+        for (DataType dt : DataType.values()) {
+            if (dt.prefix.equals(str)) {
+                return dt;
+            }
+        }
+        throw new RuntimeException("Invalid data type: " + str);
+    }
+
+    /**
+     * Parse a line of vector from HDFS.
+     *
+     * @param line the line to parse
+     * @return a {@link FloatVector} object
+     */
     public FloatVector parseVector(String line) {
-        if (line.startsWith("i") || line.startsWith("q")) {
+
+        // If the line starts with "d", it is a deletion marker.
+        if (line.startsWith(DataType.DELETE.prefix)) {
+            return parseDeletionMarker(line);
+        }
+
+        // Otherwise, it is an insert or query vector, unless the vector content is missing.
+        if (line.startsWith(DataType.INSERT.prefix) || line.startsWith(DataType.QUERY.prefix)) {
             line = line.substring(2);
         }
         String[] parts = line.split(",");
+        long id = Long.parseLong(parts[0]);
+
+        if (parts.length == 1) {
+            return new DeletionMarker(id);
+        }
+
         float[] array = new float[parts.length - 1];
         for (int i = 1; i < parts.length; i++) {
             array[i - 1] = Float.parseFloat(parts[i]);
@@ -30,27 +66,64 @@ public class HDFSVectorParser implements Serializable {
         return new FloatVector(Long.parseLong(parts[0]), array);
     }
 
+    public FloatVector parseDeletionMarker(String line) {
+        if (line.startsWith(DataType.DELETE.prefix)) {
+            line = line.substring(2);
+        }
+        long id = Long.parseLong(line);
+        return new DeletionMarker(id);
+    }
+
+    /**
+     * Parse a line of vector from HDFS, and return it as a {@link PartitionedData} object.
+     *
+     * @param line the line to parse
+     * @return a {@link PartitionedData} object
+     */
     public PartitionedData parsePartitionedData(String line) {
         String[] parts = line.split(" ");
         if (parts.length != 2) {
             throw new RuntimeException("Invalid partitioned data: " + line);
         }
-        PartitionedData.DataType dt = parseDataType(parts[0]);
-        if (dt == PartitionedData.DataType.DATA) {
+        DataType dt = parseDataType(parts[0]);
+        if (dt == DataType.INSERT) {
             return new PartitionedFloatVector(0, parseVector(parts[1]));
-        } else if (dt == PartitionedData.DataType.QUERY) {
+        } else if (dt == DataType.QUERY) {
             return new PartitionedQuery(0, 0, parseVector(parts[1]));
+        } else if (dt == DataType.DELETE) {
+            return new PartitionedFloatVector(0, parseDeletionMarker(parts[1]));
         } else {
             throw new RuntimeException("Invalid partitioned data: " + line);
         }
     }
 
-    public String unparse(FloatVector vector) {
+    /**
+     * Unparse a {@link FloatVector} object to a string.
+     *
+     * @param vector the vector to unparse
+     * @return the string representation of the vector
+     */
+    public String unparseBare(FloatVector vector) {
         StringBuilder sb = new StringBuilder();
+        unparseBareVector(sb, vector);
+        return sb.toString();
+    }
+
+    public String unparseInsert(FloatVector vector) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(DataType.INSERT.prefix);
+        unparseBareVector(sb, vector);
+        return sb.toString();
+    }
+
+    public String unparseDelete(long id) {
+        return DataType.DELETE.prefix + id;
+    }
+
+    private void unparseBareVector(StringBuilder sb, FloatVector vector) {
         sb.append(vector.getId());
         for (float f : vector.array()) {
             sb.append(",").append(f);
         }
-        return sb.toString();
     }
 }

@@ -8,6 +8,7 @@ import io.milvus.common.clientenum.ConsistencyLevelEnum;
 import io.milvus.grpc.*;
 import io.milvus.param.*;
 import io.milvus.param.collection.*;
+import io.milvus.param.dml.DeleteParam;
 import io.milvus.param.dml.InsertParam;
 import io.milvus.param.dml.SearchParam;
 import io.milvus.param.index.CreateIndexParam;
@@ -329,6 +330,19 @@ public class MilvusUtil {
             if (response.getStatus() != R.Status.Success.getCode()) {
                 LOG.error(response.getMessage());
             }
+        }
+    }
+
+    public void delete(List<Long> ids, String collectionName, String partitionName) {
+        R<MutationResult> response =
+                milvusServiceClient.delete(
+                        DeleteParam.newBuilder()
+                                .withCollectionName(collectionName)
+                                .withPartitionName(partitionName)
+                                .withExpr("id in " + ids)
+                                .build());
+        if (response.getStatus() != R.Status.Success.getCode()) {
+            LOG.error(response.getMessage());
         }
     }
 

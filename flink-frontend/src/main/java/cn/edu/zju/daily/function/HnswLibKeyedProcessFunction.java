@@ -78,7 +78,7 @@ public class HnswLibKeyedProcessFunction
                         (System.currentTimeMillis() - start));
             }
             collector.collect(result);
-        } else if (data.getDataType() == PartitionedData.DataType.DATA) {
+        } else if (data.getDataType() == PartitionedData.DataType.INSERT_OR_DELETE) {
 
             insertBuffer.add(data.getVector());
             if (insertBuffer.size() + randomInit >= BATCH_SIZE) {

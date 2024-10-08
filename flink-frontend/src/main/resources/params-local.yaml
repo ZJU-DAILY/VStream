@@ -4,8 +4,8 @@ sourcePath: "/user/auroflow/vector_search/dataset/vectors/sift_base.txt"
 queryPath: "/user/auroflow/vector_search/dataset/vectors/sift_query.txt"
 vectorDim: 128
 insertThrottleThresholds: [0]
-insertRates: [1000]
-fakeInsertRate: 1000
+insertRates: [500]
+fakeInsertRate: 500
 queryThrottleThresholds: [0]
 queryRates: [10]
 queryExecuteLoop: 1
@@ -44,6 +44,9 @@ milvusPort: 19530
 milvusNumShards: 4
 milvusInsertBufferCapacity: 1000
 milvusQueryBufferCapacity: 10
+chromaCollectionName: "vector_collection"
+chromaAddressFile: "/home/auroflow/code/vector-search/VStream/flink-frontend/src/main/resources/chroma_addresses.txt"
+chromaInsertBatchSize: 100
 groundTruthPath: "/home/auroflow/code/vector-search/data/sift/sift_groundtruth.ivecs"
 fileSinkPath: "hdfs://localhost:9000/user/auroflow/vector_search/rocksdb-logs"
 sortInterval: 100

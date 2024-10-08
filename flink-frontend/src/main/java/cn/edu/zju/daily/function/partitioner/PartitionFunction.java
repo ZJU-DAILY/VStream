@@ -30,7 +30,7 @@ public interface PartitionFunction
 
     @Override
     default void flatMap(PartitionedData value, Collector<PartitionedData> out) throws Exception {
-        if (value.getDataType().equals(PartitionedData.DataType.DATA)) {
+        if (value.getDataType().equals(PartitionedData.DataType.INSERT_OR_DELETE)) {
             flatMap1(value.getVector(), out);
         } else if (value.getDataType().equals(PartitionedData.DataType.QUERY)) {
             flatMap2(value.getVector(), out);

@@ -4,15 +4,15 @@ sourcePath: "/user/auroflow/vector_search/dataset/vectors/bigann_base.txt"
 queryPath: "/user/auroflow/vector_search/dataset/vectors/bigann_query.txt"
 vectorDim: 128
 # To control the insert rate in a staged manner, set the thresholds for the number of vectors inserted, where the rate changes
-insertThrottleThresholds: [0, 80000000]
+insertThrottleThresholds: [ 0, 80000000 ]
 # The insert rates at each stage
-insertRates: [15000, 8000]
+insertRates: [ 15000, 8000 ]
 # The rate observed by the system
 fakeInsertRate: 8000
 # To control the query rate in a staged manner, set the thresholds for the number of queries, where the rate changes
-queryThrottleThresholds: [0, 533]
+queryThrottleThresholds: [ 0, 533 ]
 # The query rates at each stage
-queryRates: [-10, -2]
+queryRates: [ -10, -2 ]
 # Loop the queries
 queryExecuteLoop: 1
 k: 10
@@ -50,6 +50,9 @@ milvusPort: 19530
 milvusNumShards: 4
 milvusInsertBufferCapacity: 1000
 milvusQueryBufferCapacity: 10
+chromaCollectionName: "vector_collection"
+chromaAddressFile: "/home/auroflow/code/vector-search/VStream/flink-frontend/src/main/resources/chroma_addresses.txt"
+chromaInsertBatchSize: 100
 groundTruthPath: "/home/auroflow/code/vector-search/data/sift/sift_groundtruth.ivecs"
 fileSinkPath: "hdfs://10.214.151.20:9000/user/auroflow/vector_search/rocksdb-logs"
 sortInterval: 100
