@@ -17,7 +17,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "plugin/vectorbackend/vectorbackend/vectorbackend_namespace.h"
+#include "plugin/vectorbackend/db/vector_columnfamily.h"
 #include "rocksdb/block_cache_trace_writer.h"
 #include "rocksdb/iterator.h"
 #include "rocksdb/listener.h"
@@ -181,9 +181,13 @@ class DB {
   // will use to operate on column family column_family[i].
   // Before delete DB, you have to close All column families by calling
   // DestroyColumnFamilyHandle() with all the handles.
-  static Status Open(const DBOptions& db_options, const std::string& name,
-                     const std::vector<ColumnFamilyDescriptor>& column_families,
-                     std::vector<ColumnFamilyHandle*>* handles, DB** dbptr);
+  static Status Open(
+      const DBOptions& db_options, const std::string& name,
+      const std::vector<ColumnFamilyDescriptor>& column_families,
+      std::vector<ColumnFamilyHandle*>* handles, DB** dbptr,
+      const std::vector<VECTORBACKEND_NAMESPACE::VectorCFDescriptor>&
+          vector_column_families = {},
+      std::vector<ColumnFamilyHandle*>* vcf_handles = {});
 
   // OpenForReadOnly() creates a Read-only instance that supports reads alone.
   //

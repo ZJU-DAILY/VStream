@@ -13,8 +13,6 @@
 
 #include "options/cf_options.h"
 #include "options/db_options.h"
-#include "plugin/vectorbackend/options/vcf_options.h"
-#include "plugin/vectorbackend/options/vector_options_helper.h"
 #include "rocksdb/cache.h"
 #include "rocksdb/compaction_filter.h"
 #include "rocksdb/convenience.h"

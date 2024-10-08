@@ -337,6 +337,11 @@ class ColumnFamilyData {
   // Validate CF options against DB options
   static Status ValidateOptions(const DBOptions& db_options,
                                 const ColumnFamilyOptions& cf_options);
+
+  // Validate VCF options against DB options
+  static Status ValidateOptions(
+      const DBOptions& db_options,
+      const VECTORBACKEND_NAMESPACE::VectorColumnFamilyOptions& vcf_options);
   // REQUIRES: DB mutex held
   Status SetOptions(
       const DBOptions& db_options,

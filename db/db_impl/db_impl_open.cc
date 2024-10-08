@@ -21,6 +21,7 @@
 #include "monitoring/persistent_stats_history.h"
 #include "monitoring/thread_status_util.h"
 #include "options/options_helper.h"
+#include "plugin/vectorbackend/options/vector_options_helper.h"
 #include "rocksdb/table.h"
 #include "rocksdb/wal_filter.h"
 #include "test_util/sync_point.h"
@@ -225,6 +226,20 @@ Status ValidateOptionsByTable(
   }
   return Status::OK();
 }
+
+Status ValidateOptionsByTable(
+    const DBOptions& db_opts,
+    const std::vector<VECTORBACKEND_NAMESPACE::VectorCFDescriptor>&
+        column_families) {
+  Status s;
+  for (auto& cf : column_families) {
+    s = VECTORBACKEND_NAMESPACE::ValidateOptions(db_opts, cf.options);
+    if (!s.ok()) {
+      return s;
+    }
+  }
+  return Status::OK();
+}
 }  // namespace
 
 Status DBImpl::ValidateOptions(
@@ -232,6 +247,21 @@ Status DBImpl::ValidateOptions(
     const std::vector<ColumnFamilyDescriptor>& column_families) {
   Status s;
   for (auto& cfd : column_families) {
+    s = ColumnFamilyData::ValidateOptions(db_options, cfd.options);
+    if (!s.ok()) {
+      return s;
+    }
+  }
+  s = ValidateOptions(db_options);
+  return s;
+}
+
+Status DBImpl::ValidateOptions(
+    const DBOptions& db_options,
+    const std::vector<VECTORBACKEND_NAMESPACE::VectorCFDescriptor>&
+        vector_column_families) {
+  Status s;
+  for (auto& cfd : vector_column_families) {
     s = ColumnFamilyData::ValidateOptions(db_options, cfd.options);
     if (!s.ok()) {
       return s;
@@ -1741,13 +1771,17 @@ Status DB::Open(const Options& options, const std::string& dbname, DB** dbptr) {
 
 Status DB::Open(const DBOptions& db_options, const std::string& dbname,
                 const std::vector<ColumnFamilyDescriptor>& column_families,
-                std::vector<ColumnFamilyHandle*>* handles, DB** dbptr) {
+                std::vector<ColumnFamilyHandle*>* handles, DB** dbptr,
+                const std::vector<VECTORBACKEND_NAMESPACE::VectorCFDescriptor>&
+                    vector_column_families,
+                std::vector<ColumnFamilyHandle*>* vcf_handles) {
   const bool kSeqPerBatch = true;
   const bool kBatchPerTxn = true;
   ThreadStatusUtil::SetEnableTracking(db_options.enable_thread_tracking);
   ThreadStatusUtil::SetThreadOperation(ThreadStatus::OperationType::OP_DBOPEN);
   Status s = DBImpl::Open(db_options, dbname, column_families, handles, dbptr,
-                          !kSeqPerBatch, kBatchPerTxn);
+                          !kSeqPerBatch, kBatchPerTxn, vector_column_families,
+                          vcf_handles);
   ThreadStatusUtil::ResetThreadStatus();
   return s;
 }
@@ -1864,11 +1898,20 @@ IOStatus DBImpl::CreateWAL(uint64_t log_file_num, uint64_t recycle_log_number,
   return io_s;
 }
 
-Status DBImpl::Open(const DBOptions& db_options, const std::string& dbname,
-                    const std::vector<ColumnFamilyDescriptor>& column_families,
-                    std::vector<ColumnFamilyHandle*>* handles, DB** dbptr,
-                    const bool seq_per_batch, const bool batch_per_txn) {
+Status DBImpl::Open(
+    const DBOptions& db_options, const std::string& dbname,
+    const std::vector<ColumnFamilyDescriptor>& column_families,
+    std::vector<ColumnFamilyHandle*>* handles, DB** dbptr,
+    const bool seq_per_batch, const bool batch_per_txn,
+    const std::vector<VECTORBACKEND_NAMESPACE::VectorCFDescriptor>&
+        vector_column_families,
+    std::vector<ColumnFamilyHandle*>* vcf_handles) {
   Status s = ValidateOptionsByTable(db_options, column_families);
+  if (!s.ok()) {
+    return s;
+  }
+
+  s = ValidateOptionsByTable(db_options, vector_column_families);
   if (!s.ok()) {
     return s;
   }
@@ -1878,14 +1921,30 @@ Status DBImpl::Open(const DBOptions& db_options, const std::string& dbname,
     return s;
   }
 
+  s = ValidateOptions(db_options, vector_column_families);
+  if (!s.ok()) {
+    return s;
+  }
+
   *dbptr = nullptr;
   assert(handles);
   handles->clear();
+  bool has_vector_column_families = !vector_column_families.empty();
+  if (has_vector_column_families) {
+    assert(vcf_handles);
+    vcf_handles->clear();
+  }
 
   size_t max_write_buffer_size = 0;
-  for (auto cf : column_families) {
+  for (const auto& cf : column_families) {
     max_write_buffer_size =
         std::max(max_write_buffer_size, cf.options.write_buffer_size);
+  }
+  if (has_vector_column_families) {
+    for (const auto& vcf : vector_column_families) {
+      max_write_buffer_size =
+          std::max(max_write_buffer_size, vcf.options.write_buffer_size);
+    }
   }
 
   DBImpl* impl = new DBImpl(db_options, dbname, seq_per_batch, batch_per_txn);
@@ -1905,6 +1964,13 @@ Status DBImpl::Open(const DBOptions& db_options, const std::string& dbname,
     for (auto& cf : column_families) {
       for (auto& cf_path : cf.options.cf_paths) {
         paths.emplace_back(cf_path.path);
+      }
+    }
+    if (has_vector_column_families) {
+      for (auto& vcf : vector_column_families) {
+        for (auto& vcf_path : vcf.options.cf_paths) {
+          paths.emplace_back(vcf_path.path);
+        }
       }
     }
     for (auto& path : paths) {
@@ -1934,7 +2000,13 @@ Status DBImpl::Open(const DBOptions& db_options, const std::string& dbname,
 
   // Handles create_if_missing, error_if_exists
   uint64_t recovered_seq(kMaxSequenceNumber);
-  s = impl->Recover(column_families, false /* read_only */,
+  std::vector<ColumnFamilyDescriptor> all_column_families{column_families};
+  all_column_families.reserve(column_families.size() +
+                              vector_column_families.size());
+  for (const auto& vcf : vector_column_families) {
+    all_column_families.emplace_back(vcf.name, vcf.options);
+  }
+  s = impl->Recover(all_column_families, false /* read_only */,
                     false /* error_if_wal_file_exists */,
                     false /* error_if_data_exists_in_wals */, &recovered_seq,
                     &recovery_ctx);
@@ -2021,6 +2093,45 @@ Status DBImpl::Open(const DBOptions& db_options, const std::string& dbname,
         } else {
           s = Status::InvalidArgument("Column family not found", cf.name);
           break;
+        }
+      }
+    }
+    // set vector column family handles
+    if (has_vector_column_families) {
+      for (const auto& vcf : vector_column_families) {
+        auto cfd =
+            impl->versions_->GetColumnFamilySet()->GetColumnFamily(vcf.name);
+        if (cfd != nullptr) {
+          vcf_handles->emplace_back(
+              new ColumnFamilyHandleImpl(cfd, impl, &impl->mutex_));
+          {
+            MutexLock l(&impl->vcf_mutex_);
+            impl->vcf_info_->emplace(
+                cfd->GetID(),
+                VECTORBACKEND_NAMESPACE::VectorColumnFamilyInfo{
+                    vcf.name,
+                    VECTORBACKEND_NAMESPACE::ImmutableVectorCFOptions{
+                        vcf.options},
+                    VECTORBACKEND_NAMESPACE::MutableVectorCFOptions{
+                        vcf.options}});
+          }
+          impl->NewThreadStatusCfInfo(cfd);
+        } else {
+          if (db_options.create_missing_column_families) {
+            // missing column family, create it
+            ColumnFamilyHandle* handle = nullptr;
+            impl->mutex_.Unlock();
+            s = impl->CreateColumnFamily(vcf.options, vcf.name, &handle);
+            impl->mutex_.Lock();
+            if (s.ok()) {
+              vcf_handles->push_back(handle);
+            } else {
+              break;
+            }
+          } else {
+            s = Status::InvalidArgument("Column family not found", vcf.name);
+            break;
+          }
         }
       }
     }
@@ -2119,6 +2230,13 @@ Status DBImpl::Open(const DBOptions& db_options, const std::string& dbname,
         paths.emplace_back(cf.options.cf_paths[0].path);
       }
     }
+    if (has_vector_column_families) {
+      for (auto& vcf : vector_column_families) {
+        if (!vcf.options.cf_paths.empty()) {
+          paths.emplace_back(vcf.options.cf_paths[0].path);
+        }
+      }
+    }
     // Remove duplicate paths.
     std::sort(paths.begin(), paths.end());
     paths.erase(std::unique(paths.begin(), paths.end()), paths.end());
@@ -2158,7 +2276,6 @@ Status DBImpl::Open(const DBOptions& db_options, const std::string& dbname,
                            impl->immutable_db_options_.db_paths[0].path);
   }
 
-
   if (s.ok()) {
     ROCKS_LOG_HEADER(impl->immutable_db_options_.info_log, "DB pointer %p",
                      impl);
@@ -2194,6 +2311,12 @@ Status DBImpl::Open(const DBOptions& db_options, const std::string& dbname,
       delete h;
     }
     handles->clear();
+    if (has_vector_column_families) {
+      for (auto* h : *vcf_handles) {
+        delete h;
+      }
+      vcf_handles->clear();
+    }
     delete impl;
     *dbptr = nullptr;
   }

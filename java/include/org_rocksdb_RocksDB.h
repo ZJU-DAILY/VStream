@@ -27,6 +27,14 @@ JNIEXPORT jlongArray JNICALL Java_org_rocksdb_RocksDB_open__JLjava_lang_String_2
 
 /*
  * Class:     org_rocksdb_RocksDB
+ * Method:    open
+ * Signature: (JLjava/lang/String;[[B[J[[B[J)[J
+ */
+JNIEXPORT jlongArray JNICALL Java_org_rocksdb_RocksDB_open__JLjava_lang_String_2_3_3B_3J_3_3B_3J
+  (JNIEnv *, jclass, jlong, jstring, jobjectArray, jlongArray, jobjectArray, jlongArray);
+
+/*
+ * Class:     org_rocksdb_RocksDB
  * Method:    openROnly
  * Signature: (JLjava/lang/String;Z)J
  */

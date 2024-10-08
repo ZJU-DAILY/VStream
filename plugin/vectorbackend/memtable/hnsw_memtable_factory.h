@@ -30,7 +30,7 @@ struct HnswOptions {
 
 class HnswMemTableFactory : public MemTableRepFactory {
  public:
-  explicit HnswMemTableFactory(const HnswOptions& hnswOptions = HnswOptions());
+  explicit HnswMemTableFactory(const HnswOptions& hnswOptions = {});
 
   // Methods for Configurable/Customizable class overrides
   static const char* kClassName() { return "HnswMemTableFactory"; }
@@ -48,8 +48,10 @@ class HnswMemTableFactory : public MemTableRepFactory {
 
   bool CanHandleDuplicatedKey() const override { return true; }
 
+  [[nodiscard]] const HnswOptions& HnswOptions() const { return hnswOptions_; }
+
  private:
-  HnswOptions hnswOptions_;
+  struct HnswOptions hnswOptions_;
 };
 
 // Register the factory so that it can be used to create HnswMemTableRep
