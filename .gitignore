@@ -77,6 +77,7 @@ java/crossbuild/.vagrant
 .vagrant/
 java/**/*.asc
 java/javadoc
+java/.idea
 
 scan_build_report/
 t
