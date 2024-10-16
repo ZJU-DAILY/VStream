@@ -2,8 +2,8 @@ package cn.edu.zju.daily;
 
 import cn.edu.zju.daily.data.result.SearchResult;
 import cn.edu.zju.daily.data.result.SearchResultEncoder;
+import cn.edu.zju.daily.data.source.HDFSVectorSourceBuilder;
 import cn.edu.zju.daily.data.vector.FloatVector;
-import cn.edu.zju.daily.pipeline.HDFSVectorSource;
 import cn.edu.zju.daily.pipeline.MilvusStreamingPipeline;
 import cn.edu.zju.daily.util.Parameters;
 import java.time.LocalDateTime;
@@ -24,7 +24,7 @@ public class MilvusStreamSearchJob {
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
-        HDFSVectorSource source = new HDFSVectorSource(env, params);
+        HDFSVectorSourceBuilder source = new HDFSVectorSourceBuilder(env, params);
         MilvusStreamingPipeline pipeline = new MilvusStreamingPipeline(params);
 
         SingleOutputStreamOperator<FloatVector> vectors = source.getSourceStream(true);

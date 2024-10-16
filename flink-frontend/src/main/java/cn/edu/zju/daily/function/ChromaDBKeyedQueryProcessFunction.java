@@ -98,7 +98,7 @@ public class ChromaDBKeyedQueryProcessFunction
                                 collectionName, CustomEmptyChromaEmbeddingFunction.getInstance());
             } catch (Exception e) {
                 LOG.error("Collection {} does not exist yet.", collectionName);
-                return new ArrayList<>();
+                return getResultList(queryData, null, null);
             }
         }
 
@@ -110,21 +110,47 @@ public class ChromaDBKeyedQueryProcessFunction
                                 "$gte",
                                 queryData.get(0).getVector().getEventTime()
                                         - queryData.get(0).getVector().getTTL()));
-        CustomChromaCollection.QueryResponse queryResponse =
-                collection.queryEmbeddings(
-                        queryData.stream().map(d -> d.getVector().list()).collect(toList()),
-                        params.getK(),
-                        where,
-                        null,
-                        null);
+
+        CustomChromaCollection.QueryResponse queryResponse;
+        try {
+            queryResponse =
+                    collection.queryEmbeddings(
+                            queryData.stream().map(d -> d.getVector().list()).collect(toList()),
+                            params.getK(),
+                            where,
+                            null,
+                            null);
+        } catch (Exception e) {
+            LOG.error("ChromaDB query failed, will reinitialize collection.");
+            collection = null;
+            return getResultList(queryData, null, null);
+        }
+
         LOG.info(
                 "{} queries returned in {} ms", queryData.size(), System.currentTimeMillis() - now);
-        List<List<String>> idsList = queryResponse.getIds();
-        List<List<Float>> scoresList = queryResponse.getDistances();
+        return getResultList(queryData, queryResponse.getIds(), queryResponse.getDistances());
+    }
+
+    private List<SearchResult> getResultList(
+            List<PartitionedData> queryData,
+            List<List<String>> idsList,
+            List<List<Float>> scoresList) {
+        Objects.requireNonNull(queryData);
+
         List<SearchResult> results = new ArrayList<>();
-        for (int i = 0; i < idsList.size(); i++) {
-            List<Long> ids = idsList.get(i).stream().map(Long::parseLong).collect(toList());
-            List<Float> scores = scoresList.get(i);
+        for (int i = 0; i < queryData.size(); i++) {
+            List<Long> ids;
+            if (idsList != null) {
+                ids = idsList.get(i).stream().map(Long::parseLong).collect(toList());
+            } else {
+                ids = Collections.emptyList();
+            }
+            List<Float> scores;
+            if (scoresList != null) {
+                scores = scoresList.get(i);
+            } else {
+                scores = Collections.emptyList();
+            }
             results.add(
                     new SearchResult(
                             queryData.get(i).getPartitionId(),

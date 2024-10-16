@@ -1,4 +1,4 @@
-package cn.edu.zju.daily.pipeline;
+package cn.edu.zju.daily.data.source;
 
 import static java.util.stream.Collectors.toList;
 
@@ -6,7 +6,7 @@ import cn.edu.zju.daily.data.PartitionedData;
 import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.data.vector.HDFSVectorParser;
 import cn.edu.zju.daily.function.partitioner.PartitionFunction;
-import cn.edu.zju.daily.rate.FloatVectorRateLimiter;
+import cn.edu.zju.daily.rate.FloatVectorThrottler;
 import cn.edu.zju.daily.util.Parameters;
 import java.util.*;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
@@ -20,13 +20,13 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.util.Collector;
 
 /** Create vector source with designated rate. */
-public class HDFSVectorSource {
+public class HDFSVectorSourceBuilder {
 
     private final StreamExecutionEnvironment env;
     private final Parameters params;
     private final HDFSVectorParser parser = new HDFSVectorParser();
 
-    public HDFSVectorSource(StreamExecutionEnvironment env, Parameters params) {
+    public HDFSVectorSourceBuilder(StreamExecutionEnvironment env, Parameters params) {
         this.env = env;
         this.params = params;
     }
@@ -40,7 +40,7 @@ public class HDFSVectorSource {
                     params.getInsertRates(),
                     "source",
                     5,
-                    false);
+                    1);
         } else {
             return get(
                     params.getHdfsAddress(),
@@ -49,7 +49,7 @@ public class HDFSVectorSource {
                     Collections.singletonList(0L),
                     "source",
                     5,
-                    false);
+                    1);
         }
     }
 
@@ -62,7 +62,7 @@ public class HDFSVectorSource {
                     params.getQueryRates(),
                     "query",
                     1,
-                    true);
+                    params.getQueryLoops());
         } else {
             return get(
                     params.getHdfsAddress(),
@@ -71,7 +71,7 @@ public class HDFSVectorSource {
                     Collections.singletonList(0L),
                     "query",
                     1,
-                    true);
+                    params.getQueryLoops());
         }
     }
 
@@ -175,32 +175,33 @@ public class HDFSVectorSource {
             List<Long> rates,
             String name,
             int sourceParallelism,
-            boolean continuous) {
-        FileSource<String> fileSource;
-        if (continuous) {
+            int numLoops) {
+        FileSource<FloatVector> fileSource;
+        if (numLoops > 1) {
             // Continuous source not supported yet
             fileSource =
                     FileSource.forRecordStreamFormat(
-                                    new TextLineInputFormat(), new Path(hdfsAddress + hdfsPath))
+                                    new FloatVectorInputFormat(params.getMaxTTL()),
+                                    new Path(hdfsAddress + hdfsPath))
+                            .setFileEnumerator(
+                                    new LoopingNonSplittingRecursiveEnumerator.Provider(numLoops))
                             .build();
         } else {
             fileSource =
                     FileSource.forRecordStreamFormat(
-                                    new TextLineInputFormat(), new Path(hdfsAddress + hdfsPath))
+                                    new FloatVectorInputFormat(params.getMaxTTL()),
+                                    new Path(hdfsAddress + hdfsPath))
                             .build();
         }
 
-        FloatVectorRateLimiter limiter =
-                new FloatVectorRateLimiter(thresholds, ratesToIntervals(rates));
-
+        FloatVectorThrottler throttler =
+                new FloatVectorThrottler(thresholds, ratesToIntervals(rates), numLoops > 1);
         return env.fromSource(fileSource, WatermarkStrategy.noWatermarks(), "hdfs-vector-source")
-                .name(name + " input")
-                .map(new MaxTTLSetter(params.getMaxTTL(), parser))
                 .setParallelism(1)
-                .name(name + " parse")
+                .name(name + " input")
                 .returns(FloatVector.class)
                 .disableChaining()
-                .map(limiter)
+                .map(throttler)
                 .setParallelism(1)
                 .name(name + " throttle")
                 .returns(FloatVector.class)

@@ -2,9 +2,9 @@ package cn.edu.zju.daily;
 
 import cn.edu.zju.daily.data.result.SearchResult;
 import cn.edu.zju.daily.data.result.SearchResultEncoder;
+import cn.edu.zju.daily.data.source.HDFSVectorSourceBuilder;
 import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.pipeline.ChromaStreamingPipeline;
-import cn.edu.zju.daily.pipeline.HDFSVectorSource;
 import cn.edu.zju.daily.util.Parameters;
 import java.time.LocalDateTime;
 import org.apache.flink.connector.file.sink.FileSink;
@@ -25,7 +25,7 @@ public class ChromaStreamSearchJob {
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
-        HDFSVectorSource source = new HDFSVectorSource(env, params);
+        HDFSVectorSourceBuilder source = new HDFSVectorSourceBuilder(env, params);
         ChromaStreamingPipeline pipeline = new ChromaStreamingPipeline(params);
 
         SingleOutputStreamOperator<FloatVector> vectors = source.getSourceStream(true);

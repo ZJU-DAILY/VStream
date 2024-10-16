@@ -269,6 +269,7 @@
                                     <exclude>org.nd4j:*</exclude>
                                     <exclude>org.bytedeco:*</exclude>
                                     <exclude>ai.djl:*</exclude>
+                                    <exclude>ai.djl.huggingface:*</exclude>
                                     <exclude>org.bytedeco:mkl:jar:windows-*</exclude>
                                     <exclude>org.bytedeco:mkl:jar:macosx-*</exclude>
                                     <exclude>org.bytedeco:mkl:jar:ios-*</exclude>

@@ -3,9 +3,9 @@ package cn.edu.zju.daily.util;
 import static java.util.stream.Collectors.counting;
 import static java.util.stream.Collectors.groupingBy;
 
+import cn.edu.zju.daily.data.source.HDFSVectorSourceBuilder;
 import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.function.partitioner.LSHPartitionFunction;
-import cn.edu.zju.daily.pipeline.HDFSVectorSource;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -18,12 +18,12 @@ public class DatasetSpanEstimator {
 
     private final Parameters params;
     private final StreamExecutionEnvironment env;
-    private final HDFSVectorSource source;
+    private final HDFSVectorSourceBuilder source;
 
     public DatasetSpanEstimator(Parameters params) {
         this.params = params;
         env = StreamExecutionEnvironment.createLocalEnvironment(1);
-        source = new HDFSVectorSource(env, params);
+        source = new HDFSVectorSourceBuilder(env, params);
     }
 
     public float estimate() throws Exception {

@@ -9,7 +9,7 @@ public class FloatVector implements Serializable, Item<Long, float[]> {
 
     public static final String METADATA_TS_FIELD = "ts";
 
-    private final long _id;
+    private long _id;
     private final float[] value;
     private long eventTime = 0L;
     private long TTL;
@@ -113,6 +113,10 @@ public class FloatVector implements Serializable, Item<Long, float[]> {
     // ==========================
     // Setters
     // ==========================
+    public void setId(long id) {
+        this._id = id;
+    }
+
     public void setTTL(long TTL) {
         this.TTL = TTL;
     }

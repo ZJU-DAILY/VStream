@@ -50,7 +50,7 @@ public class Parameters implements Serializable {
     private List<Long> observedInsertRates;
     private List<Long> queryThrottleThresholds;
     private List<Long> queryRates;
-    private int queryExecuteLoop;
+    private int queryLoops;
     private int parallelism;
     private int reduceParallelism;
     private int numCopies;
@@ -230,12 +230,12 @@ public class Parameters implements Serializable {
      *
      * @return query execute loop
      */
-    public int getQueryExecuteLoop() {
-        return queryExecuteLoop;
+    public int getQueryLoops() {
+        return queryLoops;
     }
 
-    public void setQueryExecuteLoop(int queryExecuteLoop) {
-        this.queryExecuteLoop = queryExecuteLoop;
+    public void setQueryLoops(int queryLoops) {
+        this.queryLoops = queryLoops;
     }
 
     /**

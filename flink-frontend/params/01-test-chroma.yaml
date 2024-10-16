@@ -10,13 +10,13 @@ insertThrottleThresholds: [ 0, 925000000, 950000000, 975000000 ]
 # The insert rates at each stage
 insertRates: [ 8000, 7000, 6000, 5000 ]
 # The rate observed by the system
-fakeInsertRate: 8000
+observedInsertRates: [ 8000, 7000, 6000, 5000 ]
 # To control the query rate in a staged manner, set the thresholds for the number of queries, where the rate changes
 queryThrottleThresholds: [ 0 ]
 # The query rates at each stage
 queryRates: [ 1000 ]
 # Loop the queries
-queryExecuteLoop: 1
+queryLoops: 1
 k: 10
 parallelism: 160 # 12 #
 reduceParallelism: 1 # 1 #
@@ -25,7 +25,7 @@ maxTTL: 2400000
 partitioner: "lsh+hilbert"  # supports ["lsh+hilbert", "simple"]
 proximity: 1
 metricType: "L2"
-lshNumFamilies: 8  # number of hash families, This controls the fanout for each vector and query.
+lshNumFamilies: 4 # number of hash families, This controls the fanout for each vector and query.
 lshNumHashes: 10  # number of hash functions in each family
 lshBucketWidth: 5  # hash bucket width
 lshNumHilbertBits: 7  # number of bits used for hilbert curve

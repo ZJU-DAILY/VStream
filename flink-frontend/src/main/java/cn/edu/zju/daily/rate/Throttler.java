@@ -7,9 +7,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** @author auroflow */
-public abstract class RateLimiter<U, V> extends RichMapFunction<U, V> {
+public abstract class Throttler<U, V> extends RichMapFunction<U, V> {
 
-    private static final Logger logger = LoggerFactory.getLogger(RateLimiter.class);
+    private static final Logger logger = LoggerFactory.getLogger(Throttler.class);
 
     private final List<Long> thresholds;
     private final List<Long> intervals; // nanoseconds
@@ -28,7 +28,7 @@ public abstract class RateLimiter<U, V> extends RichMapFunction<U, V> {
      * @param thresholds a list of numbers of processed elements
      * @param intervals corresponding process intervals
      */
-    protected RateLimiter(List<Long> thresholds, List<Long> intervals) {
+    protected Throttler(List<Long> thresholds, List<Long> intervals) {
         this.thresholds = thresholds;
         this.intervals = intervals;
     }
@@ -60,7 +60,7 @@ public abstract class RateLimiter<U, V> extends RichMapFunction<U, V> {
         long interval = getThisInterval();
 
         if (interval == 0) {
-            return transform(value, System.currentTimeMillis());
+            return transform(value, System.currentTimeMillis(), count);
         }
 
         // Retrieves the current state
@@ -72,7 +72,7 @@ public abstract class RateLimiter<U, V> extends RichMapFunction<U, V> {
         }
 
         lastEmitted = current;
-        return transform(value, System.currentTimeMillis());
+        return transform(value, System.currentTimeMillis(), count);
     }
 
     /**
@@ -82,5 +82,5 @@ public abstract class RateLimiter<U, V> extends RichMapFunction<U, V> {
      * @param timestamp the timestamp when the input value is emitted
      * @return the transformed value
      */
-    public abstract V transform(U value, long timestamp);
+    public abstract V transform(U value, long timestamp, long count);
 }

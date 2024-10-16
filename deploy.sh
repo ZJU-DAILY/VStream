@@ -15,7 +15,7 @@ master=$(head -n 1 workers)
 workers=$(tail -n +2 workers)
 
 # Copy the project to the master, excluding anything from the build directory
-rsync -avz --exclude "/build/" --exclude "/cmake-build-*" --exclude "/examples/" --exclude "/flink-frontend/tmp" --exclude ".git" . $master:$REMOTE_PROJECT_DIR
+rsync -avz --delete --exclude "/build/" --exclude "/cmake-build-*" --exclude "/examples/" --exclude "/flink-frontend/tmp" --exclude ".git" . $master:$REMOTE_PROJECT_DIR
 ssh -p $SSH_PORT $master "cd $REMOTE_PROJECT_DIR && ./build.sh $BUILD_FLAGS"
 
 # success?

@@ -2,8 +2,8 @@
 # File containing host:port pairs
 USER="auroflow"
 SSH_PORT="4399"
-FILE="/home/auroflow/code/vector-search/VStream/flink-frontend/src/main/resources/chroma_addresses.txt"
-# FILE="/home/auroflow/code/vector-search/VStream/flink-frontend/src/test/resources/test_chroma_addresses.txt"
+# FILE="/home/auroflow/code/vector-search/VStream/flink-frontend/src/main/resources/chroma_addresses.txt"
+FILE="/home/auroflow/code/vector-search/VStream/flink-frontend/src/test/resources/chroma_addresses.txt"
 CHROMA_PERSISTENT_PATH="/home/auroflow/storage/chroma"
 CPU_LIMIT="1"
 

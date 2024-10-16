@@ -9,8 +9,8 @@ import numpy as np
 from chromadb.utils import embedding_functions
 from tqdm import tqdm
 
-# ADDRESS_FILE = "/home/auroflow/code/vector-search/VStream/flink-frontend/src/main/resources/chroma_addresses.txt"
-ADDRESS_FILE = "/home/auroflow/code/vector-search/VStream/flink-frontend/src/test/resources/test_chroma_addresses.txt"
+ADDRESS_FILE = "/home/auroflow/code/vector-search/VStream/flink-frontend/src/main/resources/chroma_addresses.txt"
+# ADDRESS_FILE = "/home/auroflow/code/vector-search/VStream/flink-frontend/src/test/resources/test_chroma_addresses.txt"
 COLLECTION_PREFIX = "testcol_"
 ROUNDS = 1000
 BATCH_SIZE = 1000
@@ -45,7 +45,7 @@ class ChromaInsert(Thread):
             self.client.delete_collection(collection_name)
         metadata = {
             "hnsw:batch_size": 10000,
-            "hnsw:sync_threshold": 10000,
+            "hnsw:sync_threshold": 100000,
             "hnsw:M": 16,
             "hnsw:search_ef": 16,
             "hnsw:construction_ef": 128
