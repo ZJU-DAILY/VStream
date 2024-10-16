@@ -39,7 +39,8 @@ public class HDFSVectorSource {
                     params.getInsertThrottleThresholds(),
                     params.getInsertRates(),
                     "source",
-                    5);
+                    5,
+                    false);
         } else {
             return get(
                     params.getHdfsAddress(),
@@ -47,7 +48,8 @@ public class HDFSVectorSource {
                     Collections.singletonList(0L),
                     Collections.singletonList(0L),
                     "source",
-                    5);
+                    5,
+                    false);
         }
     }
 
@@ -59,7 +61,8 @@ public class HDFSVectorSource {
                     params.getQueryThrottleThresholds(),
                     params.getQueryRates(),
                     "query",
-                    1);
+                    1,
+                    true);
         } else {
             return get(
                     params.getHdfsAddress(),
@@ -67,7 +70,8 @@ public class HDFSVectorSource {
                     Collections.singletonList(0L),
                     Collections.singletonList(0L),
                     "query",
-                    1);
+                    1,
+                    true);
         }
     }
 
@@ -170,13 +174,25 @@ public class HDFSVectorSource {
             List<Long> thresholds,
             List<Long> rates,
             String name,
-            int sourceParallelism) {
-        FileSource<String> fileSource =
-                FileSource.forRecordStreamFormat(
-                                new TextLineInputFormat(), new Path(hdfsAddress + hdfsPath))
-                        .build();
+            int sourceParallelism,
+            boolean continuous) {
+        FileSource<String> fileSource;
+        if (continuous) {
+            // Continuous source not supported yet
+            fileSource =
+                    FileSource.forRecordStreamFormat(
+                                    new TextLineInputFormat(), new Path(hdfsAddress + hdfsPath))
+                            .build();
+        } else {
+            fileSource =
+                    FileSource.forRecordStreamFormat(
+                                    new TextLineInputFormat(), new Path(hdfsAddress + hdfsPath))
+                            .build();
+        }
+
         FloatVectorRateLimiter limiter =
                 new FloatVectorRateLimiter(thresholds, ratesToIntervals(rates));
+
         return env.fromSource(fileSource, WatermarkStrategy.noWatermarks(), "hdfs-vector-source")
                 .name(name + " input")
                 .map(new MaxTTLSetter(params.getMaxTTL(), parser))

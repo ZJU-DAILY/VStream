@@ -3,14 +3,10 @@ package cn.edu.zju.daily.pipeline;
 import cn.edu.zju.daily.data.PartitionedData;
 import cn.edu.zju.daily.data.result.SearchResult;
 import cn.edu.zju.daily.data.vector.FloatVector;
-import cn.edu.zju.daily.function.MilvusKeyedDataProcessFunction;
-import cn.edu.zju.daily.function.MilvusKeyedQueryProcessFunction;
-import cn.edu.zju.daily.function.PartialResultProcessFunction;
-import cn.edu.zju.daily.function.PartitionedDataSplitFunction;
+import cn.edu.zju.daily.function.*;
 import cn.edu.zju.daily.function.partitioner.PartitionFunction;
 import cn.edu.zju.daily.util.MilvusUtil;
 import cn.edu.zju.daily.util.Parameters;
-import java.util.Map;
 import java.util.Random;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.streaming.api.datastream.DataStream;
@@ -20,56 +16,15 @@ import org.apache.flink.util.OutputTag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class MilvusSeparatedStreamingPipeline {
+public class ChromaSeparatedStreamingPipeline {
 
     private final Parameters params;
     MilvusUtil milvusUtil = new MilvusUtil();
 
-    Logger LOG = LoggerFactory.getLogger(MilvusSeparatedStreamingPipeline.class);
+    Logger LOG = LoggerFactory.getLogger(ChromaSeparatedStreamingPipeline.class);
 
-    public MilvusSeparatedStreamingPipeline(Parameters params) throws InterruptedException {
+    public ChromaSeparatedStreamingPipeline(Parameters params) throws InterruptedException {
         this.params = params;
-        milvusUtil.connect(params.getMilvusHost(), params.getMilvusPort());
-
-        String collectionName = params.getMilvusCollectionName();
-        System.out.println("Preparing collection...");
-
-        if (milvusUtil.collectionExists(collectionName)) {
-            boolean deleted = milvusUtil.dropCollection(collectionName);
-            if (deleted) {
-                LOG.warn("Collection {} already exists, deleted.", collectionName);
-            } else {
-                throw new RuntimeException("Failed to delete existed collection.");
-            }
-        }
-        milvusUtil.createCollection(
-                params.getMilvusCollectionName(),
-                params.getVectorDim(),
-                params.getMilvusNumShards());
-        int numPartitions = params.getParallelism();
-        Map<Integer, Integer> map = PartitionFunction.getNodeIdMap(numPartitions);
-        for (int i = 0; i < numPartitions; i++) {
-            String partitionName = Integer.toString(map.get(i));
-            milvusUtil.createPartition(collectionName, partitionName);
-        }
-        boolean indexBuilt =
-                milvusUtil.buildHnswIndex(
-                        params.getMilvusCollectionName(),
-                        params.getMetricType(),
-                        params.getHnswM(),
-                        params.getHnswEfConstruction(),
-                        params.getHnswEfSearch());
-        boolean loaded = milvusUtil.loadCollection(collectionName);
-
-        if (indexBuilt && loaded) {
-            while (!milvusUtil.hasIndex(collectionName) || !milvusUtil.isLoaded(collectionName)) {
-                System.out.println("Waiting for loading and collection build...");
-                Thread.sleep(5000);
-            }
-            System.out.println("Done.");
-        }
-
-        System.out.println("Prepared.");
     }
 
     private PartitionFunction getPartitioner() {
@@ -130,7 +85,7 @@ public class MilvusSeparatedStreamingPipeline {
 
     private void applyToDataStream(DataStream<PartitionedData> data) {
         data.keyBy(PartitionedData::getPartitionId)
-                .process(new MilvusKeyedDataProcessFunction(params))
+                .process(new ChromaDBKeyedDataProcessFunction(params))
                 .setParallelism(params.getParallelism())
                 .setMaxParallelism(params.getParallelism())
                 .name("data process")
@@ -141,7 +96,7 @@ public class MilvusSeparatedStreamingPipeline {
             DataStream<PartitionedData> data) {
         SingleOutputStreamOperator<SearchResult> rawResults =
                 data.keyBy(PartitionedData::getPartitionId)
-                        .process(new MilvusKeyedQueryProcessFunction(params))
+                        .process(new ChromaDBKeyedQueryProcessFunction(params))
                         .setParallelism(params.getParallelism())
                         .setMaxParallelism(params.getParallelism())
                         .name("query process")

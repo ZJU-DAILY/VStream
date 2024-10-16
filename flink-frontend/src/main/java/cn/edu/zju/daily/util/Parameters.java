@@ -38,6 +38,8 @@ public class Parameters implements Serializable {
         }
     }
 
+    private String flinkJobManagerHost;
+    private int flinkJobManagerPort;
     private String hdfsAddress;
     private String hdfsUser;
     private String sourcePath;
@@ -45,7 +47,7 @@ public class Parameters implements Serializable {
     private int vectorDim;
     private List<Long> insertThrottleThresholds;
     private List<Long> insertRates;
-    private long fakeInsertRate;
+    private List<Long> observedInsertRates;
     private List<Long> queryThrottleThresholds;
     private List<Long> queryRates;
     private int queryExecuteLoop;
@@ -90,6 +92,27 @@ public class Parameters implements Serializable {
     private String chromaCollectionName;
     private String chromaAddressFile;
     private int chromaInsertBatchSize;
+    private int chromaHnswBatchSize;
+    private boolean chromaClearData;
+    private int chromaQueryBatchSize;
+
+    /** Flink job manager host. */
+    public String getFlinkJobManagerHost() {
+        return flinkJobManagerHost;
+    }
+
+    public void setFlinkJobManagerHost(String flinkJobManagerHost) {
+        this.flinkJobManagerHost = flinkJobManagerHost;
+    }
+
+    /** Flink job manager port. */
+    public int getFlinkJobManagerPort() {
+        return flinkJobManagerPort;
+    }
+
+    public void setFlinkJobManagerPort(int flinkJobManagerPort) {
+        this.flinkJobManagerPort = flinkJobManagerPort;
+    }
 
     /**
      * HDFS address.
@@ -173,6 +196,14 @@ public class Parameters implements Serializable {
 
     public void setInsertRates(List<Long> insertRates) {
         this.insertRates = insertRates;
+    }
+
+    public List<Long> getObservedInsertRates() {
+        return observedInsertRates;
+    }
+
+    public void setObservedInsertRates(List<Long> observedInsertRates) {
+        this.observedInsertRates = observedInsertRates;
     }
 
     public List<Long> getQueryThrottleThresholds() {
@@ -647,12 +678,35 @@ public class Parameters implements Serializable {
         this.chromaInsertBatchSize = chromaInsertBatchSize;
     }
 
-    /** Timestamp interval between data tuples, 0 means using system time. */
-    public long getFakeInsertRate() {
-        return fakeInsertRate;
+    /**
+     * ChromaDB HNSW batch size. This is the frequency Chroma Brute index is flushed to the
+     * in-memory HNSW index.
+     */
+    public int getChromaHnswBatchSize() {
+        return chromaHnswBatchSize;
     }
 
-    public void setFakeInsertRate(long fakeInsertRate) {
-        this.fakeInsertRate = fakeInsertRate;
+    public void setChromaHnswBatchSize(int chromaHnswBatchSize) {
+        this.chromaHnswBatchSize = chromaHnswBatchSize;
+    }
+
+    /** Whether to clear data in ChromaDB before running the job. */
+    public boolean isChromaClearData() {
+        return chromaClearData;
+    }
+
+    public void setChromaClearData(boolean chromaClearData) {
+        if (!chromaClearData) {
+            throw new RuntimeException("ChromaDB data should be cleared before running the job.");
+        }
+        this.chromaClearData = true;
+    }
+
+    public int getChromaQueryBatchSize() {
+        return chromaQueryBatchSize;
+    }
+
+    public void setChromaQueryBatchSize(int chromaQueryBatchSize) {
+        this.chromaQueryBatchSize = chromaQueryBatchSize;
     }
 }

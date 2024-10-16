@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Random;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.functions.sink.DiscardingSink;
 import org.apache.flink.util.Collector;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -23,17 +24,11 @@ public class StreamSearchJobTest {
 
     private static Parameters params;
 
-    static {
-        System.load(
-                "/home/auroflow/code/vector-search/VectorBackend-RocksDB/build/java/librocksdbjni-shared.so");
-        System.out.println("Loaded.");
-    }
-
     @BeforeAll
     public static void setUpAll() {
         params =
                 Parameters.load(
-                        "/home/auroflow/code/vector-search/rocksdb-stream/src/test/resources/test-params.yaml",
+                        "/home/auroflow/code/vector-search/VStream/flink-frontend/src/test/resources/test-params.yaml",
                         false);
     }
 
@@ -145,7 +140,7 @@ public class StreamSearchJobTest {
         int k = 10;
 
         List<FloatVector> vectors = new ArrayList<>();
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 100000; i++) {
             vectors.add(FloatVector.getRandom(i, dim));
         }
 
@@ -164,22 +159,19 @@ public class StreamSearchJobTest {
                         params.getParallelism(),
                         0.5F);
 
-        List<SearchResult> searchResults =
-                env.fromCollection(vectors)
-                        .connect(env.fromCollection(queries))
-                        .flatMap(partitioner)
-                        .keyBy(PartitionedData::getPartitionId)
-                        .process(new RocksDBKeyedProcessFunction(100))
-                        .setParallelism(numPartitions)
-                        .setMaxParallelism(numPartitions)
-                        .keyBy(SearchResult::getQueryId)
-                        //            .countWindow(numPartitions)
-                        .process(new PartialResultProcessFunction(k))
-                        .filter(SearchResult::isComplete)
-                        .executeAndCollect(100000);
+        env.fromCollection(vectors)
+                .connect(env.fromCollection(queries))
+                .flatMap(partitioner)
+                .keyBy(PartitionedData::getPartitionId)
+                .process(new RocksDBKeyedProcessFunction(100))
+                .setParallelism(numPartitions)
+                .setMaxParallelism(numPartitions)
+                .keyBy(SearchResult::getQueryId)
+                //            .countWindow(numPartitions)
+                .process(new PartialResultProcessFunction(k))
+                .filter(SearchResult::isComplete)
+                .addSink(new DiscardingSink<>());
 
-        for (SearchResult searchResult : searchResults) {
-            System.out.println(searchResult);
-        }
+        env.executeAsync();
     }
 }

@@ -2,12 +2,12 @@ package cn.edu.zju.daily.data.vector;
 
 import com.github.jelmerk.knn.Item;
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 /** This class represents a float data vector or query vector. */
 public class FloatVector implements Serializable, Item<Long, float[]> {
+
+    public static final String METADATA_TS_FIELD = "ts";
 
     private final long _id;
     private final float[] value;
@@ -75,6 +75,15 @@ public class FloatVector implements Serializable, Item<Long, float[]> {
 
     public long getEventTime() {
         return eventTime;
+    }
+
+    /**
+     * Get the metadata, currently in the format of {@code {"ts": eventTime}}.
+     *
+     * @return metadata
+     */
+    public Map<String, String> getMetadata() {
+        return Collections.singletonMap(METADATA_TS_FIELD, String.valueOf(eventTime));
     }
 
     public List<Float> list() {

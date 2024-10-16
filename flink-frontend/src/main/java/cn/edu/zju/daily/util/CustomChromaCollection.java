@@ -43,16 +43,12 @@ public class CustomChromaCollection {
 
     @SuppressWarnings("unchecked")
     public CustomChromaCollection fetch() throws ApiException {
-        try {
-            LinkedTreeMap<String, ?> resp =
-                    (LinkedTreeMap<String, ?>) api.getCollection(collectionName);
-            this.collectionName = resp.get("name").toString();
-            this.collectionId = resp.get("id").toString();
-            this.metadata = (LinkedTreeMap<String, Object>) resp.get("metadata");
-            return this;
-        } catch (ApiException e) {
-            throw e;
-        }
+        LinkedTreeMap<String, ?> resp =
+                (LinkedTreeMap<String, ?>) api.getCollection(collectionName);
+        this.collectionName = resp.get("name").toString();
+        this.collectionId = resp.get("id").toString();
+        this.metadata = (LinkedTreeMap<String, Object>) resp.get("metadata");
+        return this;
     }
 
     public static CustomChromaCollection getInstance(DefaultApi api, String collectionName)

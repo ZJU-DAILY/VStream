@@ -94,13 +94,9 @@ public class RocksDBStateDownloader extends RocksDBStateDataTransfer {
                         downloadRequest ->
                                 // Take all files from shared and private state.
                                 Streams.concat(
-                                                downloadRequest
-                                                        .getStateHandle()
-                                                        .getSharedState()
+                                                downloadRequest.getStateHandle().getSharedState()
                                                         .stream(),
-                                                downloadRequest
-                                                        .getStateHandle()
-                                                        .getPrivateState()
+                                                downloadRequest.getStateHandle().getPrivateState()
                                                         .stream())
                                         .map(
                                                 // Create one runnable for each StreamStateHandle

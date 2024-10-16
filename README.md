@@ -29,8 +29,8 @@ bash build.sh
 
 After building, make sure to do the following on every machine in your Flink cluster:
 
-- Put `build/java/librocksdbjni-shared.so` in `LD_LIBRARY_PATH` and rename it to `librocksdbjni.so`.
-- Copy `build/java/rocksdbjni_classes.jar` to Flink's lib directory.
+- Put `build/java/librocksdbjni-shared.so` in `$LD_LIBRARY_PATH` and rename it to `librocksdbjni.so`.
+- Copy `build/java/rocksdbjni_classes.jar` to `$FLINK_HOME/lib` directory.
 
 ### Data Preparation
 

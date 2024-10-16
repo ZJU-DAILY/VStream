@@ -16,7 +16,7 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 public class VStreamSearchJob {
 
     private static final String DEFAULT_PARAM_PATH =
-            "/home/auroflow/code/vector-search/rocksdb-stream/src/main/resources/params.yaml";
+            "./flink-frontend/src/main/resources/params-local.yaml";
 
     public static void main(String[] args) throws Exception {
 
@@ -25,6 +25,7 @@ public class VStreamSearchJob {
         Parameters params = Parameters.load(paramPath, false);
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        env.getCheckpointConfig().setCheckpointTimeout(600000);
         new VectorEnvironmentCreator(params).prepareVectorEnvironment(env);
 
         HDFSVectorSource source = new HDFSVectorSource(env, params);

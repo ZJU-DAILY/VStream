@@ -17,7 +17,7 @@ public class VectorEnvironmentCreator implements Serializable {
     public VectorEnvironmentCreator(Parameters params) {
         this.params = params;
         this.dbStoragePath =
-                "/home/auroflow/code/vector-search/rocksdb-stream/tmp/rocksdb-backend-"
+                "/home/auroflow/code/vector-search/VStream/flink-frontend/tmp/rocksdb-backend-"
                         + LocalDateTime.now().toString().split("\\.")[0].replace(":", "-");
     }
 

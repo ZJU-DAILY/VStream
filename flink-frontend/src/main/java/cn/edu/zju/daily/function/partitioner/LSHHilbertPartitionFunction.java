@@ -6,6 +6,8 @@ import cn.edu.zju.daily.data.PartitionedQuery;
 import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.lsh.L2HilbertPartitioner;
 import java.util.*;
+import org.apache.flink.api.common.state.ValueState;
+import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.co.RichCoFlatMapFunction;
 import org.apache.flink.util.Collector;
@@ -38,8 +40,11 @@ public class LSHHilbertPartitionFunction
     private final List<L2HilbertPartitioner> partitioners;
 
     private final Map<Integer, Integer> nodeIdToKeyMap;
+    private ValueState<Long> count = null;
 
     private int[] counter;
+    private int totalCounter = 0;
+    private static final int COUNTER_REPORT_INTERVAL = 480000;
 
     private final int numPartitions;
 
@@ -64,12 +69,19 @@ public class LSHHilbertPartitionFunction
                 updateInterval,
                 maxRetainedElements,
                 maxTTL,
-                0,
+                Collections.singletonList(0L),
+                Collections.singletonList(0L),
                 numPartitions);
     }
 
-    private final long fakeInsertIntervalNano;
-    private long fakeTsNano;
+    /** Insert interval in nanoseconds, observed by this partitioner. */
+    private final List<Long> observedInsertIntervals;
+
+    private final List<Long> insertThresholds;
+
+    private int currentObservedInsertIntervalIndex = 0;
+
+    private long observedTsNano;
 
     /**
      * Constructor.
@@ -82,7 +94,7 @@ public class LSHHilbertPartitionFunction
      * @param updateInterval 更新分区方案的频率 (ms)
      * @param maxRetainedElements 统计历史信息时保留的最大元素数量
      * @param maxTTL 支持的最大查询TTL
-     * @param fakeInsertInterval 插入向量的时间戳间隔 (ns)
+     * @param observedInsertIntervals 希望分区器观测到的插入向量时间戳间隔 (ns)
      * @param numPartitions 分区数量
      */
     public LSHHilbertPartitionFunction(
@@ -95,7 +107,8 @@ public class LSHHilbertPartitionFunction
             long updateInterval,
             int maxRetainedElements,
             long maxTTL,
-            long fakeInsertIntervalNano,
+            List<Long> observedInsertIntervals,
+            List<Long> insertThresholds,
             int numPartitions) {
         //        if (numHashFunctions * numHilbertBits > 63) {
         //            LOG.warn("numHashFunctions * numHilbertBits > 63, cannot use small options for
@@ -122,18 +135,21 @@ public class LSHHilbertPartitionFunction
         }
 
         nodeIdToKeyMap = PartitionFunction.getNodeIdMap(numPartitions);
-        this.fakeInsertIntervalNano = fakeInsertIntervalNano;
+        this.observedInsertIntervals = observedInsertIntervals;
+        this.insertThresholds = insertThresholds;
         this.numPartitions = numPartitions;
     }
 
     @Override
     public void open(Configuration parameters) throws Exception {
         super.open(parameters);
-        fakeTsNano = 0;
+        observedTsNano = 0;
         LOG.info(
                 "LSHHilbertPartitionFunction initialized with insert interval {} ns.",
-                fakeInsertIntervalNano);
+                observedInsertIntervals.get(0));
         counter = new int[numPartitions];
+        count = getRuntimeContext().getState(new ValueStateDescriptor<>("count", Long.class));
+        count.update(0L);
     }
 
     /**
@@ -146,9 +162,18 @@ public class LSHHilbertPartitionFunction
     @Override
     public void flatMap1(FloatVector value, Collector<PartitionedData> out) throws Exception {
         // 校准 ts
-        if (fakeInsertIntervalNano > 0) {
-            value.setEventTime(fakeTsNano / 1000000L);
-            fakeTsNano += fakeInsertIntervalNano;
+        value.setEventTime(observedTsNano / 1000000L);
+
+        // 更新 observedTs
+        count.update(count.value() + 1);
+        while (currentObservedInsertIntervalIndex < observedInsertIntervals.size() - 1
+                && count.value() >= insertThresholds.get(currentObservedInsertIntervalIndex + 1)) {
+            currentObservedInsertIntervalIndex++;
+        }
+        long observedInsertInterval =
+                observedInsertIntervals.get(currentObservedInsertIntervalIndex);
+        if (observedInsertInterval > 0) {
+            observedTsNano += observedInsertInterval;
         }
 
         Set<Integer> partitions = new HashSet<>();
@@ -158,6 +183,16 @@ public class LSHHilbertPartitionFunction
         for (int partition : partitions) {
             counter[partition]++;
             out.collect(new PartitionedFloatVector(nodeIdToKeyMap.get(partition), value));
+        }
+
+        // Report partition distribution periodically
+        totalCounter++;
+        if (totalCounter == COUNTER_REPORT_INTERVAL) {
+            LOG.info("Partitions: {}", Arrays.toString(counter));
+            IntSummaryStatistics stats = Arrays.stream(counter).summaryStatistics();
+            LOG.info("Balance: {}", (stats.getMax() - stats.getAverage()) / stats.getAverage());
+            totalCounter = 0;
+            Arrays.fill(counter, 0);
         }
     }
 
@@ -171,9 +206,7 @@ public class LSHHilbertPartitionFunction
     @Override
     public void flatMap2(FloatVector value, Collector<PartitionedData> out) throws Exception {
         // 校准 ts
-        if (fakeInsertIntervalNano > 0) {
-            value.setEventTime(fakeTsNano / 1000000L);
-        }
+        value.setEventTime(observedTsNano / 1000000L);
 
         Set<Integer> partitions = new HashSet<>();
         for (L2HilbertPartitioner partitioner : partitioners) {

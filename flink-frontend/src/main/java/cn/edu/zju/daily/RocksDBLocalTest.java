@@ -217,6 +217,14 @@ public class RocksDBLocalTest {
                 resultBytes, 0, query.getId(), 1, query.getEventTime());
     }
 
+    private static void createCheckpoint(String dir) {
+        try (Checkpoint checkpoint = Checkpoint.create(db)) {
+            checkpoint.createCheckpoint(dir);
+        } catch (RocksDBException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     static void test() throws Exception {
 
         String dir =
@@ -227,7 +235,7 @@ public class RocksDBLocalTest {
 
         FloatVectorIterator vectors =
                 FloatVectorIterator.fromFile(
-                        "/home/auroflow/code/vector-search/data/sift/sift_base.fvecs", 1);
+                        "/home/auroflow/code/vector-search/data/sift/sift_base.fvecs", 1, 10000);
         FloatVectorIterator queries =
                 FloatVectorIterator.fromFile(
                         "/home/auroflow/code/vector-search/data/sift/sift_query.fvecs");
@@ -257,7 +265,9 @@ public class RocksDBLocalTest {
             }
         }
 
-        //         closeDB();
+        flush();
+        createCheckpoint(dir + "/checkpoint");
+        closeDB();
         writer.close();
     }
 

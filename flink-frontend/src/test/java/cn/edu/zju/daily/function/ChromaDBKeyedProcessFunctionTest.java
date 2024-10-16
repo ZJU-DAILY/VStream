@@ -2,6 +2,7 @@ package cn.edu.zju.daily.function;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import cn.edu.zju.daily.util.ChromaUtil;
 import cn.edu.zju.daily.util.CustomChromaClient;
 import cn.edu.zju.daily.util.CustomChromaCollection;
 import java.io.IOException;
@@ -48,8 +49,7 @@ class ChromaDBKeyedProcessFunctionTest {
     @Test
     void testReadAddresses() throws IOException {
         List<String> addresses =
-                ChromaDBKeyedProcessFunction.readAddresses(
-                        "src/test/resources/test_chroma_addresses.txt");
+                ChromaUtil.readAddresses("src/test/resources/test_chroma_addresses.txt");
         List<String> actualLines = new ArrayList<>();
         actualLines.add("localhost:8000");
         actualLines.add("localhost:8001");

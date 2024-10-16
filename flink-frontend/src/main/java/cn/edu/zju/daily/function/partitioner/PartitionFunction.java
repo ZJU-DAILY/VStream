@@ -1,9 +1,12 @@
 package cn.edu.zju.daily.function.partitioner;
 
+import static java.util.stream.Collectors.toList;
+
 import cn.edu.zju.daily.data.PartitionedData;
 import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.util.Parameters;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import org.apache.flink.api.common.functions.FlatMapFunction;
@@ -89,7 +92,8 @@ public interface PartitionFunction
                         params.getLshBucketWidth(),
                         params.getProximity());
             case "lsh+hilbert":
-                long fakeInsertInterval = rateToInterval(params.getFakeInsertRate());
+                List<Long> observedInsertIntervals =
+                        ratesToIntervals(params.getObservedInsertRates());
                 return new LSHHilbertPartitionFunction(
                         random,
                         params.getVectorDim(),
@@ -100,7 +104,8 @@ public interface PartitionFunction
                         params.getLshPartitionUpdateInterval(),
                         params.getLshHilbertMaxRetainedElements(),
                         params.getMaxTTL(),
-                        fakeInsertInterval,
+                        observedInsertIntervals,
+                        params.getInsertThrottleThresholds(),
                         params.getParallelism());
             case "simple":
                 return new SimplePartitionFunction(params.getParallelism());
@@ -114,5 +119,9 @@ public interface PartitionFunction
         if (rate < 0L) return (-rate) * 1_000_000_000L;
         if (rate == 0L) return 0L; // 0 means no speed limit
         return 1_000_000_000L / rate;
+    }
+
+    static List<Long> ratesToIntervals(List<Long> rates) {
+        return rates.stream().map(PartitionFunction::rateToInterval).collect(toList());
     }
 }

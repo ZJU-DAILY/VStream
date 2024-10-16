@@ -5,12 +5,9 @@ import static cn.edu.zju.daily.util.ChromaUtil.readAddresses;
 import static java.util.stream.Collectors.toList;
 
 import cn.edu.zju.daily.data.PartitionedData;
-import cn.edu.zju.daily.data.result.SearchResult;
 import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.util.*;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
@@ -25,20 +22,23 @@ import org.apache.flink.util.Collector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ChromaDBKeyedProcessFunction
-        extends KeyedProcessFunction<Integer, PartitionedData, SearchResult>
+/** Chroma insert function. */
+public class ChromaDBKeyedDataProcessFunction
+        extends KeyedProcessFunction<Integer, PartitionedData, Object>
         implements CheckpointedFunction {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ChromaDBKeyedProcessFunction.class);
+    private static final Logger LOG =
+            LoggerFactory.getLogger(ChromaDBKeyedDataProcessFunction.class);
 
     private CustomChromaCollection collection;
     private ListState<FloatVector> state;
     private ValueState<Integer> count;
     private final Parameters params;
     private final int insertBatchSize;
-    private ExecutorService insertExecutor;
 
-    public ChromaDBKeyedProcessFunction(Parameters params) {
+    // private ExecutorService insertExecutor;
+
+    public ChromaDBKeyedDataProcessFunction(Parameters params) {
         this.params = params;
         this.insertBatchSize = params.getChromaInsertBatchSize();
     }
@@ -53,7 +53,7 @@ public class ChromaDBKeyedProcessFunction
         ValueStateDescriptor<Integer> descriptor2 =
                 new ValueStateDescriptor<>("count", Integer.class);
         count = getRuntimeContext().getState(descriptor2);
-        insertExecutor = Executors.newSingleThreadExecutor();
+        // insertExecutor = Executors.newSingleThreadExecutor();
 
         int subtaskIndex = getRuntimeContext().getIndexOfThisSubtask();
         String collectionName = params.getChromaCollectionName() + "_" + subtaskIndex;
@@ -103,6 +103,8 @@ public class ChromaDBKeyedProcessFunction
         metadata.put("hnsw:M", Integer.toString(params.getHnswM()));
         metadata.put("hnsw:construction_ef", Integer.toString(params.getHnswEfConstruction()));
         metadata.put("hnsw:search_ef", Integer.toString(params.getHnswEfSearch()));
+        metadata.put("hnsw:batch_size", Integer.toString(params.getChromaHnswBatchSize()));
+        metadata.put("hnsw:sync_threshold", Integer.toString(10 * params.getChromaHnswBatchSize()));
 
         this.collection =
                 client.createCollection(
@@ -115,17 +117,14 @@ public class ChromaDBKeyedProcessFunction
     @Override
     public void processElement(
             PartitionedData data,
-            KeyedProcessFunction<Integer, PartitionedData, SearchResult>.Context context,
-            Collector<SearchResult> collector)
+            KeyedProcessFunction<Integer, PartitionedData, Object>.Context context,
+            Collector<Object> collector)
             throws Exception {
 
-        if (data.getDataType() == PartitionedData.DataType.QUERY) {
-            // use another thread for searching?
-            SearchResult result =
-                    search(data.getVector(), data.getPartitionId(), data.getNumPartitionsSent());
-            collector.collect(result);
-        } else if (data.getDataType() == PartitionedData.DataType.INSERT_OR_DELETE) {
+        if (data.getDataType() == PartitionedData.DataType.INSERT_OR_DELETE) {
             insertOrDelete(data.getVector());
+        } else {
+            throw new RuntimeException("Unsupported data type: " + data.getDataType());
         }
     }
 
@@ -177,8 +176,10 @@ public class ChromaDBKeyedProcessFunction
                                     .map(FloatVector::getId)
                                     .map(Object::toString)
                                     .collect(toList());
+                    List<Map<String, String>> metadatas =
+                            vectorsToAdd.stream().map(FloatVector::getMetadata).collect(toList());
                     long now = System.currentTimeMillis();
-                    collection.add(vectors, null, ids, ids);
+                    collection.add(vectors, metadatas, ids, ids);
                     LOG.info(
                             "Inserted {} vectors in {} ms",
                             vectorsToAdd.size(),
@@ -190,48 +191,17 @@ public class ChromaDBKeyedProcessFunction
         }
     }
 
-    private SearchResult search(FloatVector query, int partitionId, int numSearchPartitions)
-            throws Exception {
-
-        long now = System.currentTimeMillis();
-        CustomChromaCollection.QueryResponse queryResponse =
-                collection.queryEmbeddings(
-                        Collections.singletonList(query.list()), params.getK(), null, null, null);
-        LOG.info("1 query returned in {} ms", System.currentTimeMillis() - now);
-        List<Long> ids =
-                queryResponse.getIds().get(0).stream().map(Long::parseLong).collect(toList());
-        List<Float> scores = queryResponse.getDistances().get(0);
-        return new SearchResult(
-                partitionId,
-                query.getId(),
-                ids,
-                scores,
-                1,
-                numSearchPartitions,
-                query.getEventTime());
-    }
-
     private void insertOrDelete(FloatVector vector) throws Exception {
         if (count.value() == null) {
             // initialize
             count.update(ThreadLocalRandom.current().nextInt(insertBatchSize));
         }
 
-        if (count.value() == insertBatchSize - 1) {
-            List<FloatVector> vectors = new ArrayList<>();
-            for (FloatVector v : state.get()) {
-                vectors.add(v);
-            }
-            vectors.add(vector);
-
-            InsertAndDeleteRunnable runnable = new InsertAndDeleteRunnable(vectors);
-            // insertExecutor.execute(runnable);
-            runnable.run();
-            state.clear();
+        state.add(vector);
+        count.update(count.value() + 1);
+        if (count.value() >= insertBatchSize) {
+            flushState();
             count.update(0);
-        } else {
-            state.add(vector);
-            count.update(count.value() + 1);
         }
     }
 
@@ -240,15 +210,19 @@ public class ChromaDBKeyedProcessFunction
 
     @Override
     public void snapshotState(FunctionSnapshotContext context) throws Exception {
+        flushState();
+    }
+
+    private void flushState() throws Exception {
         List<FloatVector> vectors = new ArrayList<>();
         for (FloatVector v : state.get()) {
             vectors.add(v);
         }
         if (!vectors.isEmpty()) {
             InsertAndDeleteRunnable runnable = new InsertAndDeleteRunnable(vectors);
-            insertExecutor.execute(runnable);
-            state.clear();
-            count.update(0);
+            // insertExecutor.execute(runnable);
+            runnable.run(); // synchronous, for now
         }
+        state.clear();
     }
 }

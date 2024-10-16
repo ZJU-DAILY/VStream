@@ -82,6 +82,7 @@ public abstract class RocksDBSnapshotStrategyBase<K, R extends SnapshotResources
     private static final Logger LOG = LoggerFactory.getLogger(RocksDBSnapshotStrategyBase.class);
 
     @Nonnull private final String description;
+
     /** RocksDB instance from the backend. */
     @Nonnull protected RocksDB db;
 
@@ -164,9 +165,17 @@ public abstract class RocksDBSnapshotStrategyBase<K, R extends SnapshotResources
     private void takeDBNativeCheckpoint(@Nonnull SnapshotDirectory outputDirectory)
             throws Exception {
         // create hard links of living files in the output path
-        try (ResourceGuard.Lease ignored = rocksDBResourceGuard.acquireResource();
-                Checkpoint checkpoint = Checkpoint.create(db)) {
+        ResourceGuard.Lease ignored = null;
+        Checkpoint checkpoint = null;
+        try {
+            ignored = rocksDBResourceGuard.acquireResource();
+            LOG.info("Acquired RocksDB resource guard for taking a native checkpoint.");
+            checkpoint = Checkpoint.create(db);
+            LOG.info(
+                    "Checkpoint object created; ready to take checkpoint in {}.",
+                    outputDirectory.getDirectory().toString());
             checkpoint.createCheckpoint(outputDirectory.getDirectory().toString());
+            LOG.info("Created RocksDB checkpoint in {}.", outputDirectory);
         } catch (Exception ex) {
             try {
                 outputDirectory.cleanup();
@@ -174,6 +183,13 @@ public abstract class RocksDBSnapshotStrategyBase<K, R extends SnapshotResources
                 ex = ExceptionUtils.firstOrSuppressed(cleanupEx, ex);
             }
             throw ex;
+        } finally {
+            if (ignored != null) {
+                ignored.close();
+            }
+            if (checkpoint != null) {
+                checkpoint.close();
+            }
         }
     }
 

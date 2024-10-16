@@ -55,8 +55,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lrt -std=c++20 -DHAVE_CXX0X -openmp -march=native -fpic -w -fopenmp -ftree-vectorize")
 endif ()
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2 -mpclmul -msse2")
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0")
-#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Ofast")
+
 if (POLICY CMP0042)
     cmake_policy(SET CMP0042 NEW)
 endif ()
@@ -69,6 +68,12 @@ if (NOT CMAKE_BUILD_TYPE)
     endif ()
     set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING
             "Default BUILD_TYPE is ${default_build_type}" FORCE)
+endif ()
+
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0")
+elseif (CMAKE_BUILD_TYPE STREQUAL "Release")
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Ofast -DNDEBUG")
 endif ()
 
 find_program(CCACHE_FOUND ccache)
