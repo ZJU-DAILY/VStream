@@ -6,8 +6,6 @@ import cn.edu.zju.daily.data.PartitionedQuery;
 import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.lsh.L2HilbertPartitioner;
 import java.util.*;
-import org.apache.flink.api.common.state.ValueState;
-import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.co.RichCoFlatMapFunction;
 import org.apache.flink.util.Collector;
@@ -40,7 +38,7 @@ public class LSHHilbertPartitionFunction
     private final List<L2HilbertPartitioner> partitioners;
 
     private final Map<Integer, Integer> nodeIdToKeyMap;
-    private ValueState<Long> count = null;
+    private long count = 0;
 
     private int[] counter;
     private int totalCounter = 0;
@@ -148,8 +146,6 @@ public class LSHHilbertPartitionFunction
                 "LSHHilbertPartitionFunction initialized with insert interval {} ns.",
                 observedInsertIntervals.get(0));
         counter = new int[numPartitions];
-        count = getRuntimeContext().getState(new ValueStateDescriptor<>("count", Long.class));
-        count.update(0L);
     }
 
     /**
@@ -165,9 +161,9 @@ public class LSHHilbertPartitionFunction
         value.setEventTime(observedTsNano / 1000000L);
 
         // 更新 observedTs
-        count.update(count.value() + 1);
+        count++;
         while (currentObservedInsertIntervalIndex < observedInsertIntervals.size() - 1
-                && count.value() >= insertThresholds.get(currentObservedInsertIntervalIndex + 1)) {
+                && count >= insertThresholds.get(currentObservedInsertIntervalIndex + 1)) {
             currentObservedInsertIntervalIndex++;
         }
         long observedInsertInterval =

@@ -39,8 +39,11 @@ public class HDFSVectorSourceBuilder {
                     params.getInsertThrottleThresholds(),
                     params.getInsertRates(),
                     "source",
-                    5,
-                    1);
+                    params.getInsertSkip(),
+                    params.getInsertLimitPerLoop(),
+                    params.getVectorDim(),
+                    params.getInsertLoops());
+
         } else {
             return get(
                     params.getHdfsAddress(),
@@ -48,8 +51,10 @@ public class HDFSVectorSourceBuilder {
                     Collections.singletonList(0L),
                     Collections.singletonList(0L),
                     "source",
-                    5,
-                    1);
+                    params.getInsertSkip(),
+                    params.getInsertLimitPerLoop(),
+                    params.getVectorDim(),
+                    params.getInsertLoops());
         }
     }
 
@@ -61,7 +66,9 @@ public class HDFSVectorSourceBuilder {
                     params.getQueryThrottleThresholds(),
                     params.getQueryRates(),
                     "query",
-                    1,
+                    0,
+                    Integer.MAX_VALUE,
+                    params.getVectorDim(),
                     params.getQueryLoops());
         } else {
             return get(
@@ -70,7 +77,9 @@ public class HDFSVectorSourceBuilder {
                     Collections.singletonList(0L),
                     Collections.singletonList(0L),
                     "query",
-                    1,
+                    0,
+                    Integer.MAX_VALUE,
+                    params.getVectorDim(),
                     params.getQueryLoops());
         }
     }
@@ -174,47 +183,90 @@ public class HDFSVectorSourceBuilder {
             List<Long> thresholds,
             List<Long> rates,
             String name,
-            int sourceParallelism,
+            int startId,
+            int dataSize,
+            int dim,
             int numLoops) {
-        FileSource<FloatVector> fileSource;
-        if (numLoops > 1) {
-            // Continuous source not supported yet
-            fileSource =
+
+        if (hdfsPath.endsWith(".txt")) {
+            if (startId != 0) {
+                throw new IllegalArgumentException("startId must be 0 for text files.");
+            }
+            FileSource<FloatVector> fileSource =
                     FileSource.forRecordStreamFormat(
                                     new FloatVectorInputFormat(params.getMaxTTL()),
                                     new Path(hdfsAddress + hdfsPath))
                             .setFileEnumerator(
                                     new LoopingNonSplittingRecursiveEnumerator.Provider(numLoops))
                             .build();
-        } else {
-            fileSource =
-                    FileSource.forRecordStreamFormat(
-                                    new FloatVectorInputFormat(params.getMaxTTL()),
-                                    new Path(hdfsAddress + hdfsPath))
-                            .build();
-        }
 
-        FloatVectorThrottler throttler =
-                new FloatVectorThrottler(thresholds, ratesToIntervals(rates), numLoops > 1);
-        return env.fromSource(fileSource, WatermarkStrategy.noWatermarks(), "hdfs-vector-source")
-                .setParallelism(1)
-                .name(name + " input")
-                .returns(FloatVector.class)
-                .disableChaining()
-                .map(throttler)
-                .setParallelism(1)
-                .name(name + " throttle")
-                .returns(FloatVector.class)
-                .assignTimestampsAndWatermarks(
-                        WatermarkStrategy.<FloatVector>forMonotonousTimestamps()
-                                .withTimestampAssigner(
-                                        (vector, timestamp) -> {
-                                            long current = System.currentTimeMillis();
-                                            vector.setEventTime(current);
-                                            return current; // currently, use system time as event
-                                            // time
-                                        }))
-                .name(name + " timestamps");
+            FloatVectorThrottler throttler =
+                    new FloatVectorThrottler(thresholds, ratesToIntervals(rates), numLoops > 1);
+
+            return env.fromSource(
+                            fileSource, WatermarkStrategy.noWatermarks(), "hdfs-vector-source")
+                    .setParallelism(1)
+                    .name(name + " input")
+                    .returns(FloatVector.class)
+                    .disableChaining()
+                    .map(throttler)
+                    .setParallelism(1)
+                    .name(name + " throttle")
+                    .returns(FloatVector.class)
+                    .assignTimestampsAndWatermarks(
+                            WatermarkStrategy.<FloatVector>forMonotonousTimestamps()
+                                    .withTimestampAssigner(
+                                            (vector, timestamp) -> {
+                                                long current = System.currentTimeMillis();
+                                                vector.setEventTime(current);
+                                                return current; // currently, use system time as
+                                                // event
+                                                // time
+                                            }))
+                    .name(name + " timestamps");
+
+        } else if (hdfsPath.endsWith(".fvecs") || hdfsPath.endsWith(".bvecs")) {
+            FloatVectorBinaryInputFormat.FileType fileType;
+            if (hdfsPath.endsWith(".fvecs")) {
+                fileType = FloatVectorBinaryInputFormat.FileType.F_VEC;
+            } else {
+                // hdfsPath.endsWith(".bvecs")
+                fileType = FloatVectorBinaryInputFormat.FileType.B_VEC;
+            }
+
+            RateController rateController =
+                    new StagedRateController(thresholds, ratesToIntervals(rates));
+
+            FileSource<FloatVector> fileSource =
+                    FileSource.forRecordStreamFormat(
+                                    new FloatVectorBinaryInputFormat(
+                                            name,
+                                            params.getMaxTTL(),
+                                            fileType,
+                                            startId,
+                                            dataSize,
+                                            dim,
+                                            numLoops,
+                                            rateController),
+                                    new Path(hdfsAddress + hdfsPath))
+                            .setFileEnumerator(
+                                    new LoopingNonSplittingRecursiveEnumerator.Provider(1))
+                            .build();
+
+            return env.fromSource(
+                            fileSource,
+                            WatermarkStrategy.<FloatVector>forMonotonousTimestamps()
+                                    .withTimestampAssigner(
+                                            (vector, timestamp) -> vector.getEventTime()),
+                            "hdfs-vector-source")
+                    .setParallelism(1)
+                    .setMaxParallelism(1)
+                    .name(name + " input")
+                    .returns(FloatVector.class)
+                    .disableChaining();
+        } else {
+            throw new RuntimeException("Unknown file type.");
+        }
     }
 
     // rate: 负数，表示实际的 interval，即每隔多少秒插一个；0 表示不加限制；正数表示每秒插多少个

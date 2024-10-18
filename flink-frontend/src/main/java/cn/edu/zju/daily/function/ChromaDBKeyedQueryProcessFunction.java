@@ -91,6 +91,10 @@ public class ChromaDBKeyedQueryProcessFunction
 
     private List<SearchResult> search(List<PartitionedData> queryData) throws Exception {
 
+        if (queryData.isEmpty()) {
+            return Collections.emptyList();
+        }
+
         if (collection == null) {
             try {
                 collection =
@@ -102,7 +106,6 @@ public class ChromaDBKeyedQueryProcessFunction
             }
         }
 
-        long now = System.currentTimeMillis();
         Map<String, Object> where =
                 Collections.singletonMap(
                         FloatVector.METADATA_TS_FIELD,
@@ -112,6 +115,7 @@ public class ChromaDBKeyedQueryProcessFunction
                                         - queryData.get(0).getVector().getTTL()));
 
         CustomChromaCollection.QueryResponse queryResponse;
+        long now = System.currentTimeMillis();
         try {
             queryResponse =
                     collection.queryEmbeddings(
@@ -127,7 +131,11 @@ public class ChromaDBKeyedQueryProcessFunction
         }
 
         LOG.info(
-                "{} queries returned in {} ms", queryData.size(), System.currentTimeMillis() - now);
+                "Partition {}: {} queries (from #{}) returned in {} ms",
+                getRuntimeContext().getIndexOfThisSubtask(),
+                queryData.size(),
+                queryData.get(0).getVector().getId(),
+                System.currentTimeMillis() - now);
         return getResultList(queryData, queryResponse.getIds(), queryResponse.getDistances());
     }
 

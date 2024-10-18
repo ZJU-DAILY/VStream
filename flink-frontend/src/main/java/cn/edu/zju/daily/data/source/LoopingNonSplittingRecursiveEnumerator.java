@@ -7,9 +7,13 @@ import org.apache.flink.connector.file.src.FileSourceSplit;
 import org.apache.flink.connector.file.src.enumerate.FileEnumerator;
 import org.apache.flink.connector.file.src.enumerate.NonSplittingRecursiveEnumerator;
 import org.apache.flink.core.fs.Path;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class LoopingNonSplittingRecursiveEnumerator extends NonSplittingRecursiveEnumerator {
 
+    private static final Logger LOG =
+            LoggerFactory.getLogger(LoopingNonSplittingRecursiveEnumerator.class);
     private final int numLoops;
 
     public LoopingNonSplittingRecursiveEnumerator(int numLoops) {
@@ -24,6 +28,7 @@ public class LoopingNonSplittingRecursiveEnumerator extends NonSplittingRecursiv
         for (int i = 0; i < numLoops; i++) {
             loopedSplits.addAll(splits);
         }
+        LOG.info("{} splits in total.", loopedSplits.size());
         return loopedSplits;
     }
 
@@ -37,6 +42,7 @@ public class LoopingNonSplittingRecursiveEnumerator extends NonSplittingRecursiv
 
         @Override
         public FileEnumerator create() {
+            LOG.info("Creating LoopingNonSplittingRecursiveEnumerator with {} loops.", numLoops);
             return new LoopingNonSplittingRecursiveEnumerator(numLoops);
         }
     }

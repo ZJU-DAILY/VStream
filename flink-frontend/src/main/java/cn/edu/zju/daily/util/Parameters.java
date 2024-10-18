@@ -45,6 +45,9 @@ public class Parameters implements Serializable {
     private String sourcePath;
     private String queryPath;
     private int vectorDim;
+    private int insertSkip;
+    private int insertLimitPerLoop;
+    private int insertLoops;
     private List<Long> insertThrottleThresholds;
     private List<Long> insertRates;
     private List<Long> observedInsertRates;
@@ -177,6 +180,30 @@ public class Parameters implements Serializable {
 
     public void setVectorDim(int vectorDim) {
         this.vectorDim = vectorDim;
+    }
+
+    public int getInsertSkip() {
+        return insertSkip;
+    }
+
+    public void setInsertSkip(int insertSkip) {
+        this.insertSkip = insertSkip;
+    }
+
+    public int getInsertLimitPerLoop() {
+        return insertLimitPerLoop;
+    }
+
+    public void setInsertLimitPerLoop(int insertLimitPerLoop) {
+        this.insertLimitPerLoop = insertLimitPerLoop;
+    }
+
+    public int getInsertLoops() {
+        return insertLoops;
+    }
+
+    public void setInsertLoops(int insertLoops) {
+        this.insertLoops = insertLoops;
     }
 
     public List<Long> getInsertThrottleThresholds() {

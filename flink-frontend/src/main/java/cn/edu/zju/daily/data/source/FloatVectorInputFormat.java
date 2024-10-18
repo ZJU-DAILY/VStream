@@ -62,6 +62,7 @@ public class FloatVectorInputFormat extends SimpleStreamFormat<FloatVector> {
             }
             FloatVector vector = parser.parseVector(line);
             vector.setTTL(maxTTL); // currently set to max TTL
+            LOG.trace("Read vector: {}", vector);
             return vector;
         }
 

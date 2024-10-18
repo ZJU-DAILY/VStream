@@ -21,6 +21,7 @@ import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
 import org.apache.flink.util.Collector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tech.amikos.chromadb.handler.ApiException;
 
 /** Chroma insert function. */
 public class ChromaDBKeyedDataProcessFunction
@@ -30,6 +31,8 @@ public class ChromaDBKeyedDataProcessFunction
     private static final Logger LOG =
             LoggerFactory.getLogger(ChromaDBKeyedDataProcessFunction.class);
 
+    private CustomChromaClient client;
+    private String collectionName;
     private CustomChromaCollection collection;
     private ListState<FloatVector> state;
     private ValueState<Integer> count;
@@ -56,7 +59,7 @@ public class ChromaDBKeyedDataProcessFunction
         // insertExecutor = Executors.newSingleThreadExecutor();
 
         int subtaskIndex = getRuntimeContext().getIndexOfThisSubtask();
-        String collectionName = params.getChromaCollectionName() + "_" + subtaskIndex;
+        collectionName = params.getChromaCollectionName() + "_" + subtaskIndex;
         String addressFile = params.getChromaAddressFile();
         List<String> addresses = readAddresses(addressFile); // host:port_low:port_high
 
@@ -82,7 +85,7 @@ public class ChromaDBKeyedDataProcessFunction
         String addressToUse = chooseAddressToUse(address, jobInfo, getRuntimeContext());
         LOG.info("Subtask {}: Using Chroma server at {}", subtaskIndex, addressToUse);
 
-        CustomChromaClient client = new CustomChromaClient(addressToUse);
+        client = new CustomChromaClient(addressToUse);
         client.setTimeout(600); // 10 minutes
 
         // Clear the collection if it already exists
@@ -97,21 +100,31 @@ public class ChromaDBKeyedDataProcessFunction
             }
         }
 
-        // Create a new collection
-        Map<String, String> metadata = new HashMap<>();
-        metadata.put("hnsw:space", params.getMetricType().toLowerCase());
-        metadata.put("hnsw:M", Integer.toString(params.getHnswM()));
-        metadata.put("hnsw:construction_ef", Integer.toString(params.getHnswEfConstruction()));
-        metadata.put("hnsw:search_ef", Integer.toString(params.getHnswEfSearch()));
-        metadata.put("hnsw:batch_size", Integer.toString(params.getChromaHnswBatchSize()));
-        metadata.put("hnsw:sync_threshold", Integer.toString(10 * params.getChromaHnswBatchSize()));
+        this.collection = getOrCreateCollection();
+    }
 
-        this.collection =
-                client.createCollection(
-                        collectionName,
-                        metadata,
-                        true,
-                        CustomEmptyChromaEmbeddingFunction.getInstance());
+    private CustomChromaCollection getOrCreateCollection() {
+        try {
+            // Create a new collection
+            Map<String, String> metadata = new HashMap<>();
+            metadata.put("hnsw:space", params.getMetricType().toLowerCase());
+            metadata.put("hnsw:M", Integer.toString(params.getHnswM()));
+            metadata.put("hnsw:construction_ef", Integer.toString(params.getHnswEfConstruction()));
+            metadata.put("hnsw:search_ef", Integer.toString(params.getHnswEfSearch()));
+            metadata.put("hnsw:batch_size", Integer.toString(params.getChromaHnswBatchSize()));
+            metadata.put(
+                    "hnsw:sync_threshold", Integer.toString(10 * params.getChromaHnswBatchSize()));
+
+            return collection =
+                    client.createCollection(
+                            collectionName,
+                            metadata,
+                            true,
+                            CustomEmptyChromaEmbeddingFunction.getInstance());
+        } catch (ApiException e) {
+            LOG.error("Error creating collection", e);
+            return null;
+        }
     }
 
     @Override
@@ -154,12 +167,11 @@ public class ChromaDBKeyedDataProcessFunction
             if (!idsToDelete.isEmpty()) {
                 try {
                     long now = System.currentTimeMillis();
-                    collection.delete(
-                            idsToDelete.stream().map(Object::toString).collect(toList()),
-                            null,
-                            null);
+                    deleteFromCollection(
+                            idsToDelete.stream().map(Object::toString).collect(toList()));
                     LOG.info(
-                            "Deleted {} vectors in {} ms",
+                            "Partition {}: Deleted {} vectors in {} ms",
+                            getRuntimeContext().getIndexOfThisSubtask(),
                             idsToDelete.size(),
                             System.currentTimeMillis() - now);
                 } catch (Exception e) {
@@ -179,14 +191,41 @@ public class ChromaDBKeyedDataProcessFunction
                     List<Map<String, String>> metadatas =
                             vectorsToAdd.stream().map(FloatVector::getMetadata).collect(toList());
                     long now = System.currentTimeMillis();
-                    collection.add(vectors, metadatas, ids, ids);
+                    addToCollection(vectors, ids, metadatas);
                     LOG.info(
-                            "Inserted {} vectors in {} ms",
+                            "Partition {}: Inserted {} vectors (from #{}) in {} ms",
+                            getRuntimeContext().getIndexOfThisSubtask(),
                             vectorsToAdd.size(),
+                            vectorsToAdd.get(0).getId(),
                             System.currentTimeMillis() - now);
                 } catch (Exception e) {
-                    LOG.error("Error inserting vectors", e);
+                    LOG.error("Error inserting vectors to {}", collectionName, e);
                 }
+            }
+        }
+
+        private void addToCollection(
+                List<List<Float>> vectors, List<String> ids, List<Map<String, String>> metadatas) {
+            if (collection == null) {
+                collection = getOrCreateCollection();
+            }
+            try {
+                collection.add(vectors, metadatas, ids, ids);
+            } catch (Exception e) {
+                LOG.error("Error adding vectors, resetting collection.");
+                collection = null;
+            }
+        }
+
+        private void deleteFromCollection(List<String> ids) {
+            if (collection == null) {
+                collection = getOrCreateCollection();
+            }
+            try {
+                collection.delete(ids, null, null);
+            } catch (Exception e) {
+                LOG.error("Error deleting vectors, resetting collection.");
+                collection = null;
             }
         }
     }

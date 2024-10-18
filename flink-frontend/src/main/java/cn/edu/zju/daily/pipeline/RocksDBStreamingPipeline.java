@@ -45,7 +45,10 @@ public class RocksDBStreamingPipeline {
         }
         PartitionFunction partitioner = getPartitioner();
         return applyToPartitionedData(
-                vectors.connect(queries).flatMap(partitioner).name("partition"));
+                vectors.connect(queries)
+                        .keyBy(x -> 1, x -> 1) // make partitioner a keyed operator
+                        .flatMap(partitioner)
+                        .name("partition"));
     }
 
     /** Apply the streaming pipeline to an unpartitioned PartitionedData stream. */

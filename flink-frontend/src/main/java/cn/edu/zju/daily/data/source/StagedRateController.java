@@ -1,9 +1,12 @@
 package cn.edu.zju.daily.data.source;
 
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class StagedRateController implements RateController {
 
+    private static final Logger LOG = LoggerFactory.getLogger(StagedRateController.class);
     private final List<Long> stages;
     private final List<Long> delays; // in nanoseconds
     private int index = 0;
@@ -30,6 +33,7 @@ public class StagedRateController implements RateController {
         maxCount = count;
         if (index < stages.size() - 1 && count >= stages.get(index + 1)) {
             index++;
+            LOG.info("Reached threshold {}, new delay {} ns", stages.get(index), delays.get(index));
         }
         return delays.get(index);
     }

@@ -80,7 +80,6 @@ public class ChromaDBKeyedProcessFunction
         }
 
         String addressToUse = chooseAddressToUse(address, jobInfo, getRuntimeContext());
-        LOG.info("Subtask {}: Using Chroma server at {}", subtaskIndex, addressToUse);
 
         CustomChromaClient client = new CustomChromaClient(addressToUse);
         client.setTimeout(600); // 10 minutes
@@ -110,6 +109,7 @@ public class ChromaDBKeyedProcessFunction
                         metadata,
                         true,
                         CustomEmptyChromaEmbeddingFunction.getInstance());
+        LOG.info("Subtask {}: Connected to Chroma server at {}", subtaskIndex, addressToUse);
     }
 
     @Override

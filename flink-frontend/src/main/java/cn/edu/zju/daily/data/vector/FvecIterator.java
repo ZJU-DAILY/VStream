@@ -9,7 +9,11 @@ import java.util.Iterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** This class reads a float or binary vector file in SIFT format as float arrays. */
+/**
+ * This class reads a float or binary vector file in SIFT format as float arrays.
+ *
+ * @see http://corpus-texmex.irisa.fr/
+ */
 public class FvecIterator implements Iterator<float[]> {
 
     public enum InputType {
