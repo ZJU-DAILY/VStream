@@ -50,9 +50,9 @@ void Java_org_rocksdb_Checkpoint_disposeInternal(JNIEnv* /*env*/,
  * Method:    createCheckpoint
  * Signature: (JLjava/lang/String;)V
  */
-void Java_org_rocksdb_Checkpoint_createCheckpoint(JNIEnv* env, jobject /*jobj*/,
-                                                  jlong jcheckpoint_handle,
-                                                  jstring jcheckpoint_path) {
+void Java_org_rocksdb_Checkpoint_createCheckpoint__JLjava_lang_String_2(JNIEnv* env, jobject /*jobj*/,
+                                                                        jlong jcheckpoint_handle,
+                                                                        jstring jcheckpoint_path) {
   const char* checkpoint_path = env->GetStringUTFChars(jcheckpoint_path, 0);
   if (checkpoint_path == nullptr) {
     // exception thrown: OutOfMemoryError
@@ -62,6 +62,30 @@ void Java_org_rocksdb_Checkpoint_createCheckpoint(JNIEnv* env, jobject /*jobj*/,
   auto* checkpoint =
       reinterpret_cast<ROCKSDB_NAMESPACE::Checkpoint*>(jcheckpoint_handle);
   ROCKSDB_NAMESPACE::Status s = checkpoint->CreateCheckpoint(checkpoint_path);
+
+  env->ReleaseStringUTFChars(jcheckpoint_path, checkpoint_path);
+
+  if (!s.ok()) {
+    ROCKSDB_NAMESPACE::RocksDBExceptionJni::ThrowNew(env, s);
+  }
+}
+
+
+void Java_org_rocksdb_Checkpoint_createCheckpoint__JLjava_lang_String_2J(JNIEnv* env, jobject /*jobj*/,
+                                                                         jlong jcheckpoint_handle,
+                                                                         jstring jcheckpoint_path,
+                                                                         jlong jlog_size_for_flush) {
+
+  const char* checkpoint_path = env->GetStringUTFChars(jcheckpoint_path, 0);
+  if (checkpoint_path == nullptr) {
+    // exception thrown: OutOfMemoryError
+    return;
+  }
+
+  auto* checkpoint =
+      reinterpret_cast<ROCKSDB_NAMESPACE::Checkpoint*>(jcheckpoint_handle);
+  ROCKSDB_NAMESPACE::Status s = checkpoint->CreateCheckpoint(checkpoint_path,
+                                                             static_cast<uint64_t>(jlog_size_for_flush));
 
   env->ReleaseStringUTFChars(jcheckpoint_path, checkpoint_path);
 

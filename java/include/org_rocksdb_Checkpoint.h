@@ -28,8 +28,16 @@ JNIEXPORT void JNICALL Java_org_rocksdb_Checkpoint_disposeInternal
  * Method:    createCheckpoint
  * Signature: (JLjava/lang/String;)V
  */
-JNIEXPORT void JNICALL Java_org_rocksdb_Checkpoint_createCheckpoint
+JNIEXPORT void JNICALL Java_org_rocksdb_Checkpoint_createCheckpoint__JLjava_lang_String_2
   (JNIEnv *, jobject, jlong, jstring);
+
+/*
+ * Class:     org_rocksdb_Checkpoint
+ * Method:    createCheckpoint
+ * Signature: (JLjava/lang/String;J)V
+ */
+JNIEXPORT void JNICALL Java_org_rocksdb_Checkpoint_createCheckpoint__JLjava_lang_String_2J
+  (JNIEnv *, jobject, jlong, jstring, jlong);
 
 #ifdef __cplusplus
 }

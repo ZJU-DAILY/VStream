@@ -79,6 +79,7 @@ public abstract class RocksDBSnapshotStrategyBase<K, R extends SnapshotResources
                         RocksDBSnapshotStrategyBase.NativeRocksDBSnapshotResources>,
                 AutoCloseable {
 
+    private static final long DISABLE_FLUSH = -1L;
     private static final Logger LOG = LoggerFactory.getLogger(RocksDBSnapshotStrategyBase.class);
 
     @Nonnull private final String description;
@@ -174,7 +175,7 @@ public abstract class RocksDBSnapshotStrategyBase<K, R extends SnapshotResources
             LOG.info(
                     "Checkpoint object created; ready to take checkpoint in {}.",
                     outputDirectory.getDirectory().toString());
-            checkpoint.createCheckpoint(outputDirectory.getDirectory().toString());
+            checkpoint.createCheckpoint(outputDirectory.getDirectory().toString(), DISABLE_FLUSH);
             LOG.info("Created RocksDB checkpoint in {}.", outputDirectory);
         } catch (Exception ex) {
             try {
