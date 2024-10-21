@@ -60,10 +60,10 @@ public class MilvusUtil {
                 milvusServiceClient.getCollectionStatistics(param);
         if (response.getStatus() == 0) {
             GetCollStatResponseWrapper wrapper = new GetCollStatResponseWrapper(response.getData());
-            LOG.info("Collection " + collectionName + " row count: " + wrapper.getRowCount());
+            LOG.info("Collection {} row count: {}", collectionName, wrapper.getRowCount());
             return wrapper;
         } else {
-            LOG.info("RPC failed: " + response.getMessage());
+            LOG.info("RPC failed: {}", response.getMessage());
             return null;
         }
     }
@@ -72,9 +72,8 @@ public class MilvusUtil {
         long start = System.currentTimeMillis();
         GetCollStatResponseWrapper stat = getCollectionStatistics(collectionName);
         LOG.info(
-                "getCollectionSize: collection stat returned in "
-                        + (System.currentTimeMillis() - start)
-                        + " ms.");
+                "getCollectionSize: collection stat returned in {} ms.",
+                System.currentTimeMillis() - start);
         if (stat != null) {
             return stat.getRowCount();
         } else {
@@ -87,9 +86,9 @@ public class MilvusUtil {
                 milvusServiceClient.hasCollection(
                         HasCollectionParam.newBuilder().withCollectionName(collectionName).build());
         if (response.getData()) {
-            LOG.info("Collection " + collectionName + " already exists.");
+            LOG.info("Collection {} already exists.", collectionName);
         } else {
-            LOG.info("Collection " + collectionName + " not exists.");
+            LOG.info("Collection {} not exists.", collectionName);
         }
         return response.getData();
     }
@@ -101,14 +100,13 @@ public class MilvusUtil {
                                 .withCollectionName(collectionName)
                                 .build());
         if (rpcStatusR.getStatus() == 0) {
-            LOG.info("Collection " + collectionName + " has been dropped.");
+            LOG.info("Collection {} has been dropped.", collectionName);
             return true;
         } else {
             LOG.error(
-                    "Collection "
-                            + collectionName
-                            + " drop failed, error code: "
-                            + rpcStatusR.getStatus());
+                    "Collection {} drop failed, error code: {}",
+                    collectionName,
+                    rpcStatusR.getStatus());
             return false;
         }
     }
@@ -243,6 +241,20 @@ public class MilvusUtil {
         }
         DescribeIndexResponse data = response.getData();
         return data.getIndexDescriptionsList().get(0).getState() == IndexState.Finished;
+    }
+
+    public IndexDescription getIndexDescription(String collectionName, String indexName) {
+        DescribeIndexParam param =
+                DescribeIndexParam.newBuilder()
+                        .withCollectionName(collectionName)
+                        .withIndexName(indexName)
+                        .build();
+        R<DescribeIndexResponse> response = milvusServiceClient.describeIndex(param);
+        if (response.getStatus() != R.Status.Success.getCode()) {
+            System.out.println(response.getMessage());
+        }
+        DescribeIndexResponse data = response.getData();
+        return data.getIndexDescriptionsList().get(0);
     }
 
     public void flush(String collectionName, boolean async) {
@@ -395,10 +407,9 @@ public class MilvusUtil {
         R<SearchResults> response = milvusServiceClient.search(searchParam);
         if (response.getStatus() != 0) {
             LOG.warn(
-                    "Search response status: "
-                            + response.getStatus()
-                            + ", message: "
-                            + response.getMessage());
+                    "Search response status: {}, message: {}",
+                    response.getStatus(),
+                    response.getMessage());
         }
         SearchResults data = response.getData();
         if (data == null) {

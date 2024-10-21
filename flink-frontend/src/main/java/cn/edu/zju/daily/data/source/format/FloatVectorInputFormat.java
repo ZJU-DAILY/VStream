@@ -1,4 +1,4 @@
-package cn.edu.zju.daily.data.source;
+package cn.edu.zju.daily.data.source.format;
 
 import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.data.vector.HDFSVectorParser;
@@ -24,7 +24,7 @@ public class FloatVectorInputFormat extends SimpleStreamFormat<FloatVector> {
         this(DEFAULT_CHARSET_NAME, maxTTL);
     }
 
-    public FloatVectorInputFormat(String charsetName, long maxTTL) {
+    FloatVectorInputFormat(String charsetName, long maxTTL) {
         this.charsetName = charsetName;
         this.maxTTL = maxTTL;
     }

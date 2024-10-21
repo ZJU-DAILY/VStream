@@ -43,3 +43,4 @@ src/main/resources/*.yaml
 src/test/resources/*.yaml
 src/main/resources/chroma_addresses.txt
 src/test/resources/test_chroma_addresses.txt
+params/

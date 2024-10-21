@@ -33,7 +33,7 @@ for file in $(find "$FLINK_FRONTEND_DIR/params" -name "*.yaml" | sort -n); do
     -d "{\"msgtype\": \"text\", \"text\": {\"content\": \"$PROMPT\"}}" &> /dev/null
 
     sleep 10s
-    python "$SCRIPT_DIR/wait-flink-job.py" "$syslog_dirname"
+    python3 "$SCRIPT_DIR/wait-flink-job.py" "$syslog_dirname"
     status=$?
     "$SCRIPT_DIR/stop-chroma.sh" -f "$syslog_dirname" -a y
     rm -f ./.syslog_dir
@@ -43,7 +43,7 @@ for file in $(find "$FLINK_FRONTEND_DIR/params" -name "*.yaml" | sort -n); do
       echo "done $base" >> "$COMPLETED_LOG"
     fi
   else
-    echo "Skip non-milvus job."
+    echo "Skip non-chroma job."
     echo "skip $base" >> "$COMPLETED_LOG"
     continue
   fi

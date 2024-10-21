@@ -8,7 +8,7 @@ import java.util.*;
 import org.apache.flink.util.Collector;
 
 /**
- * 使用 LSH 函数为向量数据和查询分配分区. 该函数实现了 CoFlatMapFunction 接口，因此需要同时处理数据和查询，这是为了确保数据和查询使用同样的 分区策略。
+ * 简单哈希分区. 该函数实现了 CoFlatMapFunction 接口，因此需要同时处理数据和查询，这是为了确保数据和查询使用同样的分区策略。
  *
  * <p>Flink 内部对 KeyedStream 使用 hash 分区，具体的分区器是 KeyGroupStreamPartitioner。分区的计算流程：
  *

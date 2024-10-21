@@ -1,5 +1,7 @@
-package cn.edu.zju.daily.data.source;
+package cn.edu.zju.daily.data.source.format;
 
+import cn.edu.zju.daily.data.source.rate.RateControllerBuilder;
+import cn.edu.zju.daily.data.source.rate.UnlimitedRateControllerBuilder;
 import cn.edu.zju.daily.data.vector.FloatVector;
 import java.io.IOException;
 import java.nio.Buffer;
@@ -8,15 +10,19 @@ import java.nio.ByteOrder;
 import java.time.Duration;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.IllegalConfigurationException;
 import org.apache.flink.connector.file.src.reader.SimpleStreamFormat;
 import org.apache.flink.connector.file.src.reader.StreamFormat;
 import org.apache.flink.core.fs.FSDataInputStream;
+import org.apache.flink.util.MathUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class FloatVectorBinaryInputFormat extends SimpleStreamFormat<FloatVector> {
 
     private static final Logger LOG = LoggerFactory.getLogger(FloatVectorBinaryInputFormat.class);
+
+    private static final int MAX_BUFFER_SIZE = Integer.MAX_VALUE - 8;
 
     /**
      * If the current clock is ahead of allowedEmitTs by this amount of time, there is severe
@@ -42,7 +48,7 @@ public class FloatVectorBinaryInputFormat extends SimpleStreamFormat<FloatVector
             int limitPerLoop,
             int dim,
             int numLoops,
-            RateController rateController) {
+            RateControllerBuilder rateControllerBuilder) {
         this.name = name;
         this.maxTTL = maxTTL;
         this.fileType = fileType;
@@ -50,7 +56,11 @@ public class FloatVectorBinaryInputFormat extends SimpleStreamFormat<FloatVector
         this.limitPerLoop = limitPerLoop == 0 ? Integer.MAX_VALUE : limitPerLoop;
         this.dim = dim;
         this.numLoops = numLoops;
-        this.rateController = rateController;
+        if (rateControllerBuilder != null) {
+            this.rateControllerBuilder = rateControllerBuilder;
+        } else {
+            this.rateControllerBuilder = new UnlimitedRateControllerBuilder();
+        }
     }
 
     public enum FileType {
@@ -64,7 +74,7 @@ public class FloatVectorBinaryInputFormat extends SimpleStreamFormat<FloatVector
         }
     }
 
-    private static final int DIM_BYTES = Integer.BYTES;
+    static final int DIM_BYTES = Integer.BYTES;
 
     private final String name;
     private final long maxTTL;
@@ -73,12 +83,37 @@ public class FloatVectorBinaryInputFormat extends SimpleStreamFormat<FloatVector
     private final int limitPerLoop;
     private final int dim;
     private final int numLoops;
-    private final RateController rateController;
+    private final RateControllerBuilder rateControllerBuilder;
+
+    FileType getFileType() {
+        return fileType;
+    }
 
     @Override
     public Reader createReader(Configuration config, FSDataInputStream stream) throws IOException {
+        RateControllerBuilder.RateController rateController = rateControllerBuilder.build();
+        final int fetchSize =
+                Math.min(
+                        MAX_BUFFER_SIZE,
+                        MathUtils.checkedDownCast(
+                                config.get(StreamFormat.FETCH_IO_SIZE).getBytes()));
+        if (fetchSize <= 0) {
+            throw new IllegalConfigurationException(
+                    String.format(
+                            "The fetch size (%s) must be > 0, but is %d",
+                            StreamFormat.FETCH_IO_SIZE.key(), fetchSize));
+        }
         return new Reader(
-                stream, name, fileType, maxTTL, skip, limitPerLoop, dim, numLoops, rateController);
+                stream,
+                name,
+                fileType,
+                maxTTL,
+                skip,
+                limitPerLoop,
+                dim,
+                numLoops,
+                rateController,
+                fetchSize);
     }
 
     @Override
@@ -98,7 +133,7 @@ public class FloatVectorBinaryInputFormat extends SimpleStreamFormat<FloatVector
         private int loop; // current loop
         private int count; // current count in this loop
         private long vectorId;
-        private final RateController rateController;
+        private final RateControllerBuilder.RateController rateController;
         private final String name;
 
         private final ByteBuffer intBuffer;
@@ -114,9 +149,10 @@ public class FloatVectorBinaryInputFormat extends SimpleStreamFormat<FloatVector
                 int limitPerLoop,
                 int dim,
                 int numLoops,
-                RateController rateController)
+                RateControllerBuilder.RateController rateController,
+                int fetchSize)
                 throws IOException {
-            this.stream = stream;
+            this.stream = new BufferedFSDataInputStream(stream, fetchSize);
             this.name = name;
             this.fileType = fileType;
             this.maxTTL = maxTTL;
@@ -174,6 +210,17 @@ public class FloatVectorBinaryInputFormat extends SimpleStreamFormat<FloatVector
             if (bytesSkippedTotal != DIM_BYTES) {
                 throw new IOException(
                         "Failed to skip " + DIM_BYTES + " bytes of vector dimension.");
+            }
+
+            // Check vector dim
+            int dimRead = intBuffer.asIntBuffer().get(0);
+            if (dimRead != dim) {
+                throw new IOException(
+                        "Failed to read the correct dimension of the vector, expected "
+                                + dim
+                                + ", actually read "
+                                + dimRead
+                                + ".");
             }
 
             // Read the data until the vector is complete
@@ -235,14 +282,15 @@ public class FloatVectorBinaryInputFormat extends SimpleStreamFormat<FloatVector
             // Rate control
             long currentNanos = System.nanoTime();
 
-            if (rateController != null) {
+            if (rateController != null
+                    && !(rateController instanceof UnlimitedRateControllerBuilder.Controller)) {
                 long delay = rateController.getDelayNanos(vectorId);
                 long delayRefreshThresholdNanos =
                         Math.max(DELAY_REFRESH_THRESHOLD.toNanos(), delay);
                 if (allowedEmitNanos == 0
                         || currentNanos - allowedEmitNanos >= delayRefreshThresholdNanos) {
                     LOG.info(
-                            "FloatVectorBinaryInputFormat.Reader({}): Resetting allowedEmitNanos to current time.",
+                            "FloatVectorBinaryInputFormat.Reader ({}): Resetting allowedEmitNanos to current time.",
                             name);
                     allowedEmitNanos = currentNanos;
                 }

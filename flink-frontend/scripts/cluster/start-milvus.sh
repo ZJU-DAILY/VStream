@@ -1,82 +1,87 @@
-# check if root:
-if [ "$EUID" -ne 0 ]
-then echo "Please run as root"
-  exit
-fi
+#!/bin/bash
+while getopts p:n:f: flag
+do
+  case "${flag}" in
+    p) param_file=${OPTARG};;
+    n) noexec=${OPTARG};;
+    f) force=${OPTARG};;
+    *) echo "Invalid flag: ${flag}";;
+  esac
+done
 
-CLUSTER="node10 node11 node12 node13 node14 node15 node20 node21 node22 node23 node182"
-MASTER="node20"
-FLINK_MASTER="node23"
+SCRIPT_DIR=$(dirname -- "${BASH_SOURCE}")
+CLUSTER="node10 node11 node12 node13 node14 node15 node21 node22 node23 node182 node193"
+RUN_HOST="node182"
+FLINK_MASTER="node11"
+FLINK_MASTER_PORT="4978"
 MONITORED="$CLUSTER"
+SSH_CONFIG="-p 4399"
+SYSLOG_DIR="/home/auroflow/storage/syslogs"
+FLINK_FRONTEND_DIR="/home/auroflow/code/vector-search/VStream/flink-frontend"
+FLINK_FRONTEND_JAR="/home/auroflow/code/vector-search/VStream/build/flink-frontend/vstream-1.1.jar"
 
-if [ "$1" = "-n" ]; then
-  noexec=true
-fi
-if [ "$2" = "-n" ]; then
-  noexec=true
-fi
-if [ "$1" = "-f" ]; then
-  force=true
-fi
-if [ "$2" = "-f" ]; then
-  force=true
-fi
+# Display config
+echo "About to execute:"
+ssh $SSH_CONFIG $RUN_HOST "cat $FLINK_FRONTEND_DIR/src/main/resources/params.yaml"
 
-# On node20
-# Show config
-ssh $MASTER "cat /home/auroflow/code/vector-search/rocksdb-stream/src/main/resources/params.yaml"
-if [ ! -z $noexec ]; then
-  echo "[no-exec]"
-fi
 # confirm correct
-if [ -z $force ]; then
+if [ "$force" != "true" ]; then
   echo "Are the params correct?"
-  read iscorrect
-  if [ "$iscorrect" != "y" ]
-  then echo "vi /home/auroflow/code/vector-search/rocksdb-stream/src/main/resources/params.yaml"
+  read -r iscorrect
+  if [ "$iscorrect" != "y" ]; then
+    echo "vi $FLINK_FRONTEND_DIR/src/main/resources/params.yaml"
     exit
   fi
 fi
 
 # Get current time
 DATE=$(date +"%m%d-%H%M")
-folder="/home/auroflow/code/vector-search/syslogs/$DATE-milvus"
-echo "Syslogs folder name: $folder"
+syslog_dir="$SYSLOG_DIR/$DATE-milvus"
+echo "Syslogs folder name: $syslog_dir"
+
+if [ "$noexec" == "true" ]; then
+  echo "[no-exec] job started"
+  exit
+fi
 
 # If Flink is running on master, exit
-if ssh $FLINK_MASTER "/home/auroflow/java/amazon-corretto-8.362.08.1-linux-x64/bin/jps | grep StandaloneSessionClusterEntrypoint | grep -v grep"; then
+if ssh $SSH_CONFIG $FLINK_MASTER "jps | grep StandaloneSessionClusterEntrypoint | grep -v grep"; then
   echo "Flink is running on $FLINK_MASTER, please stop Flink first"
   exit
 fi
 
+# sync params.yaml to RUN_HOST
+rsync -a -e "ssh $SSH_CONFIG" "$param_file" $RUN_HOST:$FLINK_FRONTEND_DIR/src/main/resources/params.yaml
+
 # Copy current config to master's syslogs folder
-ssh $MASTER "mkdir -p $folder"
-ssh $MASTER "cp /home/auroflow/code/vector-search/rocksdb-stream/src/main/resources/params.yaml $folder"
+ssh $SSH_CONFIG $RUN_HOST "mkdir -p $syslog_dir"
+ssh $SSH_CONFIG $RUN_HOST "cp $FLINK_FRONTEND_DIR/src/main/resources/params.yaml $syslog_dir"
 
 # Remove flink logs on all nodes
 for node in $CLUSTER; do
   echo "Removing old Flink logs on $node"
-  ssh $node "rm -rf /home/auroflow/java/flink-1.18.0/log/*"
+  ssh $SSH_CONFIG $node "rm -rf \$FLINK_HOME/log/*"
 done
 
-python3 calculate-parallelism.py /home/auroflow/code/vector-search/rocksdb-stream/src/main/resources/params.yaml
+python3 "$(dirname -- ${BASH_SOURCE})"/adjust_parallelism.py "$param_file"
 
 # Restart flink cluster
-ssh auroflow@$FLINK_MASTER -i /home/auroflow/.ssh/id_rsa "cd /home/auroflow/java/flink-1.18.0/; ./bin/start-cluster.sh"
+ssh $SSH_CONFIG $FLINK_MASTER "\$FLINK_HOME/bin/start-cluster.sh"
+echo "Starting monitoring tools..."
 # On every machine
 for node in $MONITORED; do
-  echo "Starting monitoring tools on $node"
-  ssh $node "mkdir -p $folder"
-  ssh $node 'bash -c "ps aux >> '$folder'/ps.log"'
-  ssh $node 'nohup bash -c "/usr/local/bin/pidstat 10 -urd -p $(pgrep -f "milvus|etcd|pulsar|minio" | tr "\n" ",") > '$folder'/pidstat.log 2>&1 &" </dev/null >/dev/null 2>/dev/null'
-  ssh $node 'nohup bash -c "/usr/sbin/nethogs -t -d 10 > '$folder'/nethogs.log 2>&1 &" </dev/null >/dev/null 2>/dev/null'
-  ssh $node 'nohup bash -c "bash /home/auroflow/code/vector-search/scripts/check-milvus.sh >/dev/null 2>&1 &" </dev/null >/dev/null 2>/dev/null'
+  ssh $SSH_CONFIG $node "mkdir -p $syslog_dir"
+  ssh $SSH_CONFIG root@$node 'bash -c "ps aux >> '$syslog_dir'/ps.log"'
+  ssh $SSH_CONFIG root@$node 'nohup bash -c "/usr/local/bin/pidstat 2 -urd -p $(pgrep -f "milvus|etcd|pulsar|minio" | tr "\n" ",") > '$syslog_dir'/pidstat.log 2>&1 &" </dev/null >/dev/null 2>/dev/null'
+  ssh $SSH_CONFIG root@$node 'nohup bash -c "/usr/sbin/nethogs -t -d 2 > '$syslog_dir'/nethogs.log 2>&1 &" </dev/null >/dev/null 2>/dev/null'
+  ssh $SSH_CONFIG root@$node 'nohup bash -c "bash '$SCRIPT_DIR'/check-milvus.sh >/dev/null 2>&1 &" </dev/null >/dev/null 2>/dev/null'
 done
 
-# On node20
+# On RUN_HOST
 # remove nohup
-ssh $MASTER "rm -f /home/auroflow/code/vector-search/rocksdb-stream/nohup.out"
+ssh $SSH_CONFIG $RUN_HOST "rm $FLINK_FRONTEND_DIR/nohup.out &> /dev/null"
 # Run flink job
 echo "Starting Flink job..."
-ssh auroflow@$MASTER -i /home/auroflow/.ssh/id_rsa 'nohup flink run -c cn.edu.zju.daily.MilvusSeparatedStreamSearchJob --jobmanager=10.214.151.23:8081 /home/auroflow/code/vector-search/rocksdb-stream/target/rocksdb-stream-1.0-SNAPSHOT.jar > /home/auroflow/code/vector-search/rocksdb-stream/nohup.out &'
-echo "done"
+ssh $SSH_CONFIG $RUN_HOST 'nohup flink run -c cn.edu.zju.daily.MilvusSeparatedStreamSearchJob --jobmanager='$FLINK_MASTER':'$FLINK_MASTER_PORT' '$FLINK_FRONTEND_JAR' '$FLINK_FRONTEND_DIR'/src/main/resources/params.yaml > '$FLINK_FRONTEND_DIR'/nohup.out &'
+echo "$syslog_dir" > ./.syslog_dir
+echo "job started"

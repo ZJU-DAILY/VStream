@@ -1,10 +1,16 @@
 package cn.edu.zju.daily.data.source;
 
+import cn.edu.zju.daily.data.source.format.FloatVectorBinaryInputFormat;
+import cn.edu.zju.daily.data.source.rate.RateControllerBuilder;
+import cn.edu.zju.daily.data.source.rate.StagedRateControllerBuilder;
 import cn.edu.zju.daily.data.vector.FloatVector;
 import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Arrays;
+import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.MemorySize;
+import org.apache.flink.connector.file.src.reader.StreamFormat;
 import org.apache.flink.core.fs.local.LocalDataInputStream;
 import org.junit.jupiter.api.Test;
 
@@ -18,12 +24,13 @@ public class FloatVectorBinaryInputFormatTest {
 
     @Test
     void test() throws IOException {
-        RateController rateController =
-                new StagedRateController(
-                        Arrays.asList(0L, 5L),
-                        Arrays.asList(
-                                Duration.ofMillis(500).toNanos(),
-                                Duration.ofMillis(2000).toNanos()));
+        RateControllerBuilder.RateController rateController =
+                new StagedRateControllerBuilder(
+                                Arrays.asList(0L, 5L),
+                                Arrays.asList(
+                                        Duration.ofMillis(500).toNanos(),
+                                        Duration.ofMillis(2000).toNanos()))
+                        .build();
         FloatVectorBinaryInputFormat format =
                 new FloatVectorBinaryInputFormat(
                         "test",
@@ -35,9 +42,12 @@ public class FloatVectorBinaryInputFormatTest {
                         numLoops,
                         null);
 
+        Configuration conf = new Configuration();
+        conf.set(StreamFormat.FETCH_IO_SIZE, new MemorySize(1024576));
+
         FloatVectorBinaryInputFormat.Reader reader =
                 format.createReader(
-                        null,
+                        conf,
                         new LocalDataInputStream(
                                 new File(
                                         "/mnt/sda1/work/vector-search/dataset/bigann/bigann_query.bvecs")));

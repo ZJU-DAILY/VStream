@@ -14,14 +14,15 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
 public class MilvusSeparatedStreamSearchJob {
 
-    private static final Parameters params =
-            Parameters.load(
-                    "/home/auroflow/code/vector-search/rocksdb-stream/src/main/resources/params.yaml",
-                    false);
+    private static final String DEFAULT_PARAM_PATH =
+            "/home/auroflow/code/vector-search/VStream/flink-frontend/src/main/resources/params.yaml";
 
     private static final boolean doSearch = true;
 
     public static void main(String[] args) throws Exception {
+
+        String paramPath = args.length > 0 ? args[0] : DEFAULT_PARAM_PATH;
+        Parameters params = Parameters.load(paramPath, false);
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 

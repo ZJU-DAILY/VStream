@@ -58,6 +58,8 @@ public interface PartitionFunction
                         params.getMaxTTL(),
                         params.getParallelism(),
                         isQuery);
+            case "simple":
+                return new SimpleUnaryPartitionFunction(params.getParallelism(), isQuery);
             default:
                 throw new RuntimeException(
                         "Partitioner " + params.getPartitioner() + " not supported.");

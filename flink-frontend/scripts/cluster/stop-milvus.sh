@@ -1,33 +1,28 @@
 # Check if root
-if [ "$EUID" -ne 0 ]
-then echo "Please run as root"
-  exit
-fi
+while getopts f:n:a: flag
+do
+  case "${flag}" in
+    a) answer=${OPTARG};;
+    n) noexec=${OPTARG};;
+    f) folder=${OPTARG};;
+    *) echo "Invalid flag: ${flag}";;
+  esac
+done
 
-# -n (if any) should follow folder name (if any)
-if [ "$1" = "-n" ]; then
-  noexec=true
-  elif [ ! -z "$1" ]; then
-  folder="$1"
-  answer=y
-  if [ "$2" = "-n" ]; then
-    noexec=true
-    elif [ "$2" = "-a" ]; then
-    answer=n
-  fi
-fi
-
-CLUSTER="node10 node11 node12 node13 node14 node15 node20 node21 node22 node23 node182"
-MASTER="node20"
-FLINK_MASTER="node23"
+SCRIPT_DIR=$(dirname -- "${BASH_SOURCE}")
+CLUSTER="node10 node11 node12 node13 node14 node15 node21 node22 node23 node182 node193"
+FLINK_MASTER="node11"
+MILVUS_DATA_PATH="/home/auroflow/milvus/milvus-cluster-deploy-script/volumes"
+FLINK_MASTER_PORT="4978"
+RUN_HOST="node11"
 MONITORED="$CLUSTER"
+SSH_CONFIG="-p 4399"
+SYSLOG_DIR="/home/auroflow/storage/syslogs"
+FLINK_FRONTEND_DIR="/home/auroflow/code/vector-search/VStream/flink-frontend"
 
-if [ ! -z $noexec ]; then
-  echo "[no-exec]"
-fi
 # Input previous folder name
 if [ -z "$folder" ]; then
-  ssh $MASTER "ls /home/auroflow/code/vector-search/syslogs"
+  ssh $SSH_CONFIG $RUN_HOST "ls $SYSLOG_DIR"
   echo "Please input the previous syslogs folder name"
   read folder
 else
@@ -36,56 +31,62 @@ fi
 
 
 # If -n argument is given, don't run flink
-if [ ! -z $noexec ]; then
-  if [ -z $answer ]; then
+if [ "$noexec" == "true" ]; then
+  if [ -z "$answer" ]; then
     echo "Do you want to keep the previous result? (y/n)"
-    read answer
+    read -r answer
   fi
-  if [ "$answer" != "${answer#[Nn]}" ] ;then
+  if [ "$answer" != "${answer#[Nn]}" ]; then
     echo "Drop the previous result"
   else
     echo "Keep the previous result"
   fi
-  echo "done"
+  echo "[no-exec] done"
   exit
 fi
 
 # Ask if drop the previous result
-if [ -z $answer ]; then
+if [ -z "$answer" ]; then
   echo "Do you want to keep the previous result? (y/n)"
-  read answer
+  read -r answer
+fi
+
+if [ "$answer" != "${answer#[Nn]}" ]; then
+  echo "Saving du log..."
+  for node in $MONITORED; do
+    ssh $SSH_CONFIG root@$node "tree --du $MILVUS_DATA_PATH > $SYSLOG_DIR/$folder/du.log"
+  done
 fi
 
 for node in $MONITORED; do
   echo "Killing alarm utility on $node"
-  ssh $node 'pkill -f "bash /home/auroflow/code/vector-search/scripts/check-milvus.sh"'
+  ssh $SSH_CONFIG root@$node 'pkill -f "bash '$SCRIPT_DIR'/check-milvus.sh"'
 done
 
 # If Flink is running on master, stop
-if ssh $FLINK_MASTER "/home/auroflow/java/amazon-corretto-8.362.08.1-linux-x64/bin/jps | grep StandaloneSessionClusterEntrypoint | grep -v grep"; then
+if ssh $SSH_CONFIG $FLINK_MASTER "jps | grep StandaloneSessionClusterEntrypoint | grep -v grep"; then
   echo "Flink is running on master, stopping current job"
-  ssh auroflow@$FLINK_MASTER -i /home/auroflow/.ssh/id_rsa "/home/auroflow/java/flink-1.18.0/bin/stop-cluster.sh"
+  ssh $SSH_CONFIG $FLINK_MASTER "\$FLINK_HOME/bin/stop-cluster.sh"
 fi
 
 
 if [ "$answer" != "${answer#[Nn]}" ] ;then
   echo "Drop the previous result"
+  echo "Dropping..."
   for node in $MONITORED; do
-    echo "Removing syslogs and killing monitoring tools on $node"
-    ssh $node "rm -rf /home/auroflow/code/vector-search/syslogs/$folder"
-    ssh $node "pkill pidstat"
-    ssh $node "pkill nethogs"
+    ssh $SSH_CONFIG $node "rm -rf $SYSLOG_DIR/$folder"
+    ssh $SSH_CONFIG root@$node "pkill pidstat"
+    ssh $SSH_CONFIG root@$node "pkill nethogs"
   done
 else
   echo "Keep the previous result"
+  echo "Saving..."
   for node in $CLUSTER; do
-    echo "Saving Flink logs on $node"
-    ssh $node "cp -r /home/auroflow/java/flink-1.18.0/log /home/auroflow/code/vector-search/syslogs/$folder"
+    ssh $SSH_CONFIG $node "cp -r \$FLINK_HOME/log $SYSLOG_DIR/$folder"
   done
   for node in $MONITORED; do
-    echo "Killing monitor tools on $node"
-    ssh $node "pkill pidstat"
-    ssh $node "pkill nethogs"
+    ssh $SSH_CONFIG root@$node "pkill pidstat"
+    ssh $SSH_CONFIG root@$node "pkill nethogs"
   done
 fi
 echo "done"

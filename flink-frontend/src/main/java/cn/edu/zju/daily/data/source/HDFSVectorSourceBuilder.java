@@ -3,6 +3,10 @@ package cn.edu.zju.daily.data.source;
 import static java.util.stream.Collectors.toList;
 
 import cn.edu.zju.daily.data.PartitionedData;
+import cn.edu.zju.daily.data.source.format.FloatVectorBinaryInputFormat;
+import cn.edu.zju.daily.data.source.format.FloatVectorBinaryInputFormatAdaptor;
+import cn.edu.zju.daily.data.source.format.FloatVectorInputFormat;
+import cn.edu.zju.daily.data.source.rate.*;
 import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.data.vector.HDFSVectorParser;
 import cn.edu.zju.daily.function.partitioner.PartitionFunction;
@@ -10,7 +14,6 @@ import cn.edu.zju.daily.rate.FloatVectorThrottler;
 import cn.edu.zju.daily.util.Parameters;
 import java.util.*;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
-import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.connector.file.src.FileSource;
 import org.apache.flink.connector.file.src.reader.TextLineInputFormat;
@@ -22,6 +25,9 @@ import org.apache.flink.util.Collector;
 /** Create vector source with designated rate. */
 public class HDFSVectorSourceBuilder {
 
+    private static final long QUERY_POLLING_INTERVAL_MILLIS = 10000L;
+    private static final String DEFAULT_INDEX_NAME = "_default_idx_102";
+
     private final StreamExecutionEnvironment env;
     private final Parameters params;
     private final HDFSVectorParser parser = new HDFSVectorParser();
@@ -32,55 +38,113 @@ public class HDFSVectorSourceBuilder {
     }
 
     public SingleOutputStreamOperator<FloatVector> getSourceStream(boolean throttle) {
-        if (throttle) {
-            return get(
-                    params.getHdfsAddress(),
-                    params.getSourcePath(),
-                    params.getInsertThrottleThresholds(),
-                    params.getInsertRates(),
-                    "source",
-                    params.getInsertSkip(),
-                    params.getInsertLimitPerLoop(),
-                    params.getVectorDim(),
-                    params.getInsertLoops());
+        List<Long> thresholds =
+                throttle ? params.getInsertThrottleThresholds() : Collections.singletonList(0L);
+        List<Long> rates = throttle ? params.getInsertRates() : Collections.singletonList(0L);
 
-        } else {
-            return get(
+        if (params.getSourcePath().endsWith(".txt")) {
+            if ("bind-insert".equals(params.getQueryThrottleMode())) {
+                throw new RuntimeException("Text source does not support binding rate.");
+            }
+            if (params.isMilvusWaitForIndexBuild()) {
+                throw new RuntimeException("Text source does not support waiting for index build.");
+            }
+
+            return getTextSource(
                     params.getHdfsAddress(),
                     params.getSourcePath(),
-                    Collections.singletonList(0L),
-                    Collections.singletonList(0L),
+                    thresholds,
+                    rates,
                     "source",
+                    params.getInsertLoops());
+        } else if (params.getSourcePath().endsWith(".fvecs")
+                || params.getSourcePath().endsWith(".bvecs")) {
+
+            RateControllerBuilder rateControllerBuilder =
+                    params.isMilvusWaitForIndexBuild()
+                            ? new WaitingIndexBuildStagedRateControllerBuilder(
+                                    thresholds,
+                                    ratesToIntervals(rates),
+                                    params.getMilvusIndexWaitRatios(),
+                                    params.getMilvusHost(),
+                                    params.getMilvusPort(),
+                                    params.getMilvusCollectionName(),
+                                    DEFAULT_INDEX_NAME)
+                            : new StagedRateControllerBuilder(thresholds, ratesToIntervals(rates));
+
+            if ("bind-insert".equals(params.getQueryThrottleMode())) {
+                rateControllerBuilder =
+                        new BindingRateControllerBuilder(
+                                rateControllerBuilder,
+                                params.getHdfsAddress(),
+                                params.getHdfsUser(),
+                                params.getQueryRatePollingPath(),
+                                rateToInterval(params.getInitialQueryRate()),
+                                rateToInterval(params.getNewQueryRate()),
+                                params.getQueryThrottleInsertThreshold());
+            }
+
+            return getBinarySource(
+                    params.getHdfsAddress(),
+                    params.getSourcePath(),
+                    "source",
+                    params.getVectorDim(),
                     params.getInsertSkip(),
                     params.getInsertLimitPerLoop(),
-                    params.getVectorDim(),
-                    params.getInsertLoops());
+                    params.getInsertLoops(),
+                    params.getInsertReadBulkSize(),
+                    rateControllerBuilder);
+        } else {
+            throw new RuntimeException("Unknown file type.");
         }
     }
 
     public SingleOutputStreamOperator<FloatVector> getQueryStream(boolean throttle) {
-        if (throttle) {
-            return get(
+        List<Long> thresholds =
+                throttle ? params.getQueryThrottleThresholds() : Collections.singletonList(0L);
+        List<Long> rates = throttle ? params.getQueryRates() : Collections.singletonList(0L);
+
+        if (params.getQueryPath().endsWith(".txt")) {
+            if ("bind-query".equals(params.getQueryThrottleMode())) {
+                throw new RuntimeException("Text source does not support binding rate.");
+            }
+
+            return getTextSource(
                     params.getHdfsAddress(),
                     params.getQueryPath(),
-                    params.getQueryThrottleThresholds(),
-                    params.getQueryRates(),
+                    thresholds,
+                    rates,
                     "query",
+                    params.getQueryLoops());
+        } else if (params.getQueryPath().endsWith(".fvecs")
+                || params.getQueryPath().endsWith(".bvecs")) {
+
+            RateControllerBuilder rateControllerBuilder;
+            if ("staged".equals(params.getQueryThrottleMode())) {
+                rateControllerBuilder =
+                        new StagedRateControllerBuilder(thresholds, ratesToIntervals(rates));
+            } else {
+                rateControllerBuilder =
+                        new PollingRateControllerBuilder(
+                                params.getHdfsAddress(),
+                                params.getHdfsUser(),
+                                params.getQueryRatePollingPath(),
+                                QUERY_POLLING_INTERVAL_MILLIS,
+                                params.getInitialQueryRate());
+            }
+
+            return getBinarySource(
+                    params.getHdfsAddress(),
+                    params.getQueryPath(),
+                    "query",
+                    params.getVectorDim(),
                     0,
                     Integer.MAX_VALUE,
-                    params.getVectorDim(),
-                    params.getQueryLoops());
+                    params.getQueryLoops(),
+                    params.getQueryReadBulkSize(),
+                    rateControllerBuilder);
         } else {
-            return get(
-                    params.getHdfsAddress(),
-                    params.getQueryPath(),
-                    Collections.singletonList(0L),
-                    Collections.singletonList(0L),
-                    "query",
-                    0,
-                    Integer.MAX_VALUE,
-                    params.getVectorDim(),
-                    params.getQueryLoops());
+            throw new RuntimeException("Unknown file type.");
         }
     }
 
@@ -159,114 +223,96 @@ public class HDFSVectorSourceBuilder {
         return env.fromCollection(data, TypeInformation.of(PartitionedData.class));
     }
 
-    private static class MaxTTLSetter implements MapFunction<String, FloatVector> {
-
-        long maxTTL;
-        HDFSVectorParser parser;
-
-        MaxTTLSetter(long maxTTL, HDFSVectorParser parser) {
-            this.maxTTL = maxTTL;
-            this.parser = parser;
-        }
-
-        @Override
-        public FloatVector map(String value) throws Exception {
-            FloatVector vector = parser.parseVector(value);
-            vector.setTTL(maxTTL); // currently set to max TTL
-            return vector;
-        }
-    }
-
-    private SingleOutputStreamOperator<FloatVector> get(
+    private SingleOutputStreamOperator<FloatVector> getTextSource(
             String hdfsAddress,
             String hdfsPath,
             List<Long> thresholds,
             List<Long> rates,
             String name,
-            int startId,
-            int dataSize,
-            int dim,
-            int numLoops) {
+            int numLoops) { // (Deprecated) txt files
 
-        if (hdfsPath.endsWith(".txt")) {
-            if (startId != 0) {
-                throw new IllegalArgumentException("startId must be 0 for text files.");
-            }
-            FileSource<FloatVector> fileSource =
-                    FileSource.forRecordStreamFormat(
-                                    new FloatVectorInputFormat(params.getMaxTTL()),
-                                    new Path(hdfsAddress + hdfsPath))
-                            .setFileEnumerator(
-                                    new LoopingNonSplittingRecursiveEnumerator.Provider(numLoops))
-                            .build();
+        FileSource<FloatVector> fileSource =
+                FileSource.forRecordStreamFormat(
+                                new FloatVectorInputFormat(params.getMaxTTL()),
+                                new Path(hdfsAddress + hdfsPath))
+                        .setFileEnumerator(
+                                new LoopingNonSplittingRecursiveEnumerator.Provider(numLoops))
+                        .build();
 
-            FloatVectorThrottler throttler =
-                    new FloatVectorThrottler(thresholds, ratesToIntervals(rates), numLoops > 1);
+        FloatVectorThrottler throttler =
+                new FloatVectorThrottler(thresholds, ratesToIntervals(rates), numLoops > 1);
 
-            return env.fromSource(
-                            fileSource, WatermarkStrategy.noWatermarks(), "hdfs-vector-source")
-                    .setParallelism(1)
-                    .name(name + " input")
-                    .returns(FloatVector.class)
-                    .disableChaining()
-                    .map(throttler)
-                    .setParallelism(1)
-                    .name(name + " throttle")
-                    .returns(FloatVector.class)
-                    .assignTimestampsAndWatermarks(
-                            WatermarkStrategy.<FloatVector>forMonotonousTimestamps()
-                                    .withTimestampAssigner(
-                                            (vector, timestamp) -> {
-                                                long current = System.currentTimeMillis();
-                                                vector.setEventTime(current);
-                                                return current; // currently, use system time as
-                                                // event
-                                                // time
-                                            }))
-                    .name(name + " timestamps");
+        return env.fromSource(fileSource, WatermarkStrategy.noWatermarks(), "hdfs-vector-source")
+                .setParallelism(1)
+                .name(name + " input")
+                .returns(FloatVector.class)
+                .disableChaining()
+                .map(throttler)
+                .setParallelism(1)
+                .name(name + " throttle")
+                .returns(FloatVector.class)
+                .assignTimestampsAndWatermarks(
+                        WatermarkStrategy.<FloatVector>forMonotonousTimestamps()
+                                .withTimestampAssigner(
+                                        (vector, timestamp) -> {
+                                            long current = System.currentTimeMillis();
+                                            vector.setEventTime(current);
+                                            return current; // currently, use system time as
+                                            // event
+                                            // time
+                                        }))
+                .name(name + " timestamps");
+    }
 
-        } else if (hdfsPath.endsWith(".fvecs") || hdfsPath.endsWith(".bvecs")) {
-            FloatVectorBinaryInputFormat.FileType fileType;
-            if (hdfsPath.endsWith(".fvecs")) {
-                fileType = FloatVectorBinaryInputFormat.FileType.F_VEC;
-            } else {
-                // hdfsPath.endsWith(".bvecs")
-                fileType = FloatVectorBinaryInputFormat.FileType.B_VEC;
-            }
+    private SingleOutputStreamOperator<FloatVector> getBinarySource(
+            String hdfsAddress,
+            String hdfsPath,
+            String name,
+            int vectorDim,
+            int skip,
+            int limitPerLoop,
+            int numLoops,
+            int bulkSize,
+            RateControllerBuilder rateControllerBuilder) {
 
-            RateController rateController =
-                    new StagedRateController(thresholds, ratesToIntervals(rates));
-
-            FileSource<FloatVector> fileSource =
-                    FileSource.forRecordStreamFormat(
-                                    new FloatVectorBinaryInputFormat(
-                                            name,
-                                            params.getMaxTTL(),
-                                            fileType,
-                                            startId,
-                                            dataSize,
-                                            dim,
-                                            numLoops,
-                                            rateController),
-                                    new Path(hdfsAddress + hdfsPath))
-                            .setFileEnumerator(
-                                    new LoopingNonSplittingRecursiveEnumerator.Provider(1))
-                            .build();
-
-            return env.fromSource(
-                            fileSource,
-                            WatermarkStrategy.<FloatVector>forMonotonousTimestamps()
-                                    .withTimestampAssigner(
-                                            (vector, timestamp) -> vector.getEventTime()),
-                            "hdfs-vector-source")
-                    .setParallelism(1)
-                    .setMaxParallelism(1)
-                    .name(name + " input")
-                    .returns(FloatVector.class)
-                    .disableChaining();
+        // Binary files
+        FloatVectorBinaryInputFormat.FileType fileType;
+        if (hdfsPath.endsWith(".fvecs")) {
+            fileType = FloatVectorBinaryInputFormat.FileType.F_VEC;
         } else {
-            throw new RuntimeException("Unknown file type.");
+            // hdfsPath.endsWith(".bvecs")
+            fileType = FloatVectorBinaryInputFormat.FileType.B_VEC;
         }
+
+        FileSource<FloatVector> fileSource =
+                FileSource.forBulkFileFormat(
+                                new FloatVectorBinaryInputFormatAdaptor(
+                                        new FloatVectorBinaryInputFormat(
+                                                name,
+                                                params.getMaxTTL(),
+                                                fileType,
+                                                skip,
+                                                limitPerLoop,
+                                                vectorDim,
+                                                numLoops,
+                                                rateControllerBuilder),
+                                        bulkSize,
+                                        vectorDim),
+                                new Path(hdfsAddress + hdfsPath))
+                        .setFileEnumerator(new LoopingNonSplittingRecursiveEnumerator.Provider(1))
+                        .build();
+
+        return env.fromSource(
+                        fileSource,
+                        WatermarkStrategy.<FloatVector>forMonotonousTimestamps()
+                                .withTimestampAssigner(
+                                        (vector, timestamp) -> vector.getEventTime()),
+                        "hdfs-vector-source")
+                .setParallelism(1)
+                .setMaxParallelism(1)
+                .name(name + " input")
+                .returns(FloatVector.class)
+                .disableChaining();
     }
 
     // rate: 负数，表示实际的 interval，即每隔多少秒插一个；0 表示不加限制；正数表示每秒插多少个

@@ -85,10 +85,11 @@ public class MilvusSeparatedStreamingPipeline {
     public SingleOutputStreamOperator<SearchResult> apply(
             DataStream<FloatVector> data, DataStream<FloatVector> query) {
 
-        // This implementation is partly wrong, because it uses different partitioners for data and
-        // query, which are
-        // "trained" with different data, resulting in different partitioning schemes. However, this
-        // prevents
+        // This implementation is actually problematic, because it uses different partitioners for
+        // data and
+        // query, which are "trained" with different data, resulting in different partitioning
+        // schemes. However, this
+        // reduces pressure on partitioners.
         SingleOutputStreamOperator<PartitionedData> partitionedData =
                 data.flatMap(getUnaryPartitioner(false))
                         .name("data partition")

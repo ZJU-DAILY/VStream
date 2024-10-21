@@ -3,11 +3,10 @@ package cn.edu.zju.daily.util;
 import cn.edu.zju.daily.data.vector.FloatVectorIterator;
 import cn.edu.zju.daily.data.vector.FvecIterator;
 import cn.edu.zju.daily.data.vector.HDFSVectorParser;
-import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.util.Random;
-import org.apache.commons.lang3.tuple.Pair;
 
 /** @author shenghao */
 public class DataUploader {
@@ -15,6 +14,7 @@ public class DataUploader {
     private final String sourcePath;
     private final int loop;
     private final HadoopFileHelper hadoopFileHelper;
+    private final String hdfsPath;
     private final int limit;
     private final double deleteRatio;
     private final Random random;
@@ -30,7 +30,8 @@ public class DataUploader {
             throws IOException {
         this.sourcePath = sourcePath;
         this.loop = loop;
-        this.hadoopFileHelper = new HadoopFileHelper(hdfsAddress, hdfsPath, hdfsUser);
+        this.hadoopFileHelper = new HadoopFileHelper(hdfsAddress, hdfsUser);
+        this.hdfsPath = hdfsPath;
         this.limit = limit;
         this.deleteRatio = deleteRatio;
         this.random = new Random();
@@ -41,42 +42,31 @@ public class DataUploader {
         FvecIterator.InputType inputType;
 
         FloatVectorIterator it = FloatVectorIterator.fromFile(sourcePath, loop, limit);
-        Pair<OutputStream, BufferedWriter> outputStreamBufferedWriterTuple2 =
-                hadoopFileHelper.beginWrite();
 
         long i = 0;
-
-        if (deleteRatio == 0) {
-            while (it.hasNext()) {
-                hadoopFileHelper.writeString(
-                        outputStreamBufferedWriterTuple2.getRight(), parser.unparseBare(it.next()));
-                if (i % 500_000 == 0) {
-                    System.out.println(i + " vectors converted.");
+        try (OutputStream out = hadoopFileHelper.getOutputStream(hdfsPath);
+                PrintWriter writer = new PrintWriter(out)) {
+            if (deleteRatio == 0) {
+                while (it.hasNext()) {
+                    writer.println(parser.unparseBare(it.next()));
                 }
-                i += 1;
-            }
-        } else {
-            while (it.hasNext()) {
-                boolean delete = random.nextDouble() < deleteRatio;
-                if (delete) {
-                    long id = random.nextInt(it.nextId());
-                    hadoopFileHelper.writeString(
-                            outputStreamBufferedWriterTuple2.getRight(), parser.unparseDelete(id));
-                } else {
-                    hadoopFileHelper.writeString(
-                            outputStreamBufferedWriterTuple2.getRight(),
-                            parser.unparseInsert(it.next()));
+            } else {
+                while (it.hasNext()) {
+                    boolean delete = random.nextDouble() < deleteRatio;
+                    if (delete) {
+                        long id = random.nextInt(it.nextId());
+                        writer.println(parser.unparseDelete(id));
+                    } else {
+                        writer.println(parser.unparseInsert(it.next()));
+                    }
+                    if (i % 500_000 == 0) {
+                        System.out.println(i + " vectors converted.");
+                    }
+                    i++;
                 }
-                if (i % 500_000 == 0) {
-                    System.out.println(i + " vectors converted.");
-                }
-                i += 1;
             }
         }
 
-        hadoopFileHelper.endWrite(
-                outputStreamBufferedWriterTuple2.getRight(),
-                outputStreamBufferedWriterTuple2.getLeft());
         System.out.println("All " + i + " vectors converted.");
     }
 

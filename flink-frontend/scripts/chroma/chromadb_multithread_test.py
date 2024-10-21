@@ -9,8 +9,7 @@ import numpy as np
 from chromadb.utils import embedding_functions
 from tqdm import tqdm
 
-ADDRESS_FILE = "/home/auroflow/code/vector-search/VStream/flink-frontend/src/main/resources/chroma_addresses.txt"
-# ADDRESS_FILE = "/home/auroflow/code/vector-search/VStream/flink-frontend/src/test/resources/test_chroma_addresses.txt"
+ADDRESS_FILE = "/home/auroflow/code/vector-search/VStream/flink-frontend/src/test/resources/test_chroma_addresses.txt"
 COLLECTION_PREFIX = "testcol_"
 ROUNDS = 1000
 BATCH_SIZE = 1000
@@ -25,12 +24,11 @@ def read_addresses(filename):
     addresses = []
     with open(filename, 'r') as f:
         for line in f:
-            if line.startswith('node10'):
-                host, port_low, port_high = line.strip().split(":")
-                port_low = int(port_low)
-                port_high = int(port_high)
-                for port in range(port_low, port_high + 1):
-                    addresses.append((host, port))
+            host, port_low, port_high = line.strip().split(":")
+            port_low = int(port_low)
+            port_high = int(port_high)
+            for port in range(port_low, port_high + 1):
+                addresses.append((host, port))
     return addresses
 
 

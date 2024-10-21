@@ -20,7 +20,7 @@ def get_running_flink_job():
     return None
 
 def wait_for_task_completion(job_id):
-    flink_url = HOST + f"/jobs/{job_id}"
+    flink_url = HOST + "/jobs/" + job_id
     start_time = time.time()
     while True:
         if time.time() - start_time > max_wait_hours * 3600:
@@ -54,10 +54,10 @@ if __name__ == '__main__':
         print('Could not find a running Flink job')
         exit(1)
 
-    print(f"Found running Flink job: {running_job['id']}")
+    print("Found running Flink job: " + running_job['id'])
     print("Waiting for a task to finish...")
     status = wait_for_task_completion(running_job['id'])
-    print(f"A task has {status}!")
+    print("A task has " + status + "!")
 
     if status == "FAILED":
         exit(1)

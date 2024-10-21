@@ -48,11 +48,18 @@ public class Parameters implements Serializable {
     private int insertSkip;
     private int insertLimitPerLoop;
     private int insertLoops;
+    private int insertReadBulkSize;
     private List<Long> insertThrottleThresholds;
     private List<Long> insertRates;
     private List<Long> observedInsertRates;
+    private String queryThrottleMode;
+    private long queryThrottleInsertThreshold;
+    private long initialQueryRate;
+    private long newQueryRate;
+    private String queryRatePollingPath;
     private List<Long> queryThrottleThresholds;
     private List<Long> queryRates;
+    private int queryReadBulkSize;
     private int queryLoops;
     private int parallelism;
     private int reduceParallelism;
@@ -92,6 +99,8 @@ public class Parameters implements Serializable {
     private int milvusNumShards;
     private int milvusInsertBufferCapacity;
     private int milvusQueryBufferCapacity;
+    private boolean milvusWaitForIndexBuild;
+    private List<Float> milvusIndexWaitRatios;
     private String chromaCollectionName;
     private String chromaAddressFile;
     private int chromaInsertBatchSize;
@@ -233,6 +242,55 @@ public class Parameters implements Serializable {
         this.observedInsertRates = observedInsertRates;
     }
 
+    public int getInsertReadBulkSize() {
+        return insertReadBulkSize;
+    }
+
+    public void setInsertReadBulkSize(int insertReadBulkSize) {
+        this.insertReadBulkSize = insertReadBulkSize;
+    }
+
+    public String getQueryThrottleMode() {
+        return queryThrottleMode;
+    }
+
+    public void setQueryThrottleMode(String queryThrottleMode) {
+        if (!"bind-insert".equals(queryThrottleMode) && !"staged".equals(queryThrottleMode)) {
+            throw new RuntimeException(
+                    "Supported query throttle modes: bind-insert or thresholds, given "
+                            + queryThrottleMode);
+        }
+        this.queryThrottleMode = queryThrottleMode;
+    }
+
+    /**
+     * If query throttle mode is bind-insert, use initialQueryRate before insert count reaches this
+     * number, and afterThresholdQueryRate after that.
+     */
+    public long getQueryThrottleInsertThreshold() {
+        return queryThrottleInsertThreshold;
+    }
+
+    public void setQueryThrottleInsertThreshold(long queryThrottleInsertThreshold) {
+        this.queryThrottleInsertThreshold = queryThrottleInsertThreshold;
+    }
+
+    public long getInitialQueryRate() {
+        return initialQueryRate;
+    }
+
+    public void setInitialQueryRate(long initialQueryRate) {
+        this.initialQueryRate = initialQueryRate;
+    }
+
+    public long getNewQueryRate() {
+        return newQueryRate;
+    }
+
+    public void setNewQueryRate(long newQueryRate) {
+        this.newQueryRate = newQueryRate;
+    }
+
     public List<Long> getQueryThrottleThresholds() {
         return queryThrottleThresholds;
     }
@@ -263,6 +321,14 @@ public class Parameters implements Serializable {
 
     public void setQueryLoops(int queryLoops) {
         this.queryLoops = queryLoops;
+    }
+
+    public int getQueryReadBulkSize() {
+        return queryReadBulkSize;
+    }
+
+    public void setQueryReadBulkSize(int queryReadBulkSize) {
+        this.queryReadBulkSize = queryReadBulkSize;
     }
 
     /**
@@ -670,6 +736,26 @@ public class Parameters implements Serializable {
         this.milvusQueryBufferCapacity = milvusQueryBufferCapacity;
     }
 
+    public boolean isMilvusWaitForIndexBuild() {
+        return milvusWaitForIndexBuild;
+    }
+
+    public void setMilvusWaitForIndexBuild(boolean milvusWaitForIndexBuild) {
+        this.milvusWaitForIndexBuild = milvusWaitForIndexBuild;
+    }
+
+    /**
+     * Wait until index progress reaches the ratio before entering the next insert threshold. Length
+     * should be equal to insertThrottleThresholds.
+     */
+    public List<Float> getMilvusIndexWaitRatios() {
+        return milvusIndexWaitRatios;
+    }
+
+    public void setMilvusIndexWaitRatios(List<Float> milvusIndexWaitRatios) {
+        this.milvusIndexWaitRatios = milvusIndexWaitRatios;
+    }
+
     // =========================
     // ChromaDB related parameters
     // =========================
@@ -735,5 +821,13 @@ public class Parameters implements Serializable {
 
     public void setChromaQueryBatchSize(int chromaQueryBatchSize) {
         this.chromaQueryBatchSize = chromaQueryBatchSize;
+    }
+
+    public String getQueryRatePollingPath() {
+        return queryRatePollingPath;
+    }
+
+    public void setQueryRatePollingPath(String queryRatePollingPath) {
+        this.queryRatePollingPath = queryRatePollingPath;
     }
 }

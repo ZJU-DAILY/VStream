@@ -16,6 +16,12 @@ workers=$(tail -n +2 workers)
 
 # Copy the project to the master, excluding anything from the build directory
 rsync -avz --delete --exclude "/build/" --exclude "/cmake-build-*" --exclude "/examples/" --exclude "/flink-frontend/tmp" --exclude ".git" . $master:$REMOTE_PROJECT_DIR
+
+if [ "$BUILD_FLAGS" == "scripts" ]; then
+  echo "Scripts copied to master. Done."
+  exit 0
+fi
+
 ssh -p $SSH_PORT $master "cd $REMOTE_PROJECT_DIR && ./build.sh $BUILD_FLAGS"
 
 # success?

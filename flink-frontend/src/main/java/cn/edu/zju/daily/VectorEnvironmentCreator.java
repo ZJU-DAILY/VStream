@@ -30,6 +30,8 @@ public class VectorEnvironmentCreator implements Serializable {
                 currentOptions.setUseDirectIoForFlushAndCompaction(true);
                 currentOptions.setInfoLogLevel(InfoLogLevel.INFO_LEVEL);
                 currentOptions.setMaxBackgroundJobs(params.getRocksDBMaxBackgroundJobs());
+                currentOptions.setAvoidFlushDuringRecovery(true);
+                currentOptions.setAvoidFlushDuringShutdown(true);
                 return currentOptions;
             }
 
