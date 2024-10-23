@@ -1,12 +1,11 @@
 package cn.edu.zju.daily.util;
 
+import cn.edu.zju.daily.data.vector.FloatVector;
+import cn.edu.zju.daily.data.vector.FloatVectorIterator;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-
-import cn.edu.zju.daily.data.vector.FloatVector;
-import cn.edu.zju.daily.data.vector.FloatVectorIterator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import tech.amikos.chromadb.handler.ApiException;
@@ -43,9 +42,7 @@ public class CustomChromaClientTest {
         }
 
         @Override
-        public void run() {
-
-        }
+        public void run() {}
     }
 
     @Test

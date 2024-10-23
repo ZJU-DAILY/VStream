@@ -505,6 +505,10 @@ public class RocksDBIncrementalRestoreOperation<K> implements RocksDBRestoreOper
         for (StateMetaInfoSnapshot stateMetaInfoSnapshot : stateMetaInfoSnapshots) {
             RegisteredStateMetaInfoBase metaInfoBase =
                     RegisteredStateMetaInfoBase.fromMetaInfoSnapshot(stateMetaInfoSnapshot);
+            if (metaInfoBase.getName().startsWith("vector-")
+                    && !metaInfoBase.getName().endsWith("Ext")) {
+                continue;
+            }
             ColumnFamilyDescriptor columnFamilyDescriptor =
                     RocksDBOperationUtils.createColumnFamilyDescriptor(
                             metaInfoBase,
@@ -525,7 +529,8 @@ public class RocksDBIncrementalRestoreOperation<K> implements RocksDBRestoreOper
         for (StateMetaInfoSnapshot stateMetaInfoSnapshot : stateMetaInfoSnapshots) {
             RegisteredStateMetaInfoBase metaInfoBase =
                     RegisteredStateMetaInfoBase.fromMetaInfoSnapshot(stateMetaInfoSnapshot);
-            if (metaInfoBase.getName().startsWith("vector-")) {
+            if (metaInfoBase.getName().startsWith("vector-")
+                    && !metaInfoBase.getName().endsWith("Ext")) {
                 VectorCFDescriptor vectorCFDescriptor =
                         RocksDBOperationUtils.createVectorCFDescriptor(
                                 metaInfoBase,

@@ -17,6 +17,7 @@
 
 package org.apache.flink.contrib.streaming.vstate;
 
+import static java.util.stream.Collectors.toList;
 import static org.apache.flink.contrib.streaming.vstate.RocksDBKeyedStateBackend.MERGE_OPERATOR_NAME;
 
 import java.io.IOException;
@@ -62,6 +63,15 @@ public class RocksDBOperationUtils {
         columnFamilyDescriptors.addAll(stateColumnFamilyDescriptors);
 
         RocksDB dbRef;
+
+        LOG.error(
+                "state column family descriptors: {}",
+                stateColumnFamilyDescriptors.stream()
+                        .map(d -> new String(d.getName()))
+                        .collect(toList()));
+        LOG.error(
+                "vector cf descriptors: {}",
+                vectorCFDescriptors.stream().map(d -> new String(d.getName())).collect(toList()));
 
         try {
             dbRef =

@@ -770,7 +770,10 @@ public class RocksDBKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
                             : newMetaInfo;
 
             newRocksStateInfo =
-                    new RocksDbKvStateInfo(oldStateInfo.columnFamilyHandle, newMetaInfo);
+                    oldStateInfo.columnFamilyHandle == null
+                            ? new RocksDbKvStateInfo(
+                                    oldStateInfo.vectorColumnFamilyHandle, newMetaInfo)
+                            : new RocksDbKvStateInfo(oldStateInfo.columnFamilyHandle, newMetaInfo);
             kvStateInformation.put(stateDesc.getName(), newRocksStateInfo);
         } else {
             newMetaInfo =
@@ -866,7 +869,44 @@ public class RocksDBKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
                     TypeSerializer<SV> stateSerializer)
                     throws Exception {
 
-        throw new UnsupportedOperationException("Vector state is not supported yet.");
+        RegisteredKeyValueStateBackendMetaInfo<N, SV> restoredKvStateMetaInfo = oldStateInfo.f1;
+
+        // fetch current serializer now because if it is incompatible, we can't access
+        // it anymore to improve the error message
+        TypeSerializer<N> previousNamespaceSerializer =
+                restoredKvStateMetaInfo.getNamespaceSerializer();
+
+        TypeSerializerSchemaCompatibility<N> s =
+                restoredKvStateMetaInfo.updateNamespaceSerializer(namespaceSerializer);
+        if (s.isCompatibleAfterMigration() || s.isIncompatible()) {
+            throw new StateMigrationException(
+                    "The new namespace serializer ("
+                            + namespaceSerializer
+                            + ") must be compatible with the old namespace serializer ("
+                            + previousNamespaceSerializer
+                            + ").");
+        }
+
+        restoredKvStateMetaInfo.checkStateMetaInfo(stateDesc);
+
+        // fetch current serializer now because if it is incompatible, we can't access
+        // it anymore to improve the error message
+        TypeSerializer<SV> previousStateSerializer = restoredKvStateMetaInfo.getStateSerializer();
+
+        TypeSerializerSchemaCompatibility<SV> newStateSerializerCompatibility =
+                restoredKvStateMetaInfo.updateStateSerializer(stateSerializer);
+        if (newStateSerializerCompatibility.isCompatibleAfterMigration()) {
+            migrateVectorStateValues(stateDesc, oldStateInfo);
+        } else if (newStateSerializerCompatibility.isIncompatible()) {
+            throw new StateMigrationException(
+                    "The new state serializer ("
+                            + stateSerializer
+                            + ") must not be incompatible with the old state serializer ("
+                            + previousStateSerializer
+                            + ").");
+        }
+
+        return restoredKvStateMetaInfo;
     }
 
     /**
@@ -950,6 +990,16 @@ public class RocksDBKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
             db.releaseSnapshot(rocksDBSnapshot);
             rocksDBSnapshot.close();
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private <N, S extends State, SV> void migrateVectorStateValues(
+            StateDescriptor<S, SV> stateDesc,
+            Tuple2<VectorColumnFamilyHandle, RegisteredKeyValueStateBackendMetaInfo<N, SV>>
+                    stateMetaInfo)
+            throws Exception {
+
+        throw new RuntimeException("Vector state not supported yet.");
     }
 
     @SuppressWarnings("unchecked")
@@ -1167,6 +1217,7 @@ public class RocksDBKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
 
         public RocksDbKvStateInfo(
                 ColumnFamilyHandle columnFamilyHandle, RegisteredStateMetaInfoBase metaInfo) {
+            LOG.error("Created RocksDbKvStateInfo with columnFamilyHandle: {}", metaInfo.getName());
             this.columnFamilyHandle = columnFamilyHandle;
             this.vectorColumnFamilyHandle = null;
             this.metaInfo = metaInfo;
@@ -1175,6 +1226,9 @@ public class RocksDBKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
         public RocksDbKvStateInfo(
                 VectorColumnFamilyHandle vectorColumnFamilyHandle,
                 RegisteredStateMetaInfoBase metaInfo) {
+            LOG.error(
+                    "Created RocksDbKvStateInfo with vectorColumnFamilyHandle: {}",
+                    metaInfo.getName());
             this.vectorColumnFamilyHandle = vectorColumnFamilyHandle;
             this.columnFamilyHandle = null;
             this.metaInfo = metaInfo;

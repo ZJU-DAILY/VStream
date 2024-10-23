@@ -104,8 +104,13 @@ public class WaitingIndexBuildStagedRateControllerBuilder implements RateControl
 
         private void waitIndexBuild(float waitRatio) {
             while (true) {
-                IndexDescription desc =
-                        util.getIndexDescription(milvusCollectionName, milvusIndexName);
+                IndexDescription desc;
+                try {
+                    desc = util.getIndexDescription(milvusCollectionName, milvusIndexName);
+                } catch (Exception e) {
+                    LOG.error("Failed to get index description. Index waiting is SKIPPED!", e);
+                    return;
+                }
                 float ratio;
                 if (desc.getTotalRows() == 0) {
                     ratio = 1;

@@ -343,8 +343,8 @@ public class RocksDB extends RocksObject {
       for (int i = 0; i < vcfnum; i++) {
         final VectorCFDescriptor vectorCFDescriptor = vectorCFDescriptors.get(i);
         byte[] cfName = new byte[vectorCFDescriptor.getName().length + vectorCFExtension.length()];
-        System.arraycopy(cfName, 0, vectorCFDescriptor.getName(), 0, vectorCFDescriptor.getName().length);
-        System.arraycopy(cfName, vectorCFDescriptor.getName().length, vectorCFExtension.getBytes(), 0, vectorCFExtension.length());
+        System.arraycopy(vectorCFDescriptor.getName(), 0, cfName,0, vectorCFDescriptor.getName().length);
+        System.arraycopy(vectorCFExtension.getBytes(), 0, cfName, vectorCFDescriptor.getName().length, vectorCFExtension.length());
         cfNames[cfnum + i] = cfName;
         cfOptionHandles[cfnum + i] = vectorCFDescriptor.getOptions().nativeHandle_;
         vcfNames[i] = vectorCFDescriptor.getName();

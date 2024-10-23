@@ -18,7 +18,7 @@ public class RocksDBRecoveryTest {
 
     private static final String DEFAULT_PARAM_PATH = "./src/test/resources/test-params.yaml";
     private static final String SAVEPOINT_PATH =
-            "/home/auroflow/flink/flink-savepoints/savepoint-369c4b-6a0ac3f19ee4";
+            "/home/auroflow/flink/flink-savepoints/savepoint-b949ea-4e330ad62c52";
 
     @Test
     void test() throws Exception {
@@ -27,11 +27,11 @@ public class RocksDBRecoveryTest {
 
         Configuration conf = new Configuration();
         conf.setInteger("parallelism.default", 1);
-        conf.setInteger("taskmanager.numberOfTaskSlots", 5);
+        conf.setInteger("taskmanager.numberOfTaskSlots", 20);
         conf.setString("execution.savepoint.path", SAVEPOINT_PATH);
         StreamExecutionEnvironment env =
-                //                StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(conf);
-                StreamExecutionEnvironment.getExecutionEnvironment();
+                StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(conf);
+        //                StreamExecutionEnvironment.getExecutionEnvironment();
         env.getCheckpointConfig().setCheckpointTimeout(600000);
 
         new VectorEnvironmentCreator(params).prepareVectorEnvironment(env);

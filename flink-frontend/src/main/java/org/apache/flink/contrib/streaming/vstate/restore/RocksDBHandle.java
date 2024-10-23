@@ -140,9 +140,22 @@ class RocksDBHandle implements AutoCloseable {
         restoreInstanceDirectoryFromPath(restoreSourcePath);
         reloadDb();
         // Register CF handlers
+        int index;
+        index = 0;
         for (int i = 0; i < stateMetaInfoSnapshots.size(); i++) {
-            getOrRegisterStateColumnFamilyHandle(
-                    columnFamilyHandles.get(i), stateMetaInfoSnapshots.get(i));
+            if (stateMetaInfoSnapshots.get(i).getName().startsWith("vector-")) {
+                getOrRegisterVectorStateColumnFamilyHandle(
+                        vectorCFHandles.get(index), stateMetaInfoSnapshots.get(i));
+                index++;
+            }
+        }
+        index = 0;
+        for (int i = 0; i < stateMetaInfoSnapshots.size(); i++) {
+            if (!stateMetaInfoSnapshots.get(i).getName().startsWith("vector-")) {
+                getOrRegisterStateColumnFamilyHandle(
+                        columnFamilyHandles.get(index), stateMetaInfoSnapshots.get(i));
+                index++;
+            }
         }
     }
 
@@ -188,6 +201,44 @@ class RocksDBHandle implements AutoCloseable {
 
     RocksDbKvStateInfo getOrRegisterStateColumnFamilyHandle(
             ColumnFamilyHandle columnFamilyHandle, StateMetaInfoSnapshot stateMetaInfoSnapshot) {
+
+        RocksDbKvStateInfo registeredStateMetaInfoEntry =
+                kvStateInformation.get(stateMetaInfoSnapshot.getName());
+
+        if (null == registeredStateMetaInfoEntry) {
+            // create a meta info for the state on restore;
+            // this allows us to retain the state in future snapshots even if it wasn't accessed
+            RegisteredStateMetaInfoBase stateMetaInfo =
+                    RegisteredStateMetaInfoBase.fromMetaInfoSnapshot(stateMetaInfoSnapshot);
+            if (columnFamilyHandle == null) {
+                registeredStateMetaInfoEntry =
+                        RocksDBOperationUtils.createStateInfo(
+                                stateMetaInfo,
+                                db,
+                                columnFamilyOptionsFactory,
+                                ttlCompactFiltersManager,
+                                writeBufferManagerCapacity);
+            } else {
+                registeredStateMetaInfoEntry =
+                        new RocksDbKvStateInfo(columnFamilyHandle, stateMetaInfo);
+            }
+
+            RocksDBOperationUtils.registerKvStateInformation(
+                    kvStateInformation,
+                    nativeMetricMonitor,
+                    stateMetaInfoSnapshot.getName(),
+                    registeredStateMetaInfoEntry);
+        } else {
+            // TODO with eager state registration in place, check here for serializer migration
+            // strategies
+        }
+
+        return registeredStateMetaInfoEntry;
+    }
+
+    RocksDbKvStateInfo getOrRegisterVectorStateColumnFamilyHandle(
+            VectorColumnFamilyHandle columnFamilyHandle,
+            StateMetaInfoSnapshot stateMetaInfoSnapshot) {
 
         RocksDbKvStateInfo registeredStateMetaInfoEntry =
                 kvStateInformation.get(stateMetaInfoSnapshot.getName());
