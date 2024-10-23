@@ -42,10 +42,7 @@ import org.apache.flink.runtime.state.restore.KeyGroupEntry;
 import org.apache.flink.runtime.state.restore.SavepointRestoreResult;
 import org.apache.flink.runtime.state.restore.ThrowingIterator;
 import org.apache.flink.util.StateMigrationException;
-import org.rocksdb.ColumnFamilyHandle;
-import org.rocksdb.ColumnFamilyOptions;
-import org.rocksdb.DBOptions;
-import org.rocksdb.RocksDBException;
+import org.rocksdb.*;
 
 /** Encapsulates the process of restoring a RocksDB instance from a full snapshot. */
 public class RocksDBFullRestoreOperation<K> implements RocksDBRestoreOperation {
@@ -63,6 +60,7 @@ public class RocksDBFullRestoreOperation<K> implements RocksDBRestoreOperation {
             File instanceRocksDBPath,
             DBOptions dbOptions,
             Function<String, ColumnFamilyOptions> columnFamilyOptionsFactory,
+            Function<String, VectorColumnFamilyOptions> vectorCFOptionsFactory,
             RocksDBNativeMetricOptions nativeMetricOptions,
             MetricGroup metricGroup,
             @Nonnull Collection<KeyedStateHandle> restoreStateHandles,
@@ -76,6 +74,7 @@ public class RocksDBFullRestoreOperation<K> implements RocksDBRestoreOperation {
                         instanceRocksDBPath,
                         dbOptions,
                         columnFamilyOptionsFactory,
+                        vectorCFOptionsFactory,
                         nativeMetricOptions,
                         metricGroup,
                         ttlCompactFiltersManager,

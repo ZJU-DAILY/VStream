@@ -1,7 +1,9 @@
 package cn.edu.zju.daily.data.vector;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.NoSuchElementException;
 import org.jetbrains.annotations.NotNull;
 
@@ -80,5 +82,13 @@ public class FloatVectorIterator implements Iterator<FloatVector>, Iterable<Floa
     @Override
     public Iterator<FloatVector> iterator() {
         return this;
+    }
+
+    public List<FloatVector> toList() {
+        List<FloatVector> vectors = new ArrayList<>();
+        for (FloatVector vector : this) {
+            vectors.add(vector);
+        }
+        return vectors;
     }
 }

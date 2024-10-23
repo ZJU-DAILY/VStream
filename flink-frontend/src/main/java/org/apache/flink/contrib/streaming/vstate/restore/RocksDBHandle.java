@@ -42,11 +42,7 @@ import org.apache.flink.runtime.state.RegisteredStateMetaInfoBase;
 import org.apache.flink.runtime.state.metainfo.StateMetaInfoSnapshot;
 import org.apache.flink.util.FileUtils;
 import org.apache.flink.util.IOUtils;
-import org.rocksdb.ColumnFamilyDescriptor;
-import org.rocksdb.ColumnFamilyHandle;
-import org.rocksdb.ColumnFamilyOptions;
-import org.rocksdb.DBOptions;
-import org.rocksdb.RocksDB;
+import org.rocksdb.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,11 +55,14 @@ class RocksDBHandle implements AutoCloseable {
     protected final Logger logger = LoggerFactory.getLogger(getClass());
 
     private final Function<String, ColumnFamilyOptions> columnFamilyOptionsFactory;
+    private final Function<String, VectorColumnFamilyOptions> vectorCFOptionsFactory;
     private final DBOptions dbOptions;
     private final Map<String, RocksDbKvStateInfo> kvStateInformation;
     private final String dbPath;
     private List<ColumnFamilyHandle> columnFamilyHandles;
     private List<ColumnFamilyDescriptor> columnFamilyDescriptors;
+    private List<VectorColumnFamilyHandle> vectorCFHandles;
+    private List<VectorCFDescriptor> vectorCFDescriptors;
     private final RocksDBNativeMetricOptions nativeMetricOptions;
     private final MetricGroup metricGroup;
     // Current places to set compact filter into column family options:
@@ -90,6 +89,7 @@ class RocksDBHandle implements AutoCloseable {
             File instanceRocksDBPath,
             DBOptions dbOptions,
             Function<String, ColumnFamilyOptions> columnFamilyOptionsFactory,
+            Function<String, VectorColumnFamilyOptions> vectorCFOptionsFactory,
             RocksDBNativeMetricOptions nativeMetricOptions,
             MetricGroup metricGroup,
             @Nonnull RocksDbTtlCompactFiltersManager ttlCompactFiltersManager,
@@ -98,6 +98,7 @@ class RocksDBHandle implements AutoCloseable {
         this.dbPath = instanceRocksDBPath.getAbsolutePath();
         this.dbOptions = dbOptions;
         this.columnFamilyOptionsFactory = columnFamilyOptionsFactory;
+        this.vectorCFOptionsFactory = vectorCFOptionsFactory;
         this.nativeMetricOptions = nativeMetricOptions;
         this.metricGroup = metricGroup;
         this.ttlCompactFiltersManager = ttlCompactFiltersManager;
@@ -126,12 +127,52 @@ class RocksDBHandle implements AutoCloseable {
         }
     }
 
+    void reopenDB(
+            @Nonnull List<ColumnFamilyDescriptor> columnFamilyDescriptors,
+            @Nonnull List<VectorCFDescriptor> vectorCFDescriptors,
+            @Nonnull List<StateMetaInfoSnapshot> stateMetaInfoSnapshots,
+            @Nonnull Path restoreSourcePath)
+            throws IOException {
+        this.columnFamilyDescriptors = columnFamilyDescriptors;
+        this.vectorCFDescriptors = vectorCFDescriptors;
+        this.columnFamilyHandles = new ArrayList<>(columnFamilyDescriptors.size() + 1);
+        this.vectorCFHandles = new ArrayList<>(vectorCFDescriptors.size() + 1);
+        restoreInstanceDirectoryFromPath(restoreSourcePath);
+        reloadDb();
+        // Register CF handlers
+        for (int i = 0; i < stateMetaInfoSnapshots.size(); i++) {
+            getOrRegisterStateColumnFamilyHandle(
+                    columnFamilyHandles.get(i), stateMetaInfoSnapshots.get(i));
+        }
+    }
+
     private void loadDb() throws IOException {
         db =
                 RocksDBOperationUtils.openDB(
                         dbPath,
                         columnFamilyDescriptors,
                         columnFamilyHandles,
+                        RocksDBOperationUtils.createColumnFamilyOptions(
+                                columnFamilyOptionsFactory, "default"),
+                        dbOptions);
+        // remove the default column family which is located at the first index
+        defaultColumnFamilyHandle = columnFamilyHandles.remove(0);
+        // init native metrics monitor if configured
+        nativeMetricMonitor =
+                nativeMetricOptions.isEnabled()
+                        ? new RocksDBNativeMetricMonitor(
+                                nativeMetricOptions, metricGroup, db, dbOptions.statistics())
+                        : null;
+    }
+
+    private void reloadDb() throws IOException {
+        db =
+                RocksDBOperationUtils.openDB(
+                        dbPath,
+                        columnFamilyDescriptors,
+                        columnFamilyHandles,
+                        vectorCFDescriptors,
+                        vectorCFHandles,
                         RocksDBOperationUtils.createColumnFamilyOptions(
                                 columnFamilyOptionsFactory, "default"),
                         dbOptions);
@@ -250,6 +291,10 @@ class RocksDBHandle implements AutoCloseable {
 
     public Function<String, ColumnFamilyOptions> getColumnFamilyOptionsFactory() {
         return columnFamilyOptionsFactory;
+    }
+
+    public Function<String, VectorColumnFamilyOptions> getVectorCFOptionsFactory() {
+        return vectorCFOptionsFactory;
     }
 
     public DBOptions getDbOptions() {

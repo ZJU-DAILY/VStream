@@ -28,6 +28,7 @@ import org.apache.flink.contrib.streaming.vstate.ttl.RocksDbTtlCompactFiltersMan
 import org.apache.flink.metrics.MetricGroup;
 import org.rocksdb.ColumnFamilyOptions;
 import org.rocksdb.DBOptions;
+import org.rocksdb.VectorColumnFamilyOptions;
 
 /** Encapsulates the process of initiating a RocksDB instance without restore. */
 public class RocksDBNoneRestoreOperation<K> implements RocksDBRestoreOperation {
@@ -38,6 +39,7 @@ public class RocksDBNoneRestoreOperation<K> implements RocksDBRestoreOperation {
             File instanceRocksDBPath,
             DBOptions dbOptions,
             Function<String, ColumnFamilyOptions> columnFamilyOptionsFactory,
+            Function<String, VectorColumnFamilyOptions> vectorCFOptionsFactory,
             RocksDBNativeMetricOptions nativeMetricOptions,
             MetricGroup metricGroup,
             @Nonnull RocksDbTtlCompactFiltersManager ttlCompactFiltersManager,
@@ -48,6 +50,7 @@ public class RocksDBNoneRestoreOperation<K> implements RocksDBRestoreOperation {
                         instanceRocksDBPath,
                         dbOptions,
                         columnFamilyOptionsFactory,
+                        vectorCFOptionsFactory,
                         nativeMetricOptions,
                         metricGroup,
                         ttlCompactFiltersManager,

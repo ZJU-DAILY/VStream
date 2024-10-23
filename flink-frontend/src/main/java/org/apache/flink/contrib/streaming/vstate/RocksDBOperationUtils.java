@@ -47,6 +47,8 @@ public class RocksDBOperationUtils {
             String path,
             List<ColumnFamilyDescriptor> stateColumnFamilyDescriptors,
             List<ColumnFamilyHandle> stateColumnFamilyHandles,
+            List<VectorCFDescriptor> vectorCFDescriptors,
+            List<VectorColumnFamilyHandle> vectorCFHandles,
             ColumnFamilyOptions columnFamilyOptions,
             DBOptions dbOptions)
             throws IOException {
@@ -67,7 +69,9 @@ public class RocksDBOperationUtils {
                             Preconditions.checkNotNull(dbOptions),
                             Preconditions.checkNotNull(path),
                             columnFamilyDescriptors,
-                            stateColumnFamilyHandles);
+                            stateColumnFamilyHandles,
+                            vectorCFDescriptors,
+                            vectorCFHandles);
         } catch (RocksDBException e) {
             IOUtils.closeQuietly(columnFamilyOptions);
             columnFamilyDescriptors.forEach((cfd) -> IOUtils.closeQuietly(cfd.getOptions()));
@@ -85,13 +89,13 @@ public class RocksDBOperationUtils {
         return dbRef;
     }
 
-    /*
     public static RocksDB openDB(
             String path,
             List<ColumnFamilyDescriptor> stateColumnFamilyDescriptors,
             List<ColumnFamilyHandle> stateColumnFamilyHandles,
             ColumnFamilyOptions columnFamilyOptions,
-            DBOptions dbOptions) {
+            DBOptions dbOptions)
+            throws IOException {
         List<ColumnFamilyDescriptor> columnFamilyDescriptors =
                 new ArrayList<>(1 + stateColumnFamilyDescriptors.size());
 
@@ -102,7 +106,6 @@ public class RocksDBOperationUtils {
         columnFamilyDescriptors.addAll(stateColumnFamilyDescriptors);
 
         List<VectorCFDescriptor> vectorCFDescriptors = new ArrayList<>();
-
 
         RocksDB dbRef;
 
@@ -129,8 +132,6 @@ public class RocksDBOperationUtils {
                 "Not all requested column family handles have been created");
         return dbRef;
     }
-
-     */
 
     public static RocksIteratorWrapper getRocksIterator(
             RocksDB db, ColumnFamilyHandle columnFamilyHandle, ReadOptions readOptions) {
@@ -187,7 +188,7 @@ public class RocksDBOperationUtils {
             @Nullable Long writeBufferManagerCapacity) {
 
         VectorCFDescriptor columnFamilyDescriptor =
-                createVectorColumnFamilyDescriptor(
+                createVectorCFDescriptor(
                         metaInfoBase,
                         vectorColumnFamilyOptionsFactory,
                         ttlCompactFiltersManager,
@@ -234,7 +235,7 @@ public class RocksDBOperationUtils {
      *
      * <p>Sets TTL compaction filter if {@code ttlCompactFiltersManager} is not {@code null}.
      */
-    public static VectorCFDescriptor createVectorColumnFamilyDescriptor(
+    public static VectorCFDescriptor createVectorCFDescriptor(
             RegisteredStateMetaInfoBase metaInfoBase,
             Function<String, VectorColumnFamilyOptions> columnFamilyOptionsFactory,
             @Nullable RocksDbTtlCompactFiltersManager ttlCompactFiltersManager,

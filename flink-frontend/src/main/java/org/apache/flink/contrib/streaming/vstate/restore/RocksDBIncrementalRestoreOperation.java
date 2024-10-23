@@ -71,13 +71,7 @@ import org.apache.flink.util.FileUtils;
 import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.StateMigrationException;
-import org.rocksdb.ColumnFamilyDescriptor;
-import org.rocksdb.ColumnFamilyHandle;
-import org.rocksdb.ColumnFamilyOptions;
-import org.rocksdb.DBOptions;
-import org.rocksdb.ReadOptions;
-import org.rocksdb.RocksDB;
-import org.rocksdb.RocksDBException;
+import org.rocksdb.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -118,6 +112,7 @@ public class RocksDBIncrementalRestoreOperation<K> implements RocksDBRestoreOper
             File instanceRocksDBPath,
             DBOptions dbOptions,
             Function<String, ColumnFamilyOptions> columnFamilyOptionsFactory,
+            Function<String, VectorColumnFamilyOptions> vectorCFOptionsFactory,
             RocksDBNativeMetricOptions nativeMetricOptions,
             MetricGroup metricGroup,
             @Nonnull Collection<KeyedStateHandle> restoreStateHandles,
@@ -131,6 +126,7 @@ public class RocksDBIncrementalRestoreOperation<K> implements RocksDBRestoreOper
                         instanceRocksDBPath,
                         dbOptions,
                         columnFamilyOptionsFactory,
+                        vectorCFOptionsFactory,
                         nativeMetricOptions,
                         metricGroup,
                         ttlCompactFiltersManager,
@@ -268,8 +264,9 @@ public class RocksDBIncrementalRestoreOperation<K> implements RocksDBRestoreOper
                 operatorIdentifier,
                 backendUID);
 
-        this.rocksHandle.openDB(
+        this.rocksHandle.reopenDB(
                 createColumnFamilyDescriptors(stateMetaInfoSnapshots, true),
+                createVectorCFDescriptors(stateMetaInfoSnapshots),
                 stateMetaInfoSnapshots,
                 restoreSourcePath);
     }
@@ -520,6 +517,25 @@ public class RocksDBIncrementalRestoreOperation<K> implements RocksDBRestoreOper
             columnFamilyDescriptors.add(columnFamilyDescriptor);
         }
         return columnFamilyDescriptors;
+    }
+
+    private List<VectorCFDescriptor> createVectorCFDescriptors(
+            List<StateMetaInfoSnapshot> stateMetaInfoSnapshots) {
+        List<VectorCFDescriptor> vectorCFDescriptors = new ArrayList<>();
+        for (StateMetaInfoSnapshot stateMetaInfoSnapshot : stateMetaInfoSnapshots) {
+            RegisteredStateMetaInfoBase metaInfoBase =
+                    RegisteredStateMetaInfoBase.fromMetaInfoSnapshot(stateMetaInfoSnapshot);
+            if (metaInfoBase.getName().startsWith("vector-")) {
+                VectorCFDescriptor vectorCFDescriptor =
+                        RocksDBOperationUtils.createVectorCFDescriptor(
+                                metaInfoBase,
+                                this.rocksHandle.getVectorCFOptionsFactory(),
+                                null,
+                                this.rocksHandle.getWriteBufferManagerCapacity());
+                vectorCFDescriptors.add(vectorCFDescriptor);
+            }
+        }
+        return vectorCFDescriptors;
     }
 
     /** Reads Flink's state meta data file from the state handle. */
