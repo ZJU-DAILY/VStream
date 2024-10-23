@@ -2,7 +2,7 @@ from pymilvus import utility, connections
 
 connections.connect(address="10.214.242.182:19530")
 collection_name = "vector_collection"
-index_name = "_default_idx_102"
+index_name = "embedding"
 
 if __name__ == "__main__":
     process = utility.index_building_progress(collection_name, index_name)

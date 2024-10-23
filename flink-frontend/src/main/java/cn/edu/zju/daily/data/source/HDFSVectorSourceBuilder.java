@@ -26,7 +26,7 @@ import org.apache.flink.util.Collector;
 public class HDFSVectorSourceBuilder {
 
     private static final long QUERY_POLLING_INTERVAL_MILLIS = 10000L;
-    private static final String DEFAULT_INDEX_NAME = "_default_idx_102";
+    private static final String DEFAULT_INDEX_NAME = "embedding";
 
     private final StreamExecutionEnvironment env;
     private final Parameters params;
