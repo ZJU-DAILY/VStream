@@ -52,6 +52,7 @@ public class Parameters implements Serializable {
     private List<Long> insertThrottleThresholds;
     private List<Long> insertRates;
     private List<Long> observedInsertRates;
+    private double deleteRatio;
     private String queryThrottleMode;
     private long queryThrottleInsertThreshold;
     private long initialQueryRate;
@@ -248,6 +249,15 @@ public class Parameters implements Serializable {
 
     public void setInsertReadBulkSize(int insertReadBulkSize) {
         this.insertReadBulkSize = insertReadBulkSize;
+    }
+
+    /** Deletion ratio in the insert stream. */
+    public double getDeleteRatio() {
+        return deleteRatio;
+    }
+
+    public void setDeleteRatio(double deleteRatio) {
+        this.deleteRatio = deleteRatio;
     }
 
     public String getQueryThrottleMode() {

@@ -190,7 +190,7 @@ public class StreamSearchLocalSimulation {
         Random random = new Random();
         for (FloatVector vector : vectors) {
             for (int i = 0; i < dim; i++) {
-                vector.array()[i] += random.nextInt(3) - 1; // randomize
+                vector.getValue()[i] += random.nextInt(3) - 1; // randomize
             }
             DataSerializer.serializeFloatVector(vector, id, vec);
             db.put(vectorCFHandle, writeOptions, id, vec);

@@ -85,6 +85,53 @@ public class RocksDBOperationUtils {
         return dbRef;
     }
 
+    /*
+    public static RocksDB openDB(
+            String path,
+            List<ColumnFamilyDescriptor> stateColumnFamilyDescriptors,
+            List<ColumnFamilyHandle> stateColumnFamilyHandles,
+            ColumnFamilyOptions columnFamilyOptions,
+            DBOptions dbOptions) {
+        List<ColumnFamilyDescriptor> columnFamilyDescriptors =
+                new ArrayList<>(1 + stateColumnFamilyDescriptors.size());
+
+        // we add the required descriptor for the default CF in FIRST position, see
+        // https://github.com/facebook/rocksdb/wiki/RocksJava-Basics#opening-a-database-with-column-families
+        columnFamilyDescriptors.add(
+                new ColumnFamilyDescriptor(RocksDB.DEFAULT_COLUMN_FAMILY, columnFamilyOptions));
+        columnFamilyDescriptors.addAll(stateColumnFamilyDescriptors);
+
+        List<VectorCFDescriptor> vectorCFDescriptors = new ArrayList<>();
+
+
+        RocksDB dbRef;
+
+        try {
+            dbRef =
+                    RocksDB.open(
+                            Preconditions.checkNotNull(dbOptions),
+                            Preconditions.checkNotNull(path),
+                            columnFamilyDescriptors,
+                            stateColumnFamilyHandles);
+        } catch (RocksDBException e) {
+            IOUtils.closeQuietly(columnFamilyOptions);
+            columnFamilyDescriptors.forEach((cfd) -> IOUtils.closeQuietly(cfd.getOptions()));
+
+            // improve error reporting on Windows
+            throwExceptionIfPathLengthExceededOnWindows(path, e);
+
+            throw new IOException("Error while opening RocksDB instance.", e);
+        }
+
+        // requested + default CF
+        Preconditions.checkState(
+                1 + stateColumnFamilyDescriptors.size() == stateColumnFamilyHandles.size(),
+                "Not all requested column family handles have been created");
+        return dbRef;
+    }
+
+     */
+
     public static RocksIteratorWrapper getRocksIterator(
             RocksDB db, ColumnFamilyHandle columnFamilyHandle, ReadOptions readOptions) {
         return new RocksIteratorWrapper(db.newIterator(columnFamilyHandle, readOptions));

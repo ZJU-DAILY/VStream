@@ -88,9 +88,7 @@ public class VectorEnvironmentCreator implements Serializable {
     private void setBackend(StreamExecutionEnvironment env) {
         EmbeddedRocksDBStateBackend backend = new EmbeddedRocksDBStateBackend();
         backend.setRocksDBOptions(getRocksDBOptionsFactory());
-
         backend.setPriorityQueueStateType(EmbeddedRocksDBStateBackend.PriorityQueueStateType.HEAP);
-
         backend.setDbStoragePath(dbStoragePath);
         env.setStateBackend(backend);
     }

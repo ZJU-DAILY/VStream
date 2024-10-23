@@ -1,6 +1,6 @@
 package cn.edu.zju.daily.function;
 
-import cn.edu.zju.daily.data.PartitionedData;
+import cn.edu.zju.daily.data.PartitionedElement;
 import cn.edu.zju.daily.data.result.SearchResult;
 import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.util.MilvusUtil;
@@ -19,7 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class MilvusKeyedProcessFunction
-        extends KeyedProcessFunction<Integer, PartitionedData, SearchResult> {
+        extends KeyedProcessFunction<Integer, PartitionedElement, SearchResult> {
 
     private static final Logger LOG = LoggerFactory.getLogger(MilvusKeyedProcessFunction.class);
 
@@ -66,8 +66,8 @@ public class MilvusKeyedProcessFunction
 
     @Override
     public void processElement(
-            PartitionedData data,
-            KeyedProcessFunction<Integer, PartitionedData, SearchResult>.Context context,
+            PartitionedElement data,
+            KeyedProcessFunction<Integer, PartitionedElement, SearchResult>.Context context,
             Collector<SearchResult> collector)
             throws Exception {
 
@@ -77,15 +77,18 @@ public class MilvusKeyedProcessFunction
                     "Key mismatch: " + currentKey + " != " + data.getPartitionId());
         }
 
-        if (data.getDataType() == PartitionedData.DataType.QUERY) {
+        if (data.getDataType() == PartitionedElement.DataType.QUERY) {
             // use another thread for searching?
             SearchResult result =
-                    search(data.getVector(), data.getPartitionId(), data.getNumPartitionsSent());
+                    search(
+                            data.getData().asVector(),
+                            data.getPartitionId(),
+                            data.getNumPartitionsSent());
             if (result != null) {
                 collector.collect(result);
             }
-        } else if (data.getDataType() == PartitionedData.DataType.INSERT_OR_DELETE) {
-            insertOrDelete(data.getVector(), currentKey);
+        } else if (data.getDataType() == PartitionedElement.DataType.INSERT_OR_DELETE) {
+            insertOrDelete(data.getData().asVector(), currentKey);
         }
     }
 

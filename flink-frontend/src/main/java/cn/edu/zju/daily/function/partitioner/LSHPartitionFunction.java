@@ -1,9 +1,9 @@
 package cn.edu.zju.daily.function.partitioner;
 
 import cn.edu.zju.daily.data.PartitionedData;
-import cn.edu.zju.daily.data.PartitionedFloatVector;
+import cn.edu.zju.daily.data.PartitionedElement;
 import cn.edu.zju.daily.data.PartitionedQuery;
-import cn.edu.zju.daily.data.vector.FloatVector;
+import cn.edu.zju.daily.data.vector.VectorData;
 import cn.edu.zju.daily.lsh.L2HashFamily;
 import java.util.*;
 import org.apache.flink.util.Collector;
@@ -106,17 +106,21 @@ public class LSHPartitionFunction implements PartitionFunction {
         this.keyToNodeIdMap = getKeyToNodeIdMap(nodeIdToKeyMap);
     }
 
-    public Set<Integer> getNodeIds(FloatVector vector) {
-        List<Integer> nodeIds = new ArrayList<>();
-        for (L2HashFamily hashFamily : this.hashFamilies) {
-            int[] hashValues = hashFamily.hash(vector);
-            int nodeId = L2HashFamily.getNodeId(hashValues, this.numPartitions);
-            nodeIds.add(nodeId);
+    public Set<Integer> getNodeIds(VectorData data) {
+        if (data.hasValue()) {
+            List<Integer> nodeIds = new ArrayList<>();
+            for (L2HashFamily hashFamily : this.hashFamilies) {
+                int[] hashValues = hashFamily.hash(data);
+                int nodeId = L2HashFamily.getNodeId(hashValues, this.numPartitions);
+                nodeIds.add(nodeId);
+            }
+            return new HashSet<>(nodeIds);
+        } else {
+            return new HashSet<>(this.nodeIdToKeyMap.keySet());
         }
-        return new HashSet<>(nodeIds);
     }
 
-    //    private Set<Integer> getNodeIds(FloatVector vector) {
+    //    private Set<Integer> getNodeIds(FloatVector data) {
     //        // random
     //        List<Integer> nodeIds = new ArrayList<>();
     //        for (int i = 0; i < this.hashFamilies.size(); i++) {
@@ -127,31 +131,35 @@ public class LSHPartitionFunction implements PartitionFunction {
     //    }
 
     /**
-     * @param vector data.
+     * @param data data.
      * @param collector
      * @throws Exception
      */
     @Override
-    public void flatMap1(FloatVector vector, Collector<PartitionedData> collector)
+    public void flatMap1(VectorData data, Collector<PartitionedElement> collector)
             throws Exception {
-        Set<Integer> nodeIds = getNodeIds(vector);
+        Set<Integer> nodeIds = getNodeIds(data);
         for (int nodeId : nodeIds) {
-            collector.collect(new PartitionedFloatVector(nodeIdToKey(nodeId), vector));
+            collector.collect(new PartitionedData(nodeIdToKey(nodeId), data));
         }
     }
 
     /**
-     * @param vector query.
+     * @param query query.
      * @param collector
      * @throws Exception
      */
     @Override
-    public void flatMap2(FloatVector vector, Collector<PartitionedData> collector)
+    public void flatMap2(VectorData query, Collector<PartitionedElement> collector)
             throws Exception {
-        Set<Integer> nodeIds = getNodeIds(vector);
+        if (query.isDeletion()) {
+            throw new RuntimeException("Query deletions are not supported.");
+        }
+        Set<Integer> nodeIds = getNodeIds(query);
         int numPartitionsSent = nodeIds.size();
         for (int nodeId : nodeIds) {
-            collector.collect(new PartitionedQuery(nodeIdToKey(nodeId), numPartitionsSent, vector));
+            collector.collect(
+                    new PartitionedQuery(nodeIdToKey(nodeId), numPartitionsSent, query.asVector()));
         }
     }
 }

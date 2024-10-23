@@ -12,11 +12,11 @@ public class DataSerializer {
 
     public static void serializeFloatVector(FloatVector value, byte[] id, byte[] array) {
         serializeLong(value.getId(), id);
-        serializeFloatArray(value.array(), array);
+        serializeFloatArray(value.getValue(), array);
     }
 
     public static void serializeFloatVector(FloatVector value, byte[] array) {
-        serializeFloatArray(value.array(), array);
+        serializeFloatArray(value.getValue(), array);
     }
 
     /**
@@ -33,7 +33,7 @@ public class DataSerializer {
         ByteBuffer buffer = ByteBuffer.wrap(array);
         buffer.order(ByteOrder.LITTLE_ENDIAN);
         buffer.putLong(value.getEventTime());
-        for (float v : value.array()) {
+        for (float v : value.getValue()) {
             buffer.putFloat(v);
         }
     }
@@ -50,7 +50,7 @@ public class DataSerializer {
         ByteBuffer buffer = ByteBuffer.wrap(array);
         buffer.order(ByteOrder.LITTLE_ENDIAN);
         buffer.putLong(Math.max(0, value.getEventTime() - value.getTTL()));
-        for (float v : value.array()) {
+        for (float v : value.getValue()) {
             buffer.putFloat(v);
         }
     }

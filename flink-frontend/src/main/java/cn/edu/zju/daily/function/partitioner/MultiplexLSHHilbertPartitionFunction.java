@@ -2,9 +2,10 @@ package cn.edu.zju.daily.function.partitioner;
 
 import cn.edu.zju.daily.data.MultiPartitionQuery;
 import cn.edu.zju.daily.data.PartitionedData;
-import cn.edu.zju.daily.data.PartitionedFloatVector;
+import cn.edu.zju.daily.data.PartitionedElement;
 import cn.edu.zju.daily.data.PartitionedQuery;
 import cn.edu.zju.daily.data.vector.FloatVector;
+import cn.edu.zju.daily.data.vector.VectorData;
 import cn.edu.zju.daily.lsh.L2HilbertPartitioner;
 import java.util.*;
 import org.apache.flink.api.common.functions.FlatMapFunction;
@@ -14,16 +15,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class MultiplexLSHHilbertPartitionFunction
-        implements FlatMapFunction<FloatVector, PartitionedData>,
-                MapFunction<FloatVector, MultiPartitionQuery> {
+        implements FlatMapFunction<VectorData, PartitionedElement>,
+                MapFunction<VectorData, MultiPartitionQuery> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(LSHHilbertPartitionFunction.class);
+    private static final Logger LOG =
+            LoggerFactory.getLogger(MultiplexLSHHilbertPartitionFunction.class);
 
     private final List<L2HilbertPartitioner> partitioners;
 
     private final Map<Integer, Integer> nodeIdToKeyMap;
 
     private final boolean isQuery;
+    private final int numPartitions;
 
     /**
      * Constructor.
@@ -90,6 +93,7 @@ public class MultiplexLSHHilbertPartitionFunction
         nodeIdToKeyMap = PartitionFunction.getNodeIdMap(numPartitions);
         LOG.info("Node to key: {}", nodeIdToKeyMap);
         this.isQuery = isQuery;
+        this.numPartitions = numPartitions;
     }
 
     public int nodeIdToKey(int nodeId) {
@@ -97,7 +101,7 @@ public class MultiplexLSHHilbertPartitionFunction
     }
 
     @Override
-    public void flatMap(FloatVector value, Collector<PartitionedData> out) throws Exception {
+    public void flatMap(VectorData value, Collector<PartitionedElement> out) throws Exception {
         if (isQuery) {
             flatMapQuery(value, out);
         } else {
@@ -106,23 +110,37 @@ public class MultiplexLSHHilbertPartitionFunction
     }
 
     @Override
-    public MultiPartitionQuery map(FloatVector value) throws Exception {
-        return mapQuery(value);
+    public MultiPartitionQuery map(VectorData value) throws Exception {
+        if (value.isDeletion()) {
+            throw new RuntimeException("Deletion query is not supported.");
+        }
+        return mapQuery(value.asVector());
     }
 
-    private void flatMapData(FloatVector value, Collector<PartitionedData> out) throws Exception {
-        Set<Integer> partitions = new HashSet<>();
-        for (L2HilbertPartitioner partitioner : partitioners) {
-            partitions.add(partitioner.getDataPartition(value));
-        }
-        for (int partition : partitions) {
-            //            LOG.info("Partition: {} -> {} (ts: {})", value.getId(), partition,
-            // value.getEventTime());
-            out.collect(new PartitionedFloatVector(nodeIdToKey(partition), value));
+    private void flatMapData(VectorData data, Collector<PartitionedElement> out) throws Exception {
+        if (!data.hasValue()) {
+            for (int nodeId = 0; nodeId < numPartitions; nodeId++) {
+                out.collect(new PartitionedData(nodeIdToKey(nodeId), data));
+            }
+        } else {
+            Set<Integer> partitions = new HashSet<>();
+            for (L2HilbertPartitioner partitioner : partitioners) {
+                partitions.add(partitioner.getDataPartition(data));
+            }
+            for (int partition : partitions) {
+                //            LOG.info("Partition: {} -> {} (ts: {})", value.getId(), partition,
+                // value.getEventTime());
+                out.collect(new PartitionedData(nodeIdToKey(partition), data));
+            }
         }
     }
 
-    private void flatMapQuery(FloatVector value, Collector<PartitionedData> out) throws Exception {
+    private void flatMapQuery(VectorData query, Collector<PartitionedElement> out)
+            throws Exception {
+        if (query.isDeletion()) {
+            throw new RuntimeException("Deletion queries are not supported.");
+        }
+        FloatVector value = query.asVector();
         Set<Integer> partitions = new HashSet<>();
         for (L2HilbertPartitioner partitioner : partitioners) {
             partitions.add(partitioner.getDataPartition(value));
@@ -135,16 +153,19 @@ public class MultiplexLSHHilbertPartitionFunction
         }
     }
 
-    private MultiPartitionQuery mapQuery(FloatVector value) {
+    private MultiPartitionQuery mapQuery(VectorData query) {
+        if (query.isDeletion()) {
+            throw new RuntimeException("Deletion queries are not supported.");
+        }
         Set<Integer> partitions = new HashSet<>();
         for (L2HilbertPartitioner partitioner : partitioners) {
-            partitions.add(partitioner.getDataPartition(value));
+            partitions.add(partitioner.getDataPartition(query.asVector()));
         }
         int[] partitionKeys = new int[partitions.size()];
         int i = 0;
         for (int partition : partitions) {
             partitionKeys[i++] = nodeIdToKey(partition);
         }
-        return new MultiPartitionQuery(partitionKeys, value);
+        return new MultiPartitionQuery(partitionKeys, query.asVector());
     }
 }

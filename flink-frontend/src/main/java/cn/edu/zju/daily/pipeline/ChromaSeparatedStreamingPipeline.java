@@ -1,8 +1,8 @@
 package cn.edu.zju.daily.pipeline;
 
-import cn.edu.zju.daily.data.PartitionedData;
+import cn.edu.zju.daily.data.PartitionedElement;
 import cn.edu.zju.daily.data.result.SearchResult;
-import cn.edu.zju.daily.data.vector.FloatVector;
+import cn.edu.zju.daily.data.vector.VectorData;
 import cn.edu.zju.daily.function.*;
 import cn.edu.zju.daily.function.partitioner.PartitionFunction;
 import cn.edu.zju.daily.util.MilvusUtil;
@@ -32,19 +32,19 @@ public class ChromaSeparatedStreamingPipeline {
         return PartitionFunction.getPartitionFunction(params, random);
     }
 
-    private FlatMapFunction<FloatVector, PartitionedData> getUnaryPartitioner(boolean isQuery) {
+    private FlatMapFunction<VectorData, PartitionedElement> getUnaryPartitioner(boolean isQuery) {
         Random random = new Random(2345678L);
         return PartitionFunction.getUnaryPartitionFunction(params, random, isQuery);
     }
 
     public SingleOutputStreamOperator<SearchResult> apply(
-            DataStream<FloatVector> data, DataStream<FloatVector> query) {
+            DataStream<VectorData> data, DataStream<VectorData> query) {
 
         // This implementation is partly wrong, because it uses different partitioners for data and
         // query, which are
         // "trained" with different data, resulting in different partitioning schemes. However, this
         // prevents
-        SingleOutputStreamOperator<PartitionedData> partitionedData =
+        SingleOutputStreamOperator<PartitionedElement> partitionedData =
                 data.flatMap(getUnaryPartitioner(false))
                         .name("data partition")
                         .setParallelism(1)
@@ -52,7 +52,7 @@ public class ChromaSeparatedStreamingPipeline {
 
         applyToDataStream(partitionedData);
 
-        SingleOutputStreamOperator<PartitionedData> partitionedQuery =
+        SingleOutputStreamOperator<PartitionedElement> partitionedQuery =
                 query.flatMap(getUnaryPartitioner(true))
                         .name("query partition")
                         .setParallelism(1)
@@ -63,12 +63,12 @@ public class ChromaSeparatedStreamingPipeline {
 
     @Deprecated
     public SingleOutputStreamOperator<SearchResult> applyWithJoinedPartitioner(
-            DataStream<FloatVector> data, DataStream<FloatVector> query) {
+            DataStream<VectorData> data, DataStream<VectorData> query) {
         PartitionFunction partitioner = getPartitioner();
-        OutputTag<PartitionedData> partitionedQueryTag =
-                new OutputTag<PartitionedData>("partitioned-query") {};
+        OutputTag<PartitionedElement> partitionedQueryTag =
+                new OutputTag<PartitionedElement>("partitioned-query") {};
 
-        SingleOutputStreamOperator<PartitionedData> partitionedData =
+        SingleOutputStreamOperator<PartitionedElement> partitionedData =
                 data.connect(query)
                         .flatMap(partitioner)
                         .process(new PartitionedDataSplitFunction(partitionedQueryTag))
@@ -76,15 +76,15 @@ public class ChromaSeparatedStreamingPipeline {
                         .setMaxParallelism(1)
                         .name("partition");
 
-        SideOutputDataStream<PartitionedData> partitionedQuery =
+        SideOutputDataStream<PartitionedElement> partitionedQuery =
                 partitionedData.getSideOutput(partitionedQueryTag);
 
         applyToDataStream(partitionedData);
         return applyToQueryStream(partitionedQuery);
     }
 
-    private void applyToDataStream(DataStream<PartitionedData> data) {
-        data.keyBy(PartitionedData::getPartitionId)
+    private void applyToDataStream(DataStream<PartitionedElement> data) {
+        data.keyBy(PartitionedElement::getPartitionId)
                 .process(new ChromaDBKeyedDataProcessFunction(params))
                 .setParallelism(params.getParallelism())
                 .setMaxParallelism(params.getParallelism())
@@ -93,9 +93,9 @@ public class ChromaSeparatedStreamingPipeline {
     }
 
     private SingleOutputStreamOperator<SearchResult> applyToQueryStream(
-            DataStream<PartitionedData> data) {
+            DataStream<PartitionedElement> data) {
         SingleOutputStreamOperator<SearchResult> rawResults =
-                data.keyBy(PartitionedData::getPartitionId)
+                data.keyBy(PartitionedElement::getPartitionId)
                         .process(new ChromaDBKeyedQueryProcessFunction(params))
                         .setParallelism(params.getParallelism())
                         .setMaxParallelism(params.getParallelism())

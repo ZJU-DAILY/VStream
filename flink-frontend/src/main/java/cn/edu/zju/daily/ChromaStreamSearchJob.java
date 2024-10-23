@@ -3,7 +3,7 @@ package cn.edu.zju.daily;
 import cn.edu.zju.daily.data.result.SearchResult;
 import cn.edu.zju.daily.data.result.SearchResultEncoder;
 import cn.edu.zju.daily.data.source.HDFSVectorSourceBuilder;
-import cn.edu.zju.daily.data.vector.FloatVector;
+import cn.edu.zju.daily.data.vector.VectorData;
 import cn.edu.zju.daily.pipeline.ChromaStreamingPipeline;
 import cn.edu.zju.daily.util.Parameters;
 import java.time.LocalDateTime;
@@ -28,8 +28,8 @@ public class ChromaStreamSearchJob {
         HDFSVectorSourceBuilder source = new HDFSVectorSourceBuilder(env, params);
         ChromaStreamingPipeline pipeline = new ChromaStreamingPipeline(params);
 
-        SingleOutputStreamOperator<FloatVector> vectors = source.getSourceStream(true);
-        SingleOutputStreamOperator<FloatVector> queries = source.getQueryStream(true);
+        SingleOutputStreamOperator<VectorData> vectors = source.getSourceStream(true);
+        SingleOutputStreamOperator<VectorData> queries = source.getQueryStream(true);
 
         SingleOutputStreamOperator<SearchResult> results = pipeline.apply(vectors, queries);
         String fileSinkPath =

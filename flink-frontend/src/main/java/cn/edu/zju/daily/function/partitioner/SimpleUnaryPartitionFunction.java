@@ -1,8 +1,7 @@
 package cn.edu.zju.daily.function.partitioner;
 
-import cn.edu.zju.daily.data.PartitionedData;
-import cn.edu.zju.daily.data.vector.FloatVector;
-import java.util.*;
+import cn.edu.zju.daily.data.PartitionedElement;
+import cn.edu.zju.daily.data.vector.VectorData;
 import org.apache.flink.api.common.functions.RichFlatMapFunction;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.util.Collector;
@@ -25,7 +24,7 @@ import org.apache.flink.util.Collector;
  * 等于分区 ID。getNodeIdMap 函数旨在寻找一组 key，这组 key 可以通过 murmurHash(key) 映射为各 个分区 ID。
  */
 public class SimpleUnaryPartitionFunction
-        extends RichFlatMapFunction<FloatVector, PartitionedData> {
+        extends RichFlatMapFunction<VectorData, PartitionedElement> {
 
     private SimplePartitionFunction proxy;
     private final boolean isQuery;
@@ -47,7 +46,8 @@ public class SimpleUnaryPartitionFunction
      * @throws Exception
      */
     @Override
-    public void flatMap(FloatVector vector, Collector<PartitionedData> collector) throws Exception {
+    public void flatMap(VectorData vector, Collector<PartitionedElement> collector)
+            throws Exception {
         if (!isQuery) {
             this.proxy.flatMap1(vector, collector);
         } else {

@@ -1,6 +1,6 @@
 package cn.edu.zju.daily.lsh;
 
-import cn.edu.zju.daily.data.vector.FloatVector;
+import cn.edu.zju.daily.data.vector.VectorData;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -47,7 +47,7 @@ public class L2HashFamily implements LSHashFamily {
      * @param vector
      * @return hash values
      */
-    public int[] hash(FloatVector vector) {
+    public int[] hash(VectorData vector) {
         int[] hashValues = new int[hashFunctions.size()];
         for (int i = 0; i < hashFunctions.size(); i++) {
             hashValues[i] = hashFunctions.get(i).hash(vector);

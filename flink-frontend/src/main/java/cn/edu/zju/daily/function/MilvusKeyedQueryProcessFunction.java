@@ -2,7 +2,7 @@ package cn.edu.zju.daily.function;
 
 import static java.util.stream.Collectors.toList;
 
-import cn.edu.zju.daily.data.PartitionedData;
+import cn.edu.zju.daily.data.PartitionedElement;
 import cn.edu.zju.daily.data.result.SearchResult;
 import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.util.MilvusUtil;
@@ -22,10 +22,10 @@ import org.slf4j.LoggerFactory;
 
 /** Milvus search function. */
 public class MilvusKeyedQueryProcessFunction
-        extends KeyedProcessFunction<Integer, PartitionedData, SearchResult> {
+        extends KeyedProcessFunction<Integer, PartitionedElement, SearchResult> {
 
     private final Parameters params;
-    ListState<PartitionedData> buffer;
+    ListState<PartitionedElement> buffer;
     ValueState<Integer> count;
     private MilvusUtil milvusUtil = null;
     private static final Logger LOG =
@@ -38,8 +38,8 @@ public class MilvusKeyedQueryProcessFunction
     @Override
     public void open(Configuration parameters) throws Exception {
         super.open(parameters);
-        ListStateDescriptor<PartitionedData> listStateDescriptor =
-                new ListStateDescriptor<>("buffer", PartitionedData.class);
+        ListStateDescriptor<PartitionedElement> listStateDescriptor =
+                new ListStateDescriptor<>("buffer", PartitionedElement.class);
         buffer = getRuntimeContext().getListState(listStateDescriptor);
         ValueStateDescriptor<Integer> countState =
                 new ValueStateDescriptor<>("count", Integer.class);
@@ -50,8 +50,8 @@ public class MilvusKeyedQueryProcessFunction
 
     @Override
     public void processElement(
-            PartitionedData value,
-            KeyedProcessFunction<Integer, PartitionedData, SearchResult>.Context ctx,
+            PartitionedElement value,
+            KeyedProcessFunction<Integer, PartitionedElement, SearchResult>.Context ctx,
             Collector<SearchResult> out)
             throws Exception {
 
@@ -61,16 +61,16 @@ public class MilvusKeyedQueryProcessFunction
         }
 
         int bufferCapacity = params.getMilvusQueryBufferCapacity();
-        String partitionName = Integer.toString(ctx.getCurrentKey());
+        int nodeId = getRuntimeContext().getIndexOfThisSubtask();
 
         // if buffer is full, insert to Milvus
         if (count.value() + 1 == bufferCapacity) {
-            List<PartitionedData> vectors = new ArrayList<>();
-            for (PartitionedData vector : buffer.get()) {
+            List<PartitionedElement> vectors = new ArrayList<>();
+            for (PartitionedElement vector : buffer.get()) {
                 vectors.add(vector);
             }
             vectors.add(value);
-            List<SearchResult> results = search(vectors, ctx.getCurrentKey());
+            List<SearchResult> results = search(vectors, nodeId);
             if (results != null) {
                 for (SearchResult result : results) {
                     out.collect(result);
@@ -84,13 +84,14 @@ public class MilvusKeyedQueryProcessFunction
         }
     }
 
-    private List<SearchResult> search(List<PartitionedData> data, int partitionId) {
+    private List<SearchResult> search(List<PartitionedElement> data, int partitionId) {
         int k = params.getK();
         int efSearch = params.getHnswEfSearch();
         String collectionName = params.getMilvusCollectionName();
         String metricType = params.getMetricType();
         String partitionName = Integer.toString(partitionId);
-        List<FloatVector> vectors = data.stream().map(PartitionedData::getVector).collect(toList());
+        List<FloatVector> vectors =
+                data.stream().map(el -> el.getData().asVector()).collect(toList());
 
         long start = System.currentTimeMillis();
         SearchResultsWrapper resultsWrapper =

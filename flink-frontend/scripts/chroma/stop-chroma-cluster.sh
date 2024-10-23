@@ -12,10 +12,19 @@ fi
 
 # Read each line from the file
 while IFS=: read -r host port_low port_high; do
-  # concatenate
-  NAMES=$(seq "$port_low" "$port_high" | xargs -I {} echo -n "chromadb_"$host"_{} ")
-  echo $NAMES
-  # SSH into the host and stop the chroma server
-  docker -H ssh://"$USER"@"$host":4399 stop $NAMES
+  # Batch size is 5
+  for i in $(seq "$port_low" 5 "$port_high"); do
+    # concatenate through i to min(i+4, port_high)
+    NAMES=""
+    for j in $(seq "$i" $(($i+4))); do
+      if [ "$j" -gt "$port_high" ]; then
+        break
+      fi
+      NAMES="$NAMES chromadb_"$host"_$j"
+    done
+    echo $NAMES
+    # SSH into the host and stop the chroma server
+    docker -H ssh://"$USER"@"$host":4399 stop $NAMES
+  done
 done < "$FILE"
 echo "done"

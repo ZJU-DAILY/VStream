@@ -4,7 +4,7 @@ import static java.util.stream.Collectors.counting;
 import static java.util.stream.Collectors.groupingBy;
 
 import cn.edu.zju.daily.data.source.HDFSVectorSourceBuilder;
-import cn.edu.zju.daily.data.vector.FloatVector;
+import cn.edu.zju.daily.data.vector.VectorData;
 import cn.edu.zju.daily.function.partitioner.LSHPartitionFunction;
 import java.util.List;
 import java.util.Map;
@@ -34,7 +34,7 @@ public class DatasetSpanEstimator {
                                 vector -> {
                                     float min = Float.MAX_VALUE;
                                     float max = Float.MIN_VALUE;
-                                    for (float v : vector.array()) {
+                                    for (float v : vector.getValue()) {
                                         if (v < min) {
                                             min = v;
                                         }
@@ -69,7 +69,7 @@ public class DatasetSpanEstimator {
                         params.getParallelism(),
                         width);
 
-        List<FloatVector> vectors = source.getSourceStream(false).executeAndCollect(10000);
+        List<VectorData> vectors = source.getSourceStream(false).executeAndCollect(10000);
         Map<Integer, Long> count =
                 vectors.stream()
                         .flatMap(v -> partitioner.getNodeIds(v).stream())

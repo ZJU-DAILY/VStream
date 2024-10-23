@@ -2,7 +2,7 @@ package cn.edu.zju.daily.data.source.format;
 
 import static cn.edu.zju.daily.data.source.format.FloatVectorBinaryInputFormat.DIM_BYTES;
 
-import cn.edu.zju.daily.data.vector.FloatVector;
+import cn.edu.zju.daily.data.vector.VectorData;
 import java.io.IOException;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.configuration.Configuration;
@@ -17,10 +17,10 @@ import org.apache.flink.connector.file.src.reader.StreamFormat;
  * bulk size.
  */
 public class FloatVectorBinaryInputFormatAdaptor
-        implements BulkFormat<FloatVector, FileSourceSplit> {
+        implements BulkFormat<VectorData, FileSourceSplit> {
 
     private final long bulkSizeInBytes;
-    private final StreamFormatAdapter<FloatVector> wrapee;
+    private final StreamFormatAdapter<VectorData> wrapee;
 
     /**
      * Constructor of FloatVectorBinaryInputFormatAdaptor.
@@ -37,7 +37,7 @@ public class FloatVectorBinaryInputFormatAdaptor
     }
 
     @Override
-    public Reader<FloatVector> createReader(Configuration config, FileSourceSplit split)
+    public Reader<VectorData> createReader(Configuration config, FileSourceSplit split)
             throws IOException {
         Configuration clone = config.clone();
         clone.set(StreamFormat.FETCH_IO_SIZE, new MemorySize(bulkSizeInBytes));
@@ -45,7 +45,7 @@ public class FloatVectorBinaryInputFormatAdaptor
     }
 
     @Override
-    public Reader<FloatVector> restoreReader(Configuration config, FileSourceSplit split)
+    public Reader<VectorData> restoreReader(Configuration config, FileSourceSplit split)
             throws IOException {
         Configuration clone = config.clone();
         clone.set(StreamFormat.FETCH_IO_SIZE, new MemorySize(bulkSizeInBytes));
@@ -58,7 +58,7 @@ public class FloatVectorBinaryInputFormatAdaptor
     }
 
     @Override
-    public TypeInformation<FloatVector> getProducedType() {
+    public TypeInformation<VectorData> getProducedType() {
         return wrapee.getProducedType();
     }
 }

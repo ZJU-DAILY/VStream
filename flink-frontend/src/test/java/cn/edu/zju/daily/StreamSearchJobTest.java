@@ -1,10 +1,11 @@
 package cn.edu.zju.daily;
 
-import cn.edu.zju.daily.data.PartitionedData;
+import cn.edu.zju.daily.data.PartitionedElement;
 import cn.edu.zju.daily.data.result.GroundTruthResultIterator;
 import cn.edu.zju.daily.data.result.SearchResult;
 import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.data.vector.FloatVectorIterator;
+import cn.edu.zju.daily.data.vector.VectorData;
 import cn.edu.zju.daily.function.PartialResultProcessFunction;
 import cn.edu.zju.daily.function.RocksDBKeyedProcessFunction;
 import cn.edu.zju.daily.function.partitioner.LSHPartitionFunction;
@@ -65,12 +66,12 @@ public class StreamSearchJobTest {
                         params.getParallelism(),
                         params.getLshBucketWidth());
 
-        List<PartitionedData> data = new ArrayList<>();
+        List<PartitionedElement> data = new ArrayList<>();
 
-        Collector<PartitionedData> collector =
-                new Collector<PartitionedData>() {
+        Collector<PartitionedElement> collector =
+                new Collector<PartitionedElement>() {
                     @Override
-                    public void collect(PartitionedData record) {
+                    public void collect(PartitionedElement record) {
                         data.add(record);
                     }
 
@@ -86,8 +87,8 @@ public class StreamSearchJobTest {
         }
 
         List<SearchResult> searchResults =
-                env.fromCollection(data, TypeInformation.of(PartitionedData.class))
-                        .keyBy(PartitionedData::getPartitionId)
+                env.fromCollection(data, TypeInformation.of(PartitionedElement.class))
+                        .keyBy(PartitionedElement::getPartitionId)
                         .process(new RocksDBKeyedProcessFunction(100))
                         .setParallelism(params.getParallelism())
                         .setMaxParallelism(params.getParallelism())
@@ -139,12 +140,12 @@ public class StreamSearchJobTest {
         int numPartitions = 8;
         int k = 10;
 
-        List<FloatVector> vectors = new ArrayList<>();
+        List<VectorData> vectors = new ArrayList<>();
         for (int i = 0; i < 100000; i++) {
             vectors.add(FloatVector.getRandom(i, dim));
         }
 
-        List<FloatVector> queries = new ArrayList<>();
+        List<VectorData> queries = new ArrayList<>();
         for (int i = 0; i < 100; i++) {
             queries.add(FloatVector.getRandom(i, dim));
         }
@@ -162,7 +163,7 @@ public class StreamSearchJobTest {
         env.fromCollection(vectors)
                 .connect(env.fromCollection(queries))
                 .flatMap(partitioner)
-                .keyBy(PartitionedData::getPartitionId)
+                .keyBy(PartitionedElement::getPartitionId)
                 .process(new RocksDBKeyedProcessFunction(100))
                 .setParallelism(numPartitions)
                 .setMaxParallelism(numPartitions)

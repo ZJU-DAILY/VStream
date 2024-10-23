@@ -1,10 +1,12 @@
 package cn.edu.zju.daily.function.partitioner;
 
 import cn.edu.zju.daily.data.PartitionedData;
-import cn.edu.zju.daily.data.PartitionedFloatVector;
+import cn.edu.zju.daily.data.PartitionedElement;
 import cn.edu.zju.daily.data.PartitionedQuery;
 import cn.edu.zju.daily.data.vector.FloatVector;
+import cn.edu.zju.daily.data.vector.VectorData;
 import cn.edu.zju.daily.lsh.L2HilbertPartitioner;
+import java.time.Duration;
 import java.util.*;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.co.RichCoFlatMapFunction;
@@ -30,7 +32,7 @@ import org.slf4j.LoggerFactory;
  * 等于分区 ID。getNodeIdMap 函数旨在寻找一组 key，这组 key 可以通过 murmurHash(key) 映射为各 个分区 ID。
  */
 public class LSHHilbertPartitionFunction
-        extends RichCoFlatMapFunction<FloatVector, FloatVector, PartitionedData>
+        extends RichCoFlatMapFunction<VectorData, VectorData, PartitionedElement>
         implements PartitionFunction {
 
     private static final Logger LOG = LoggerFactory.getLogger(LSHHilbertPartitionFunction.class);
@@ -151,14 +153,14 @@ public class LSHHilbertPartitionFunction
     /**
      * Processes a data tuple.
      *
-     * @param value The stream element
+     * @param data The stream element
      * @param out The collector to emit resulting elements to
      * @throws Exception
      */
     @Override
-    public void flatMap1(FloatVector value, Collector<PartitionedData> out) throws Exception {
+    public void flatMap1(VectorData data, Collector<PartitionedElement> out) throws Exception {
         // 校准 ts
-        value.setEventTime(observedTsNano / 1000000L);
+        data.setEventTime(Duration.ofNanos(observedTsNano).toMillis());
 
         // 更新 observedTs
         count++;
@@ -173,12 +175,19 @@ public class LSHHilbertPartitionFunction
         }
 
         Set<Integer> partitions = new HashSet<>();
-        for (L2HilbertPartitioner partitioner : partitioners) {
-            partitions.add(partitioner.getDataPartition(value));
+
+        if (!data.hasValue()) {
+            for (int nodeId = 0; nodeId < numPartitions; nodeId++) {
+                partitions.add(nodeId);
+            }
+        } else {
+            for (L2HilbertPartitioner partitioner : partitioners) {
+                partitions.add(partitioner.getDataPartition(data));
+            }
         }
         for (int partition : partitions) {
             counter[partition]++;
-            out.collect(new PartitionedFloatVector(nodeIdToKeyMap.get(partition), value));
+            out.collect(new PartitionedData(nodeIdToKeyMap.get(partition), data));
         }
 
         // Report partition distribution periodically
@@ -195,15 +204,20 @@ public class LSHHilbertPartitionFunction
     /**
      * Processes a query tuple.
      *
-     * @param value The stream element
+     * @param data The stream element
      * @param out The collector to emit resulting elements to
      * @throws Exception
      */
     @Override
-    public void flatMap2(FloatVector value, Collector<PartitionedData> out) throws Exception {
+    public void flatMap2(VectorData data, Collector<PartitionedElement> out) throws Exception {
         // 校准 ts
-        value.setEventTime(observedTsNano / 1000000L);
+        data.setEventTime(Duration.ofNanos(observedTsNano).toMillis());
 
+        if (data.isDeletion()) {
+            throw new RuntimeException("Deletion queries are not supported.");
+        }
+
+        FloatVector value = data.asVector();
         Set<Integer> partitions = new HashSet<>();
         for (L2HilbertPartitioner partitioner : partitioners) {
             partitions.addAll(partitioner.getQueryPartition(value));

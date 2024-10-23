@@ -7,25 +7,33 @@ import cn.edu.zju.daily.data.vector.VectorData;
 import cn.edu.zju.daily.pipeline.RocksDBStreamingPipeline;
 import cn.edu.zju.daily.util.Parameters;
 import java.time.LocalDateTime;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.connector.file.sink.FileSink;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.junit.jupiter.api.Test;
 
-/** Insert while search. */
-public class VStreamSearchJob {
+public class RocksDBRecoveryTest {
 
-    private static final String DEFAULT_PARAM_PATH =
-            "./flink-frontend/src/main/resources/params-local.yaml";
+    private static final String DEFAULT_PARAM_PATH = "./src/test/resources/test-params.yaml";
+    private static final String SAVEPOINT_PATH =
+            "/home/auroflow/flink/flink-savepoints/savepoint-369c4b-6a0ac3f19ee4";
 
-    public static void main(String[] args) throws Exception {
+    @Test
+    void test() throws Exception {
 
-        String paramPath = args.length > 0 ? args[0] : DEFAULT_PARAM_PATH;
+        Parameters params = Parameters.load(DEFAULT_PARAM_PATH, false);
 
-        Parameters params = Parameters.load(paramPath, false);
-
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        Configuration conf = new Configuration();
+        conf.setInteger("parallelism.default", 1);
+        conf.setInteger("taskmanager.numberOfTaskSlots", 5);
+        conf.setString("execution.savepoint.path", SAVEPOINT_PATH);
+        StreamExecutionEnvironment env =
+                //                StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(conf);
+                StreamExecutionEnvironment.getExecutionEnvironment();
         env.getCheckpointConfig().setCheckpointTimeout(600000);
+
         new VectorEnvironmentCreator(params).prepareVectorEnvironment(env);
 
         HDFSVectorSourceBuilder source = new HDFSVectorSourceBuilder(env, params);
@@ -43,8 +51,10 @@ public class VStreamSearchJob {
                 FileSink.<SearchResult>forRowFormat(
                                 new Path(fileSinkPath), new SearchResultEncoder())
                         .build();
-        results.sinkTo(sink);
+        results.print();
 
-        env.executeAsync();
+        env.execute();
+        System.out.println("Job exited, waiting for possible savepoint.");
+        Thread.sleep(10000);
     }
 }

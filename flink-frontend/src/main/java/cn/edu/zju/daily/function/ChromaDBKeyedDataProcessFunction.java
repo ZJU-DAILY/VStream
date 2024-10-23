@@ -4,29 +4,17 @@ import static cn.edu.zju.daily.util.ChromaUtil.chooseAddressToUse;
 import static cn.edu.zju.daily.util.ChromaUtil.readAddresses;
 import static java.util.stream.Collectors.toList;
 
-import cn.edu.zju.daily.data.PartitionedData;
 import cn.edu.zju.daily.data.vector.FloatVector;
+import cn.edu.zju.daily.data.vector.VectorDeletion;
 import cn.edu.zju.daily.util.*;
 import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
-import org.apache.flink.api.common.state.ListState;
-import org.apache.flink.api.common.state.ListStateDescriptor;
-import org.apache.flink.api.common.state.ValueState;
-import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.runtime.state.FunctionInitializationContext;
-import org.apache.flink.runtime.state.FunctionSnapshotContext;
-import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction;
-import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
-import org.apache.flink.util.Collector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.amikos.chromadb.handler.ApiException;
 
 /** Chroma insert function. */
-public class ChromaDBKeyedDataProcessFunction
-        extends KeyedProcessFunction<Integer, PartitionedData, Object>
-        implements CheckpointedFunction {
+public class ChromaDBKeyedDataProcessFunction extends VectorKeyedDataProcessFunction {
 
     private static final Logger LOG =
             LoggerFactory.getLogger(ChromaDBKeyedDataProcessFunction.class);
@@ -34,29 +22,18 @@ public class ChromaDBKeyedDataProcessFunction
     private CustomChromaClient client;
     private String collectionName;
     private CustomChromaCollection collection;
-    private ListState<FloatVector> state;
-    private ValueState<Integer> count;
     private final Parameters params;
-    private final int insertBatchSize;
 
     // private ExecutorService insertExecutor;
 
     public ChromaDBKeyedDataProcessFunction(Parameters params) {
+        super(params.getChromaInsertBatchSize());
         this.params = params;
-        this.insertBatchSize = params.getChromaInsertBatchSize();
     }
 
     @Override
     public void open(Configuration parameters) throws Exception {
         super.open(parameters);
-
-        ListStateDescriptor<FloatVector> descriptor1 =
-                new ListStateDescriptor<>("pending", FloatVector.class);
-        state = getRuntimeContext().getListState(descriptor1);
-        ValueStateDescriptor<Integer> descriptor2 =
-                new ValueStateDescriptor<>("count", Integer.class);
-        count = getRuntimeContext().getState(descriptor2);
-        // insertExecutor = Executors.newSingleThreadExecutor();
 
         int subtaskIndex = getRuntimeContext().getIndexOfThisSubtask();
         collectionName = params.getChromaCollectionName() + "_" + subtaskIndex;
@@ -128,140 +105,69 @@ public class ChromaDBKeyedDataProcessFunction
     }
 
     @Override
-    public void processElement(
-            PartitionedData data,
-            KeyedProcessFunction<Integer, PartitionedData, Object>.Context context,
-            Collector<Object> collector)
-            throws Exception {
-
-        if (data.getDataType() == PartitionedData.DataType.INSERT_OR_DELETE) {
-            insertOrDelete(data.getVector());
-        } else {
-            throw new RuntimeException("Unsupported data type: " + data.getDataType());
+    protected void flushInserts(List<FloatVector> pendingInserts) {
+        try {
+            List<List<Float>> vectors =
+                    pendingInserts.stream().map(FloatVector::list).collect(toList());
+            List<String> ids =
+                    pendingInserts.stream()
+                            .map(FloatVector::getId)
+                            .map(Object::toString)
+                            .collect(toList());
+            List<Map<String, String>> metadatas =
+                    pendingInserts.stream().map(FloatVector::getMetadata).collect(toList());
+            long now = System.currentTimeMillis();
+            addToCollection(vectors, ids, metadatas);
+            LOG.info(
+                    "Partition {}: Inserted {} vectors (from #{}) in {} ms",
+                    getRuntimeContext().getIndexOfThisSubtask(),
+                    pendingInserts.size(),
+                    pendingInserts.get(0).getId(),
+                    System.currentTimeMillis() - now);
+        } catch (Exception e) {
+            LOG.error("Error inserting vectors to {}", collectionName, e);
         }
     }
 
-    private class InsertAndDeleteRunnable implements Runnable {
-
-        final List<FloatVector> insertsAndDeletes;
-
-        InsertAndDeleteRunnable(List<FloatVector> insertsAndDeletes) {
-            this.insertsAndDeletes = insertsAndDeletes;
+    private void addToCollection(
+            List<List<Float>> vectors, List<String> ids, List<Map<String, String>> metadatas) {
+        if (collection == null) {
+            collection = getOrCreateCollection();
         }
-
-        @Override
-        public void run() {
-            Set<Long> idsToDelete = new HashSet<>();
-            List<FloatVector> vectorsToAdd = new ArrayList<>();
-            for (int i = insertsAndDeletes.size() - 1; i >= 0; i--) {
-                FloatVector v = insertsAndDeletes.get(i);
-                if (v.isDeletion()) {
-                    idsToDelete.add(v.getId());
-                } else {
-                    if (!idsToDelete.contains(v.getId())) {
-                        vectorsToAdd.add(v);
-                    }
-                }
-            }
-
-            if (!idsToDelete.isEmpty()) {
-                try {
-                    long now = System.currentTimeMillis();
-                    deleteFromCollection(
-                            idsToDelete.stream().map(Object::toString).collect(toList()));
-                    LOG.info(
-                            "Partition {}: Deleted {} vectors in {} ms",
-                            getRuntimeContext().getIndexOfThisSubtask(),
-                            idsToDelete.size(),
-                            System.currentTimeMillis() - now);
-                } catch (Exception e) {
-                    LOG.error("Error deleting vectors", e);
-                }
-            }
-
-            if (!vectorsToAdd.isEmpty()) {
-                try {
-                    List<List<Float>> vectors =
-                            vectorsToAdd.stream().map(FloatVector::list).collect(toList());
-                    List<String> ids =
-                            vectorsToAdd.stream()
-                                    .map(FloatVector::getId)
-                                    .map(Object::toString)
-                                    .collect(toList());
-                    List<Map<String, String>> metadatas =
-                            vectorsToAdd.stream().map(FloatVector::getMetadata).collect(toList());
-                    long now = System.currentTimeMillis();
-                    addToCollection(vectors, ids, metadatas);
-                    LOG.info(
-                            "Partition {}: Inserted {} vectors (from #{}) in {} ms",
-                            getRuntimeContext().getIndexOfThisSubtask(),
-                            vectorsToAdd.size(),
-                            vectorsToAdd.get(0).getId(),
-                            System.currentTimeMillis() - now);
-                } catch (Exception e) {
-                    LOG.error("Error inserting vectors to {}", collectionName, e);
-                }
-            }
-        }
-
-        private void addToCollection(
-                List<List<Float>> vectors, List<String> ids, List<Map<String, String>> metadatas) {
-            if (collection == null) {
-                collection = getOrCreateCollection();
-            }
-            try {
-                collection.add(vectors, metadatas, ids, ids);
-            } catch (Exception e) {
-                LOG.error("Error adding vectors, resetting collection.");
-                collection = null;
-            }
-        }
-
-        private void deleteFromCollection(List<String> ids) {
-            if (collection == null) {
-                collection = getOrCreateCollection();
-            }
-            try {
-                collection.delete(ids, null, null);
-            } catch (Exception e) {
-                LOG.error("Error deleting vectors, resetting collection.");
-                collection = null;
-            }
-        }
-    }
-
-    private void insertOrDelete(FloatVector vector) throws Exception {
-        if (count.value() == null) {
-            // initialize
-            count.update(ThreadLocalRandom.current().nextInt(insertBatchSize));
-        }
-
-        state.add(vector);
-        count.update(count.value() + 1);
-        if (count.value() >= insertBatchSize) {
-            flushState();
-            count.update(0);
+        try {
+            collection.add(vectors, metadatas, ids, ids);
+        } catch (Exception e) {
+            LOG.error("Error adding vectors, resetting collection.");
+            collection = null;
         }
     }
 
     @Override
-    public void initializeState(FunctionInitializationContext context) throws Exception {}
-
-    @Override
-    public void snapshotState(FunctionSnapshotContext context) throws Exception {
-        flushState();
+    protected void flushDeletes(Map<Long, VectorDeletion> pendingDeletes) {
+        try {
+            long now = System.currentTimeMillis();
+            deleteFromCollection(
+                    pendingDeletes.keySet().stream().map(Object::toString).collect(toList()));
+            LOG.info(
+                    "Partition {}: Deleted {} vectors in {} ms",
+                    getRuntimeContext().getIndexOfThisSubtask(),
+                    pendingDeletes.size(),
+                    System.currentTimeMillis() - now);
+        } catch (Exception e) {
+            LOG.error("Error deleting vectors", e);
+        }
     }
 
-    private void flushState() throws Exception {
-        List<FloatVector> vectors = new ArrayList<>();
-        for (FloatVector v : state.get()) {
-            vectors.add(v);
+    private void deleteFromCollection(List<String> ids) {
+        if (collection == null) {
+            collection = getOrCreateCollection();
         }
-        if (!vectors.isEmpty()) {
-            InsertAndDeleteRunnable runnable = new InsertAndDeleteRunnable(vectors);
-            // insertExecutor.execute(runnable);
-            runnable.run(); // synchronous, for now
+        try {
+            assert collection != null;
+            collection.delete(ids, null, null);
+        } catch (Exception e) {
+            LOG.error("Error deleting vectors, resetting collection.");
+            collection = null;
         }
-        state.clear();
     }
 }

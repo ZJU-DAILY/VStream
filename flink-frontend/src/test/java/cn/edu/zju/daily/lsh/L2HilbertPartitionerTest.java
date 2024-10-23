@@ -133,7 +133,7 @@ public class L2HilbertPartitionerTest {
                     new ArrayList<>();
             for (int partition : partitions) {
                 List<com.github.jelmerk.knn.SearchResult<FloatVector, Float>> nearest =
-                        indexes.get(partition).findNearest(query.array(), k);
+                        indexes.get(partition).findNearest(query.getValue(), k);
                 results.addAll(nearest);
             }
             results.sort(Comparator.comparingDouble(com.github.jelmerk.knn.SearchResult::distance));

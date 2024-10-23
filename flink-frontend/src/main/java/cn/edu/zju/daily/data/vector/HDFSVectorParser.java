@@ -1,7 +1,7 @@
 package cn.edu.zju.daily.data.vector;
 
 import cn.edu.zju.daily.data.PartitionedData;
-import cn.edu.zju.daily.data.PartitionedFloatVector;
+import cn.edu.zju.daily.data.PartitionedElement;
 import cn.edu.zju.daily.data.PartitionedQuery;
 import java.io.Serializable;
 
@@ -41,7 +41,7 @@ public class HDFSVectorParser implements Serializable {
      * @param line the line to parse
      * @return a {@link FloatVector} object
      */
-    public FloatVector parseVector(String line) {
+    public VectorData parseVector(String line) {
 
         // If the line starts with "d", it is a deletion marker.
         if (line.startsWith(DataType.DELETE.prefix)) {
@@ -56,7 +56,7 @@ public class HDFSVectorParser implements Serializable {
         long id = Long.parseLong(parts[0]);
 
         if (parts.length == 1) {
-            return new DeletionMarker(id);
+            return new VectorDeletion(id);
         }
 
         float[] array = new float[parts.length - 1];
@@ -66,32 +66,32 @@ public class HDFSVectorParser implements Serializable {
         return new FloatVector(Long.parseLong(parts[0]), array);
     }
 
-    public FloatVector parseDeletionMarker(String line) {
+    public VectorData parseDeletionMarker(String line) {
         if (line.startsWith(DataType.DELETE.prefix)) {
             line = line.substring(2);
         }
         long id = Long.parseLong(line);
-        return new DeletionMarker(id);
+        return new VectorDeletion(id);
     }
 
     /**
-     * Parse a line of vector from HDFS, and return it as a {@link PartitionedData} object.
+     * Parse a line of vector from HDFS, and return it as a {@link PartitionedElement} object.
      *
      * @param line the line to parse
-     * @return a {@link PartitionedData} object
+     * @return a {@link PartitionedElement} object
      */
-    public PartitionedData parsePartitionedData(String line) {
+    public PartitionedElement parsePartitionedData(String line) {
         String[] parts = line.split(" ");
         if (parts.length != 2) {
             throw new RuntimeException("Invalid partitioned data: " + line);
         }
         DataType dt = parseDataType(parts[0]);
         if (dt == DataType.INSERT) {
-            return new PartitionedFloatVector(0, parseVector(parts[1]));
+            return new PartitionedData(0, parseVector(parts[1]));
         } else if (dt == DataType.QUERY) {
-            return new PartitionedQuery(0, 0, parseVector(parts[1]));
+            return new PartitionedQuery(0, 0, parseVector(parts[1]).asVector());
         } else if (dt == DataType.DELETE) {
-            return new PartitionedFloatVector(0, parseDeletionMarker(parts[1]));
+            return new PartitionedData(0, parseDeletionMarker(parts[1]));
         } else {
             throw new RuntimeException("Invalid partitioned data: " + line);
         }
@@ -122,7 +122,7 @@ public class HDFSVectorParser implements Serializable {
 
     private void unparseBareVector(StringBuilder sb, FloatVector vector) {
         sb.append(vector.getId());
-        for (float f : vector.array()) {
+        for (float f : vector.getValue()) {
             sb.append(",").append(f);
         }
     }

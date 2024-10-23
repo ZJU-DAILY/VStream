@@ -5,12 +5,12 @@ import java.io.Serializable;
 import java.util.*;
 
 /** This class represents a float data vector or query vector. */
-public class FloatVector implements Serializable, Item<Long, float[]> {
+public class FloatVector implements VectorData, Serializable, Item<Long, float[]> {
 
     public static final String METADATA_TS_FIELD = "ts";
 
-    private long _id;
-    private final float[] value;
+    private long id;
+    private float[] value;
     private long eventTime = 0L;
     private long TTL;
 
@@ -33,7 +33,7 @@ public class FloatVector implements Serializable, Item<Long, float[]> {
      * @param TTL query time-to-live
      */
     public FloatVector(long id, float[] value, long eventTime, long TTL) {
-        this._id = id;
+        this.id = id;
         this.value = value;
         this.eventTime = eventTime;
         this.TTL = TTL;
@@ -57,22 +57,36 @@ public class FloatVector implements Serializable, Item<Long, float[]> {
     // ==========================
     // Getters
     // ==========================
+    @Override
     public long getId() {
-        return _id;
+        return id;
     }
 
-    public float[] array() {
+    @Override
+    public boolean isDeletion() {
+        return false;
+    }
+
+    @Override
+    public float[] getValue() {
         return value;
+    }
+
+    @Override
+    public boolean hasValue() {
+        return true;
     }
 
     public int dim() {
         return value.length;
     }
 
+    @Override
     public long getTTL() {
         return TTL;
     }
 
+    @Override
     public long getEventTime() {
         return eventTime;
     }
@@ -97,7 +111,7 @@ public class FloatVector implements Serializable, Item<Long, float[]> {
     // These methods are required by the HNSW Item interface
     @Override
     public Long id() {
-        return _id;
+        return id;
     }
 
     @Override
@@ -113,43 +127,40 @@ public class FloatVector implements Serializable, Item<Long, float[]> {
     // ==========================
     // Setters
     // ==========================
+    @Override
     public void setId(long id) {
-        this._id = id;
+        this.id = id;
     }
 
+    @Override
     public void setTTL(long TTL) {
         this.TTL = TTL;
     }
 
+    @Override
     public void setEventTime(long eventTime) {
         this.eventTime = eventTime;
+    }
+
+    @Override
+    public void setValue(float[] value) {
+        this.value = value;
     }
 
     // ==========================
     // Calculation
     // ==========================
-    public float dot(FloatVector other) {
-        float sum = 0;
-        for (int i = 0; i < value.length; i++) {
-            sum += value[i] * other.value[i];
-        }
-        return sum;
-    }
 
-    /**
-     * Whether this FloatVector is a {@link DeletionMarker}.
-     *
-     * @return true if this FloatVector is a {@link DeletionMarker}
-     */
-    public boolean isDeletion() {
-        return value.length == 0;
+    @Override
+    public FloatVector asVector() {
+        return this;
     }
 
     @Override
     public String toString() {
         return "FloatVector{"
                 + "_id="
-                + _id
+                + id
                 + ", value="
                 + Arrays.toString(value)
                 + ", eventTime="
@@ -157,5 +168,21 @@ public class FloatVector implements Serializable, Item<Long, float[]> {
                 + ", TTL="
                 + TTL
                 + '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        FloatVector that = (FloatVector) o;
+        return id == that.id
+                && eventTime == that.eventTime
+                && TTL == that.TTL
+                && Objects.deepEquals(value, that.value);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, Arrays.hashCode(value), eventTime, TTL);
     }
 }

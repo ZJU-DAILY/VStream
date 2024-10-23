@@ -9,11 +9,28 @@ import numpy as np
 from chromadb.utils import embedding_functions
 from tqdm import tqdm
 
-ADDRESS_FILE = "/home/auroflow/code/vector-search/VStream/flink-frontend/src/test/resources/test_chroma_addresses.txt"
+ADDRESS_FILE = "/home/auroflow/code/vector-search/VStream/flink-frontend/src/test/resources/chroma_addresses.txt"
 COLLECTION_PREFIX = "testcol_"
-ROUNDS = 1000
+ROUNDS = 100000
+GEN_ROUNDS = 1000
 BATCH_SIZE = 1000
 EMBEDDING_SIZE = 128
+
+
+class Ring:
+    def __init__(self, data):
+        self.data = data
+
+    def __getitem__(self, key):
+        if isinstance(key, slice):
+            start = key.start % len(self.data)
+            stop = key.stop % len(self.data)
+            if start < stop:
+                return self.data[start:stop]
+            else:
+                return self.data[start:] + self.data[:stop]
+        else:
+            return self.data[key % len(self.data)]
 
 
 def get_random_str():
@@ -49,7 +66,7 @@ class ChromaInsert(Thread):
             "hnsw:construction_ef": 128
         }
         self.collection = self.client.create_collection(collection_name, metadata=metadata)
-        self.embeddings = embeddings
+        self.embeddings = Ring(embeddings)
 
     def run(self):
         start_time = time.time()
@@ -64,10 +81,10 @@ if __name__ == '__main__':
     tasks = []
     embeddings = []
     ef = embedding_functions.DefaultEmbeddingFunction()
-    for i in tqdm(range(ROUNDS * BATCH_SIZE)):
+    for i in tqdm(range(GEN_ROUNDS * BATCH_SIZE)):
         embeddings.append(np.random.random(EMBEDDING_SIZE))
     for i, (host, port) in enumerate(read_addresses(ADDRESS_FILE)):
-        task = ChromaInsert(host, port, i, embeddings)
+        task = ChromaInsert(host, 8000, i, embeddings)
         task.start()
         tasks.append(task)
     for task in tasks:

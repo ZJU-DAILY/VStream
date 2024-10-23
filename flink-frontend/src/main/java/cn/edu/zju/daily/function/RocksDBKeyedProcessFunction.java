@@ -2,9 +2,10 @@ package cn.edu.zju.daily.function;
 
 import static cn.edu.zju.daily.data.DataSerializer.*;
 
-import cn.edu.zju.daily.data.PartitionedData;
+import cn.edu.zju.daily.data.PartitionedElement;
 import cn.edu.zju.daily.data.result.SearchResult;
 import cn.edu.zju.daily.data.vector.FloatVector;
+import cn.edu.zju.daily.data.vector.VectorDeletion;
 import java.util.List;
 import java.util.concurrent.*;
 import org.apache.flink.api.common.state.MapState;
@@ -22,7 +23,7 @@ import org.slf4j.LoggerFactory;
  * <p>为插入和搜索分别创建一个线程池，
  */
 public class RocksDBKeyedProcessFunction
-        extends KeyedProcessFunction<Integer, PartitionedData, SearchResult> {
+        extends KeyedProcessFunction<Integer, PartitionedElement, SearchResult> {
 
     private MapState<byte[], byte[]> mapState = null;
 
@@ -67,20 +68,20 @@ public class RocksDBKeyedProcessFunction
         mapState.put(id, array);
     }
 
-    private void delete(FloatVector vector, int nodeId) throws Exception {
+    private void delete(VectorDeletion vector, int nodeId) throws Exception {
         byte[] id = new byte[Long.BYTES];
         serializeLong(vector.getId(), id);
         mapState.remove(id);
     }
 
     public void search(
-            StreamRecord<PartitionedData> query,
+            StreamRecord<PartitionedElement> query,
             int nodeId,
             int numPartitionsSent,
-            KeyedProcessFunction<Integer, PartitionedData, SearchResult>.Context context,
+            KeyedProcessFunction<Integer, PartitionedElement, SearchResult>.Context context,
             Collector<SearchResult> out) {
         long partitionedAt = query.getValue().getPartitionedAt();
-        FloatVector queryVector = query.getValue().getVector();
+        FloatVector queryVector = query.getValue().getData().asVector();
 
         if (queryVector.getEventTime() < lastSearchTs) {
             return;
@@ -143,8 +144,8 @@ public class RocksDBKeyedProcessFunction
 
     @Override
     public void processElement(
-            PartitionedData data,
-            KeyedProcessFunction<Integer, PartitionedData, SearchResult>.Context context,
+            PartitionedElement data,
+            KeyedProcessFunction<Integer, PartitionedElement, SearchResult>.Context context,
             Collector<SearchResult> collector)
             throws Exception {
 
@@ -156,18 +157,18 @@ public class RocksDBKeyedProcessFunction
 
         Long currentTimestamp = context.timestamp();
         // reconstruct the record
-        StreamRecord<PartitionedData> record =
+        StreamRecord<PartitionedElement> record =
                 (currentTimestamp != null)
                         ? new StreamRecord<>(data, currentTimestamp)
                         : new StreamRecord<>(data);
 
-        if (data.getDataType() == PartitionedData.DataType.QUERY) {
+        if (data.getDataType() == PartitionedElement.DataType.QUERY) {
             search(record, currentKey, data.getNumPartitionsSent(), context, collector);
-        } else if (data.getDataType() == PartitionedData.DataType.INSERT_OR_DELETE) {
-            if (data.getVector().isDeletion()) {
-                delete(data.getVector(), currentKey);
+        } else if (data.getDataType() == PartitionedElement.DataType.INSERT_OR_DELETE) {
+            if (data.getData().isDeletion()) {
+                delete(data.getData().asDeletion(), currentKey);
             } else {
-                insert(data.getVector(), currentKey);
+                insert(data.getData().asVector(), currentKey);
             }
         } else {
             dump(currentKey);

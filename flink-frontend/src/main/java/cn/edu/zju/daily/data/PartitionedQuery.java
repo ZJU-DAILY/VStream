@@ -3,11 +3,11 @@ package cn.edu.zju.daily.data;
 import cn.edu.zju.daily.data.vector.FloatVector;
 
 /** A query {@link FloatVector} which has been assigned to a partition. */
-public class PartitionedQuery extends PartitionedData {
+public class PartitionedQuery extends PartitionedElement {
 
-    public PartitionedQuery(int partitionId, int numPartitionsSent, FloatVector vector) {
+    public PartitionedQuery(int partitionId, int numPartitionsSent, FloatVector query) {
         super(DataType.QUERY, partitionId);
-        this.vector = vector;
+        this.vector = query;
         this.numPartitionsSent = numPartitionsSent;
         this.setPartitionedAt(System.currentTimeMillis());
     }
@@ -15,7 +15,7 @@ public class PartitionedQuery extends PartitionedData {
     private final FloatVector vector;
     private final int numPartitionsSent;
 
-    public FloatVector getVector() {
+    public FloatVector getData() {
         return vector;
     }
 
@@ -25,14 +25,14 @@ public class PartitionedQuery extends PartitionedData {
 
     @Override
     public String toString() {
-        return "PartitionedFloatVector{"
+        return "PartitionedQuery{"
                 + "dataType="
                 + getDataType()
                 + ", partitionId="
                 + getPartitionId()
                 + ", numPartitionsSent="
                 + numPartitionsSent
-                + ", vector="
+                + ", query="
                 + vector
                 + '}';
     }

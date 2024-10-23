@@ -1,8 +1,8 @@
 package cn.edu.zju.daily.pipeline;
 
-import cn.edu.zju.daily.data.PartitionedData;
+import cn.edu.zju.daily.data.PartitionedElement;
 import cn.edu.zju.daily.data.result.SearchResult;
-import cn.edu.zju.daily.data.vector.FloatVector;
+import cn.edu.zju.daily.data.vector.VectorData;
 import cn.edu.zju.daily.function.MilvusKeyedDataProcessFunction;
 import cn.edu.zju.daily.function.MilvusKeyedQueryProcessFunction;
 import cn.edu.zju.daily.function.PartialResultProcessFunction;
@@ -10,7 +10,6 @@ import cn.edu.zju.daily.function.PartitionedDataSplitFunction;
 import cn.edu.zju.daily.function.partitioner.PartitionFunction;
 import cn.edu.zju.daily.util.MilvusUtil;
 import cn.edu.zju.daily.util.Parameters;
-import java.util.Map;
 import java.util.Random;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.streaming.api.datastream.DataStream;
@@ -47,9 +46,8 @@ public class MilvusSeparatedStreamingPipeline {
                 params.getVectorDim(),
                 params.getMilvusNumShards());
         int numPartitions = params.getParallelism();
-        Map<Integer, Integer> map = PartitionFunction.getNodeIdMap(numPartitions);
         for (int i = 0; i < numPartitions; i++) {
-            String partitionName = Integer.toString(map.get(i));
+            String partitionName = Integer.toString(i);
             milvusUtil.createPartition(collectionName, partitionName);
         }
         boolean indexBuilt =
@@ -77,20 +75,20 @@ public class MilvusSeparatedStreamingPipeline {
         return PartitionFunction.getPartitionFunction(params, random);
     }
 
-    private FlatMapFunction<FloatVector, PartitionedData> getUnaryPartitioner(boolean isQuery) {
+    private FlatMapFunction<VectorData, PartitionedElement> getUnaryPartitioner(boolean isQuery) {
         Random random = new Random(2345678L);
         return PartitionFunction.getUnaryPartitionFunction(params, random, isQuery);
     }
 
     public SingleOutputStreamOperator<SearchResult> apply(
-            DataStream<FloatVector> data, DataStream<FloatVector> query) {
+            DataStream<VectorData> data, DataStream<VectorData> query) {
 
         // This implementation is actually problematic, because it uses different partitioners for
         // data and
         // query, which are "trained" with different data, resulting in different partitioning
         // schemes. However, this
         // reduces pressure on partitioners.
-        SingleOutputStreamOperator<PartitionedData> partitionedData =
+        SingleOutputStreamOperator<PartitionedElement> partitionedData =
                 data.flatMap(getUnaryPartitioner(false))
                         .name("data partition")
                         .setParallelism(1)
@@ -98,7 +96,7 @@ public class MilvusSeparatedStreamingPipeline {
 
         applyToDataStream(partitionedData);
 
-        SingleOutputStreamOperator<PartitionedData> partitionedQuery =
+        SingleOutputStreamOperator<PartitionedElement> partitionedQuery =
                 query.flatMap(getUnaryPartitioner(true))
                         .name("query partition")
                         .setParallelism(1)
@@ -109,12 +107,12 @@ public class MilvusSeparatedStreamingPipeline {
 
     @Deprecated
     public SingleOutputStreamOperator<SearchResult> applyWithJoinedPartitioner(
-            DataStream<FloatVector> data, DataStream<FloatVector> query) {
+            DataStream<VectorData> data, DataStream<VectorData> query) {
         PartitionFunction partitioner = getPartitioner();
-        OutputTag<PartitionedData> partitionedQueryTag =
-                new OutputTag<PartitionedData>("partitioned-query") {};
+        OutputTag<PartitionedElement> partitionedQueryTag =
+                new OutputTag<PartitionedElement>("partitioned-query") {};
 
-        SingleOutputStreamOperator<PartitionedData> partitionedData =
+        SingleOutputStreamOperator<PartitionedElement> partitionedData =
                 data.connect(query)
                         .flatMap(partitioner)
                         .process(new PartitionedDataSplitFunction(partitionedQueryTag))
@@ -122,15 +120,15 @@ public class MilvusSeparatedStreamingPipeline {
                         .setMaxParallelism(1)
                         .name("partition");
 
-        SideOutputDataStream<PartitionedData> partitionedQuery =
+        SideOutputDataStream<PartitionedElement> partitionedQuery =
                 partitionedData.getSideOutput(partitionedQueryTag);
 
         applyToDataStream(partitionedData);
         return applyToQueryStream(partitionedQuery);
     }
 
-    private void applyToDataStream(DataStream<PartitionedData> data) {
-        data.keyBy(PartitionedData::getPartitionId)
+    private void applyToDataStream(DataStream<PartitionedElement> data) {
+        data.keyBy(PartitionedElement::getPartitionId)
                 .process(new MilvusKeyedDataProcessFunction(params))
                 .setParallelism(params.getParallelism())
                 .setMaxParallelism(params.getParallelism())
@@ -139,9 +137,9 @@ public class MilvusSeparatedStreamingPipeline {
     }
 
     private SingleOutputStreamOperator<SearchResult> applyToQueryStream(
-            DataStream<PartitionedData> data) {
+            DataStream<PartitionedElement> data) {
         SingleOutputStreamOperator<SearchResult> rawResults =
-                data.keyBy(PartitionedData::getPartitionId)
+                data.keyBy(PartitionedElement::getPartitionId)
                         .process(new MilvusKeyedQueryProcessFunction(params))
                         .setParallelism(params.getParallelism())
                         .setMaxParallelism(params.getParallelism())

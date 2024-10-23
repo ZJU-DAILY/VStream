@@ -4,9 +4,10 @@ import static cn.edu.zju.daily.util.ChromaUtil.chooseAddressToUse;
 import static cn.edu.zju.daily.util.ChromaUtil.readAddresses;
 import static java.util.stream.Collectors.toList;
 
-import cn.edu.zju.daily.data.PartitionedData;
+import cn.edu.zju.daily.data.PartitionedElement;
 import cn.edu.zju.daily.data.result.SearchResult;
 import cn.edu.zju.daily.data.vector.FloatVector;
+import cn.edu.zju.daily.data.vector.VectorData;
 import cn.edu.zju.daily.util.*;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -26,13 +27,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ChromaDBKeyedProcessFunction
-        extends KeyedProcessFunction<Integer, PartitionedData, SearchResult>
+        extends KeyedProcessFunction<Integer, PartitionedElement, SearchResult>
         implements CheckpointedFunction {
 
     private static final Logger LOG = LoggerFactory.getLogger(ChromaDBKeyedProcessFunction.class);
 
     private CustomChromaCollection collection;
-    private ListState<FloatVector> state;
+    private ListState<VectorData> state;
     private ValueState<Integer> count;
     private final Parameters params;
     private final int insertBatchSize;
@@ -47,8 +48,8 @@ public class ChromaDBKeyedProcessFunction
     public void open(Configuration parameters) throws Exception {
         super.open(parameters);
 
-        ListStateDescriptor<FloatVector> descriptor1 =
-                new ListStateDescriptor<>("pending", FloatVector.class);
+        ListStateDescriptor<VectorData> descriptor1 =
+                new ListStateDescriptor<>("pending", VectorData.class);
         state = getRuntimeContext().getListState(descriptor1);
         ValueStateDescriptor<Integer> descriptor2 =
                 new ValueStateDescriptor<>("count", Integer.class);
@@ -114,26 +115,29 @@ public class ChromaDBKeyedProcessFunction
 
     @Override
     public void processElement(
-            PartitionedData data,
-            KeyedProcessFunction<Integer, PartitionedData, SearchResult>.Context context,
+            PartitionedElement data,
+            KeyedProcessFunction<Integer, PartitionedElement, SearchResult>.Context context,
             Collector<SearchResult> collector)
             throws Exception {
 
-        if (data.getDataType() == PartitionedData.DataType.QUERY) {
+        if (data.getDataType() == PartitionedElement.DataType.QUERY) {
             // use another thread for searching?
             SearchResult result =
-                    search(data.getVector(), data.getPartitionId(), data.getNumPartitionsSent());
+                    search(
+                            data.getData().asVector(),
+                            data.getPartitionId(),
+                            data.getNumPartitionsSent());
             collector.collect(result);
-        } else if (data.getDataType() == PartitionedData.DataType.INSERT_OR_DELETE) {
-            insertOrDelete(data.getVector());
+        } else if (data.getDataType() == PartitionedElement.DataType.INSERT_OR_DELETE) {
+            insertOrDelete(data.getData());
         }
     }
 
     private class InsertAndDeleteRunnable implements Runnable {
 
-        final List<FloatVector> insertsAndDeletes;
+        final List<VectorData> insertsAndDeletes;
 
-        InsertAndDeleteRunnable(List<FloatVector> insertsAndDeletes) {
+        InsertAndDeleteRunnable(List<VectorData> insertsAndDeletes) {
             this.insertsAndDeletes = insertsAndDeletes;
         }
 
@@ -142,12 +146,12 @@ public class ChromaDBKeyedProcessFunction
             Set<Long> idsToDelete = new HashSet<>();
             List<FloatVector> vectorsToAdd = new ArrayList<>();
             for (int i = insertsAndDeletes.size() - 1; i >= 0; i--) {
-                FloatVector v = insertsAndDeletes.get(i);
+                VectorData v = insertsAndDeletes.get(i);
                 if (v.isDeletion()) {
                     idsToDelete.add(v.getId());
                 } else {
                     if (!idsToDelete.contains(v.getId())) {
-                        vectorsToAdd.add(v);
+                        vectorsToAdd.add(v.asVector());
                     }
                 }
             }
@@ -211,18 +215,18 @@ public class ChromaDBKeyedProcessFunction
                 query.getEventTime());
     }
 
-    private void insertOrDelete(FloatVector vector) throws Exception {
+    private void insertOrDelete(VectorData data) throws Exception {
         if (count.value() == null) {
             // initialize
             count.update(ThreadLocalRandom.current().nextInt(insertBatchSize));
         }
 
         if (count.value() == insertBatchSize - 1) {
-            List<FloatVector> vectors = new ArrayList<>();
-            for (FloatVector v : state.get()) {
+            List<VectorData> vectors = new ArrayList<>();
+            for (VectorData v : state.get()) {
                 vectors.add(v);
             }
-            vectors.add(vector);
+            vectors.add(data);
 
             InsertAndDeleteRunnable runnable = new InsertAndDeleteRunnable(vectors);
             // insertExecutor.execute(runnable);
@@ -230,7 +234,7 @@ public class ChromaDBKeyedProcessFunction
             state.clear();
             count.update(0);
         } else {
-            state.add(vector);
+            state.add(data);
             count.update(count.value() + 1);
         }
     }
@@ -240,8 +244,8 @@ public class ChromaDBKeyedProcessFunction
 
     @Override
     public void snapshotState(FunctionSnapshotContext context) throws Exception {
-        List<FloatVector> vectors = new ArrayList<>();
-        for (FloatVector v : state.get()) {
+        List<VectorData> vectors = new ArrayList<>();
+        for (VectorData v : state.get()) {
             vectors.add(v);
         }
         if (!vectors.isEmpty()) {

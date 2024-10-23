@@ -1,7 +1,7 @@
 package cn.edu.zju.daily.data.source.format;
 
-import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.data.vector.HDFSVectorParser;
+import cn.edu.zju.daily.data.vector.VectorData;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -13,7 +13,7 @@ import org.apache.flink.core.fs.FSDataInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class FloatVectorInputFormat extends SimpleStreamFormat<FloatVector> {
+public class FloatVectorInputFormat extends SimpleStreamFormat<VectorData> {
 
     private static final Logger LOG = LoggerFactory.getLogger(FloatVectorInputFormat.class);
     public static final String DEFAULT_CHARSET_NAME = "UTF-8";
@@ -37,11 +37,11 @@ public class FloatVectorInputFormat extends SimpleStreamFormat<FloatVector> {
     }
 
     @Override
-    public TypeInformation<FloatVector> getProducedType() {
-        return TypeInformation.of(FloatVector.class);
+    public TypeInformation<VectorData> getProducedType() {
+        return TypeInformation.of(VectorData.class);
     }
 
-    public static final class Reader implements StreamFormat.Reader<FloatVector> {
+    public static final class Reader implements StreamFormat.Reader<VectorData> {
 
         private final BufferedReader reader;
         private final HDFSVectorParser parser;
@@ -51,19 +51,19 @@ public class FloatVectorInputFormat extends SimpleStreamFormat<FloatVector> {
             this.reader = reader;
             this.parser = new HDFSVectorParser();
             this.maxTTL = maxTTL;
-            LOG.info("FloatVectorInputFormat.Reader created with maxTTL = {}.", maxTTL);
+            LOG.info("VectorDataInputFormat.Reader created with maxTTL = {}.", maxTTL);
         }
 
         @Override
-        public FloatVector read() throws IOException {
+        public VectorData read() throws IOException {
             String line = reader.readLine();
             if (line == null) {
                 return null;
             }
-            FloatVector vector = parser.parseVector(line);
-            vector.setTTL(maxTTL); // currently set to max TTL
-            LOG.trace("Read vector: {}", vector);
-            return vector;
+            VectorData data = parser.parseVector(line);
+            data.setTTL(maxTTL); // currently set to max TTL
+            LOG.trace("Read vector: {}", data);
+            return data;
         }
 
         @Override

@@ -1,9 +1,9 @@
 package cn.edu.zju.daily.function.partitioner;
 
 import cn.edu.zju.daily.data.PartitionedData;
-import cn.edu.zju.daily.data.PartitionedFloatVector;
+import cn.edu.zju.daily.data.PartitionedElement;
 import cn.edu.zju.daily.data.PartitionedQuery;
-import cn.edu.zju.daily.data.vector.FloatVector;
+import cn.edu.zju.daily.data.vector.VectorData;
 import java.util.*;
 import org.apache.flink.util.Collector;
 
@@ -58,8 +58,8 @@ public class SimplePartitionFunction implements PartitionFunction {
         return numPartitions;
     }
 
-    private int getNodeId(FloatVector vector) {
-        int hash = Long.hashCode(vector.getId());
+    private int getNodeId(VectorData data) {
+        int hash = Long.hashCode(data.getId());
         return hash % numPartitions;
     }
 
@@ -74,27 +74,37 @@ public class SimplePartitionFunction implements PartitionFunction {
     //    }
 
     /**
-     * @param vector data.
+     * @param data data.
      * @param collector
      * @throws Exception
      */
     @Override
-    public void flatMap1(FloatVector vector, Collector<PartitionedData> collector)
+    public void flatMap1(VectorData data, Collector<PartitionedElement> collector)
             throws Exception {
-        int nodeId = getNodeId(vector);
-        collector.collect(new PartitionedFloatVector(nodeIdToKey(nodeId), vector));
+        if (!data.hasValue()) {
+            for (int nodeId = 0; nodeId < numPartitions; nodeId++) {
+                collector.collect(new PartitionedData(nodeIdToKey(nodeId), data));
+            }
+        } else {
+            int nodeId = getNodeId(data);
+            collector.collect(new PartitionedData(nodeIdToKey(nodeId), data));
+        }
     }
 
     /**
-     * @param vector query.
+     * @param data query.
      * @param collector
      * @throws Exception
      */
     @Override
-    public void flatMap2(FloatVector vector, Collector<PartitionedData> collector)
+    public void flatMap2(VectorData data, Collector<PartitionedElement> collector)
             throws Exception {
+        if (data.isDeletion()) {
+            throw new RuntimeException("Query does not have a value.");
+        }
         for (int nodeId = 0; nodeId < numPartitions; nodeId++) {
-            collector.collect(new PartitionedQuery(nodeIdToKey(nodeId), numPartitions, vector));
+            collector.collect(
+                    new PartitionedQuery(nodeIdToKey(nodeId), numPartitions, data.asVector()));
         }
     }
 }

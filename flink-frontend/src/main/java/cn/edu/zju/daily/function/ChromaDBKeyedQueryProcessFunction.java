@@ -2,7 +2,7 @@ package cn.edu.zju.daily.function;
 
 import static java.util.stream.Collectors.toList;
 
-import cn.edu.zju.daily.data.PartitionedData;
+import cn.edu.zju.daily.data.PartitionedElement;
 import cn.edu.zju.daily.data.result.SearchResult;
 import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.util.*;
@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
 
 /** Chroma search function. */
 public class ChromaDBKeyedQueryProcessFunction
-        extends KeyedProcessFunction<Integer, PartitionedData, SearchResult> {
+        extends KeyedProcessFunction<Integer, PartitionedElement, SearchResult> {
     private static final Logger LOG =
             LoggerFactory.getLogger(ChromaDBKeyedQueryProcessFunction.class);
 
@@ -23,7 +23,7 @@ public class ChromaDBKeyedQueryProcessFunction
     private CustomChromaCollection collection;
     private String collectionName;
     private final Parameters params;
-    private List<PartitionedData> queryData;
+    private List<PartitionedElement> queryData;
 
     public ChromaDBKeyedQueryProcessFunction(Parameters params) {
         this.params = params;
@@ -69,12 +69,12 @@ public class ChromaDBKeyedQueryProcessFunction
 
     @Override
     public void processElement(
-            PartitionedData data,
-            KeyedProcessFunction<Integer, PartitionedData, SearchResult>.Context context,
+            PartitionedElement data,
+            KeyedProcessFunction<Integer, PartitionedElement, SearchResult>.Context context,
             Collector<SearchResult> collector)
             throws Exception {
 
-        if (data.getDataType() == PartitionedData.DataType.QUERY) {
+        if (data.getDataType() == PartitionedElement.DataType.QUERY) {
             // use another thread for searching?
             queryData.add(data);
             if (queryData.size() >= params.getChromaQueryBatchSize()) {
@@ -89,7 +89,7 @@ public class ChromaDBKeyedQueryProcessFunction
         }
     }
 
-    private List<SearchResult> search(List<PartitionedData> queryData) throws Exception {
+    private List<SearchResult> search(List<PartitionedElement> queryData) {
 
         if (queryData.isEmpty()) {
             return Collections.emptyList();
@@ -111,15 +111,17 @@ public class ChromaDBKeyedQueryProcessFunction
                         FloatVector.METADATA_TS_FIELD,
                         Collections.singletonMap(
                                 "$gte",
-                                queryData.get(0).getVector().getEventTime()
-                                        - queryData.get(0).getVector().getTTL()));
+                                queryData.get(0).getData().getEventTime()
+                                        - queryData.get(0).getData().getTTL()));
 
         CustomChromaCollection.QueryResponse queryResponse;
         long now = System.currentTimeMillis();
         try {
             queryResponse =
                     collection.queryEmbeddings(
-                            queryData.stream().map(d -> d.getVector().list()).collect(toList()),
+                            queryData.stream()
+                                    .map(d -> d.getData().asVector().list())
+                                    .collect(toList()),
                             params.getK(),
                             where,
                             null,
@@ -134,13 +136,13 @@ public class ChromaDBKeyedQueryProcessFunction
                 "Partition {}: {} queries (from #{}) returned in {} ms",
                 getRuntimeContext().getIndexOfThisSubtask(),
                 queryData.size(),
-                queryData.get(0).getVector().getId(),
+                queryData.get(0).getData().getId(),
                 System.currentTimeMillis() - now);
         return getResultList(queryData, queryResponse.getIds(), queryResponse.getDistances());
     }
 
     private List<SearchResult> getResultList(
-            List<PartitionedData> queryData,
+            List<PartitionedElement> queryData,
             List<List<String>> idsList,
             List<List<Float>> scoresList) {
         Objects.requireNonNull(queryData);
@@ -162,12 +164,12 @@ public class ChromaDBKeyedQueryProcessFunction
             results.add(
                     new SearchResult(
                             queryData.get(i).getPartitionId(),
-                            queryData.get(i).getVector().getId(),
+                            queryData.get(i).getData().getId(),
                             ids,
                             scores,
                             1,
                             queryData.get(i).getNumPartitionsSent(),
-                            queryData.get(i).getVector().getEventTime()));
+                            queryData.get(i).getData().getEventTime()));
         }
         return results;
     }

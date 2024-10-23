@@ -32,7 +32,8 @@ for file in $(find "$FLINK_FRONTEND_DIR/params" -name "*.yaml" | sort -n); do
     -H 'Content-Type: application/json' \
     -d "{\"msgtype\": \"text\", \"text\": {\"content\": \"$PROMPT\"}}" &> /dev/null
 
-    sleep 10s
+    sleep 2m
+
     python3 "$SCRIPT_DIR/wait-flink-job.py" "$syslog_dirname"
     status=$?
     "$SCRIPT_DIR/stop-chroma.sh" -f "$syslog_dirname" -a y

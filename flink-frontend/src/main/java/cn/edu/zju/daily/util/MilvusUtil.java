@@ -19,6 +19,7 @@ import io.milvus.response.DescCollResponseWrapper;
 import io.milvus.response.GetCollStatResponseWrapper;
 import io.milvus.response.SearchResultsWrapper;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import org.slf4j.Logger;
@@ -345,13 +346,19 @@ public class MilvusUtil {
         }
     }
 
-    public void delete(List<Long> ids, String collectionName, String partitionName) {
+    public void delete(Collection<Long> ids, String collectionName, String partitionName) {
+        String expr =
+                "id in "
+                        + "["
+                        + String.join(
+                                ",", ids.stream().map(Object::toString).toArray(String[]::new))
+                        + "]";
         R<MutationResult> response =
                 milvusServiceClient.delete(
                         DeleteParam.newBuilder()
                                 .withCollectionName(collectionName)
                                 .withPartitionName(partitionName)
-                                .withExpr("id in " + ids)
+                                .withExpr(expr)
                                 .build());
         if (response.getStatus() != R.Status.Success.getCode()) {
             LOG.error(response.getMessage());

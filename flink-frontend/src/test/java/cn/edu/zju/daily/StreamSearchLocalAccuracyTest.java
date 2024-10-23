@@ -2,7 +2,7 @@ package cn.edu.zju.daily;
 
 import static java.util.stream.Collectors.toList;
 
-import cn.edu.zju.daily.data.PartitionedData;
+import cn.edu.zju.daily.data.PartitionedElement;
 import cn.edu.zju.daily.data.result.GroundTruthResultIterator;
 import cn.edu.zju.daily.data.result.SearchResult;
 import cn.edu.zju.daily.data.result.SearchResultEncoder;
@@ -36,7 +36,7 @@ public class StreamSearchLocalAccuracyTest {
         HDFSVectorSourceBuilder source = new HDFSVectorSourceBuilder(env, params);
         RocksDBStreamingPipeline pipeline = new RocksDBStreamingPipeline(params);
 
-        SingleOutputStreamOperator<PartitionedData> data = source.getHybridStream(false);
+        SingleOutputStreamOperator<PartitionedElement> data = source.getHybridStream(false);
         SingleOutputStreamOperator<SearchResult> results = pipeline.applyToHybridStream(data);
         String fileSinkPath = params.getFileSinkPath() + "/" + System.currentTimeMillis();
         FileSink<SearchResult> sink =

@@ -1,6 +1,6 @@
 package cn.edu.zju.daily.function;
 
-import cn.edu.zju.daily.data.PartitionedData;
+import cn.edu.zju.daily.data.PartitionedElement;
 import cn.edu.zju.daily.data.result.SearchResult;
 import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.util.Parameters;
@@ -17,7 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class HnswLibKeyedProcessFunction
-        extends KeyedProcessFunction<Integer, PartitionedData, SearchResult> {
+        extends KeyedProcessFunction<Integer, PartitionedElement, SearchResult> {
 
     private static final int BATCH_SIZE = 100;
     private int randomInit;
@@ -51,8 +51,8 @@ public class HnswLibKeyedProcessFunction
 
     @Override
     public void processElement(
-            PartitionedData data,
-            KeyedProcessFunction<Integer, PartitionedData, SearchResult>.Context context,
+            PartitionedElement data,
+            KeyedProcessFunction<Integer, PartitionedElement, SearchResult>.Context context,
             Collector<SearchResult> collector)
             throws Exception {
         int currentKey = context.getCurrentKey();
@@ -61,37 +61,37 @@ public class HnswLibKeyedProcessFunction
                     "Key mismatch: " + currentKey + " != " + data.getPartitionId());
         }
 
-        if (data.getDataType() == PartitionedData.DataType.QUERY) {
+        if (data.getDataType() == PartitionedElement.DataType.QUERY) {
             long start = 0;
-            if (data.getVector().getId() % 1 == 0) {
+            if (data.getData().asVector().getId() % 1 == 0) {
                 // XXX: bigger output interval
                 start = System.currentTimeMillis();
             }
             SearchResult result =
                     SearchResultTranslator.translate(
-                            index.findNearest(data.getVector().vector(), params.getK()),
-                            data.getVector().id());
-            if (data.getVector().getId() % 1 == 0) {
+                            index.findNearest(data.getData().asVector().getValue(), params.getK()),
+                            data.getData().asVector().id());
+            if (data.getData().asVector().getId() % 1 == 0) {
                 logger.info(
                         "Searching query #{} in {} ms",
-                        data.getVector().getId(),
+                        data.getData().getId(),
                         (System.currentTimeMillis() - start));
             }
             collector.collect(result);
-        } else if (data.getDataType() == PartitionedData.DataType.INSERT_OR_DELETE) {
+        } else if (data.getDataType() == PartitionedElement.DataType.INSERT_OR_DELETE) {
 
-            insertBuffer.add(data.getVector());
+            insertBuffer.add(data.getData().asVector());
             if (insertBuffer.size() + randomInit >= BATCH_SIZE) {
                 long start = 0;
-                if (data.getVector().getId() % 10000 < 100) {
+                if (data.getData().getId() % 10000 < 100) {
                     start = System.currentTimeMillis();
                 }
                 index.addAll(insertBuffer);
                 insertBuffer.clear();
-                if (data.getVector().getId() % 10000 < 100) {
+                if (data.getData().getId() % 10000 < 100) {
                     logger.info(
                             "Inserting vector #{} in {} ms",
-                            data.getVector().getId(),
+                            data.getData().getId(),
                             (System.currentTimeMillis() - start));
                 }
                 randomInit = 0;

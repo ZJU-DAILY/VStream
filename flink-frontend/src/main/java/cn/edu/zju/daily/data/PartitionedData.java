@@ -1,57 +1,33 @@
 package cn.edu.zju.daily.data;
 
 import cn.edu.zju.daily.data.vector.FloatVector;
-import java.io.Serializable;
+import cn.edu.zju.daily.data.vector.VectorData;
+import cn.edu.zju.daily.data.vector.VectorDeletion;
 
-/**
- * This class represents a partitioned data object, which can be a data vector or a query vector.
- */
-public class PartitionedData implements Serializable {
+/** A data {@link FloatVector} or {@link VectorDeletion} which has been assigned to a partition. */
+public class PartitionedData extends PartitionedElement {
 
-    public PartitionedData(DataType dataType, int partitionId) {
-        this.dataType = dataType;
-        this.partitionId = partitionId;
+    public PartitionedData(int partitionId, VectorData data) {
+        super(DataType.INSERT_OR_DELETE, partitionId);
+        this.data = data;
+        this.setPartitionedAt(System.currentTimeMillis());
     }
 
-    public enum DataType {
-        /** Query vector. */
-        QUERY,
-        /** Data vector or delete marker. */
-        INSERT_OR_DELETE,
-        /** An operation for the dummy backend to dump the data. */
-        DUMP
-    }
+    private final VectorData data;
 
-    private final DataType dataType;
-    private final int partitionId;
-    private long partitionedAt;
-
-    public void setPartitionedAt(long partitionedAt) {
-        this.partitionedAt = partitionedAt;
-    }
-
-    public long getPartitionedAt() {
-        return partitionedAt;
-    }
-
-    public DataType getDataType() {
-        return dataType;
-    }
-
-    public int getPartitionId() {
-        return partitionId;
-    }
-
-    public int getNumPartitionsSent() {
-        throw new UnsupportedOperationException("Not implemented yet.");
-    }
-
-    public FloatVector getVector() {
-        throw new UnsupportedOperationException("Not implemented yet.");
+    public VectorData getData() {
+        return data;
     }
 
     @Override
     public String toString() {
-        return "PartitionedData{" + "dataType=" + dataType + ", partitionId=" + partitionId + '}';
+        return "PartitionedFloatVector{"
+                + "dataType="
+                + getDataType()
+                + ", partitionId="
+                + getPartitionId()
+                + ", data="
+                + data
+                + '}';
     }
 }

@@ -1,6 +1,7 @@
 package cn.edu.zju.daily.lsh;
 
 import cn.edu.zju.daily.data.vector.FloatVector;
+import cn.edu.zju.daily.data.vector.VectorData;
 import java.io.Serializable;
 import java.math.BigInteger;
 import java.util.*;
@@ -164,7 +165,7 @@ public class L2HilbertPartitioner implements Serializable {
         }
 
         @Override
-        public int[] hash(FloatVector vector) {
+        public int[] hash(VectorData vector) {
             return hashFamily.hash(vector);
         }
 
@@ -257,7 +258,7 @@ public class L2HilbertPartitioner implements Serializable {
         hashFamily.ranges.removeFirst();
     }
 
-    public int getDataPartition(FloatVector vector) {
+    public int getDataPartition(VectorData vector) {
         long ts = vector.getEventTime();
 
         // if this is the first range, the update interval is less than 10 minutes

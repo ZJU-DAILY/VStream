@@ -1,8 +1,8 @@
 package cn.edu.zju.daily.pipeline;
 
-import cn.edu.zju.daily.data.PartitionedData;
+import cn.edu.zju.daily.data.PartitionedElement;
 import cn.edu.zju.daily.data.result.SearchResult;
-import cn.edu.zju.daily.data.vector.FloatVector;
+import cn.edu.zju.daily.data.vector.VectorData;
 import cn.edu.zju.daily.function.MilvusKeyedProcessFunction;
 import cn.edu.zju.daily.function.PartialResultProcessFunction;
 import cn.edu.zju.daily.function.partitioner.PartitionFunction;
@@ -80,8 +80,8 @@ public class MilvusStreamingPipeline {
      * @return
      */
     public SingleOutputStreamOperator<SearchResult> apply(
-            SingleOutputStreamOperator<FloatVector> vectors,
-            SingleOutputStreamOperator<FloatVector> queries) {
+            SingleOutputStreamOperator<VectorData> vectors,
+            SingleOutputStreamOperator<VectorData> queries) {
 
         if (params.getParallelism() < params.getNumCopies()) {
             throw new RuntimeException("parallelism must be >= numCopies");
@@ -93,7 +93,7 @@ public class MilvusStreamingPipeline {
 
     /** Apply the streaming pipeline to an unpartitioned PartitionedData stream. */
     public SingleOutputStreamOperator<SearchResult> applyToHybridStream(
-            SingleOutputStreamOperator<PartitionedData> data) {
+            SingleOutputStreamOperator<PartitionedElement> data) {
 
         PartitionFunction partitioner = getPartitioner();
         return applyToPartitionedData(data.flatMap(partitioner).name("partition"));
@@ -103,12 +103,12 @@ public class MilvusStreamingPipeline {
      * Apply the stream pipelines to a streaming data set containing first vectors, then queries.
      */
     public SingleOutputStreamOperator<SearchResult> applyToPartitionedData(
-            SingleOutputStreamOperator<PartitionedData> data) {
+            SingleOutputStreamOperator<PartitionedElement> data) {
 
-        KeyedProcessFunction<Integer, PartitionedData, SearchResult> processFunction =
+        KeyedProcessFunction<Integer, PartitionedElement, SearchResult> processFunction =
                 new MilvusKeyedProcessFunction(params);
 
-        return data.keyBy(PartitionedData::getPartitionId)
+        return data.keyBy(PartitionedElement::getPartitionId)
                 .process(processFunction)
                 .setParallelism(params.getParallelism())
                 .setMaxParallelism(params.getParallelism())

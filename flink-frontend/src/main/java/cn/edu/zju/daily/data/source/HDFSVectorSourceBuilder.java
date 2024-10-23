@@ -2,15 +2,15 @@ package cn.edu.zju.daily.data.source;
 
 import static java.util.stream.Collectors.toList;
 
-import cn.edu.zju.daily.data.PartitionedData;
+import cn.edu.zju.daily.data.PartitionedElement;
 import cn.edu.zju.daily.data.source.format.FloatVectorBinaryInputFormat;
 import cn.edu.zju.daily.data.source.format.FloatVectorBinaryInputFormatAdaptor;
 import cn.edu.zju.daily.data.source.format.FloatVectorInputFormat;
 import cn.edu.zju.daily.data.source.rate.*;
-import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.data.vector.HDFSVectorParser;
+import cn.edu.zju.daily.data.vector.VectorData;
 import cn.edu.zju.daily.function.partitioner.PartitionFunction;
-import cn.edu.zju.daily.rate.FloatVectorThrottler;
+import cn.edu.zju.daily.rate.VectorDataThrottler;
 import cn.edu.zju.daily.util.Parameters;
 import java.util.*;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
@@ -37,7 +37,7 @@ public class HDFSVectorSourceBuilder {
         this.params = params;
     }
 
-    public SingleOutputStreamOperator<FloatVector> getSourceStream(boolean throttle) {
+    public SingleOutputStreamOperator<VectorData> getSourceStream(boolean throttle) {
         List<Long> thresholds =
                 throttle ? params.getInsertThrottleThresholds() : Collections.singletonList(0L);
         List<Long> rates = throttle ? params.getInsertRates() : Collections.singletonList(0L);
@@ -48,6 +48,9 @@ public class HDFSVectorSourceBuilder {
             }
             if (params.isMilvusWaitForIndexBuild()) {
                 throw new RuntimeException("Text source does not support waiting for index build.");
+            }
+            if (params.getDeleteRatio() != 0D) {
+                throw new RuntimeException("Text source does not support delete ratio != 0.");
             }
 
             return getTextSource(
@@ -93,13 +96,14 @@ public class HDFSVectorSourceBuilder {
                     params.getInsertLimitPerLoop(),
                     params.getInsertLoops(),
                     params.getInsertReadBulkSize(),
+                    params.getDeleteRatio(),
                     rateControllerBuilder);
         } else {
             throw new RuntimeException("Unknown file type.");
         }
     }
 
-    public SingleOutputStreamOperator<FloatVector> getQueryStream(boolean throttle) {
+    public SingleOutputStreamOperator<VectorData> getQueryStream(boolean throttle) {
         List<Long> thresholds =
                 throttle ? params.getQueryThrottleThresholds() : Collections.singletonList(0L);
         List<Long> rates = throttle ? params.getQueryRates() : Collections.singletonList(0L);
@@ -142,13 +146,14 @@ public class HDFSVectorSourceBuilder {
                     Integer.MAX_VALUE,
                     params.getQueryLoops(),
                     params.getQueryReadBulkSize(),
+                    0D,
                     rateControllerBuilder);
         } else {
             throw new RuntimeException("Unknown file type.");
         }
     }
 
-    public SingleOutputStreamOperator<PartitionedData> getHybridStream(boolean throttle) {
+    public SingleOutputStreamOperator<PartitionedElement> getHybridStream(boolean throttle) {
         if (throttle) {
             throw new RuntimeException("Hybrid stream does not support throttling.");
         } else {
@@ -162,14 +167,14 @@ public class HDFSVectorSourceBuilder {
                     .map(parser::parsePartitionedData)
                     .setParallelism(1)
                     .name("hybrid input")
-                    .returns(PartitionedData.class)
+                    .returns(PartitionedElement.class)
                     .map(
                             data -> {
-                                data.getVector().setEventTime(System.currentTimeMillis());
+                                data.getData().setEventTime(System.currentTimeMillis());
                                 return data;
                             })
                     .setParallelism(1)
-                    .returns(PartitionedData.class);
+                    .returns(PartitionedElement.class);
         }
     }
 
@@ -181,24 +186,24 @@ public class HDFSVectorSourceBuilder {
      * @return
      * @throws Exception
      */
-    public SingleOutputStreamOperator<PartitionedData> getPartitionedSourceAndQueryStream()
+    public SingleOutputStreamOperator<PartitionedElement> getPartitionedSourceAndQueryStream()
             throws Exception {
         // Collect source and query data to master. For now we only support 1M source and 1M query.
-        List<FloatVector> source =
+        List<VectorData> source =
                 getSourceStream(false).executeAndCollect("fetch source", 1_000_000);
-        List<FloatVector> queries =
+        List<VectorData> queries =
                 getQueryStream(false).executeAndCollect("fetch queries", 1_000_000);
 
         Random random = new Random(2345678L);
 
         PartitionFunction partitioner = PartitionFunction.getPartitionFunction(params, random);
 
-        List<PartitionedData> data = new ArrayList<>();
+        List<PartitionedElement> data = new ArrayList<>();
 
-        Collector<PartitionedData> collector =
-                new Collector<PartitionedData>() {
+        Collector<PartitionedElement> collector =
+                new Collector<PartitionedElement>() {
                     @Override
-                    public void collect(PartitionedData record) {
+                    public void collect(PartitionedElement record) {
                         data.add(record);
                     }
 
@@ -206,24 +211,24 @@ public class HDFSVectorSourceBuilder {
                     public void close() {}
                 };
 
-        for (FloatVector vector : source) {
+        for (VectorData vector : source) {
             partitioner.flatMap1(vector, collector);
         }
-        for (FloatVector query : queries) {
+        for (VectorData query : queries) {
             partitioner.flatMap2(query, collector);
         }
 
         // Count elements in each partition
         Map<Integer, Integer> count = new HashMap<>();
-        for (PartitionedData record : data) {
+        for (PartitionedElement record : data) {
             count.put(record.getPartitionId(), count.getOrDefault(record.getPartitionId(), 0) + 1);
         }
         System.out.println(count);
 
-        return env.fromCollection(data, TypeInformation.of(PartitionedData.class));
+        return env.fromCollection(data, TypeInformation.of(PartitionedElement.class));
     }
 
-    private SingleOutputStreamOperator<FloatVector> getTextSource(
+    private SingleOutputStreamOperator<VectorData> getTextSource(
             String hdfsAddress,
             String hdfsPath,
             List<Long> thresholds,
@@ -231,7 +236,7 @@ public class HDFSVectorSourceBuilder {
             String name,
             int numLoops) { // (Deprecated) txt files
 
-        FileSource<FloatVector> fileSource =
+        FileSource<VectorData> fileSource =
                 FileSource.forRecordStreamFormat(
                                 new FloatVectorInputFormat(params.getMaxTTL()),
                                 new Path(hdfsAddress + hdfsPath))
@@ -239,24 +244,24 @@ public class HDFSVectorSourceBuilder {
                                 new LoopingNonSplittingRecursiveEnumerator.Provider(numLoops))
                         .build();
 
-        FloatVectorThrottler throttler =
-                new FloatVectorThrottler(thresholds, ratesToIntervals(rates), numLoops > 1);
+        VectorDataThrottler throttler =
+                new VectorDataThrottler(thresholds, ratesToIntervals(rates), numLoops > 1);
 
         return env.fromSource(fileSource, WatermarkStrategy.noWatermarks(), "hdfs-vector-source")
                 .setParallelism(1)
                 .name(name + " input")
-                .returns(FloatVector.class)
+                .returns(VectorData.class)
                 .disableChaining()
                 .map(throttler)
                 .setParallelism(1)
                 .name(name + " throttle")
-                .returns(FloatVector.class)
+                .returns(VectorData.class)
                 .assignTimestampsAndWatermarks(
-                        WatermarkStrategy.<FloatVector>forMonotonousTimestamps()
+                        WatermarkStrategy.<VectorData>forMonotonousTimestamps()
                                 .withTimestampAssigner(
-                                        (vector, timestamp) -> {
+                                        (data, timestamp) -> {
                                             long current = System.currentTimeMillis();
-                                            vector.setEventTime(current);
+                                            data.setEventTime(current);
                                             return current; // currently, use system time as
                                             // event
                                             // time
@@ -264,7 +269,7 @@ public class HDFSVectorSourceBuilder {
                 .name(name + " timestamps");
     }
 
-    private SingleOutputStreamOperator<FloatVector> getBinarySource(
+    private SingleOutputStreamOperator<VectorData> getBinarySource(
             String hdfsAddress,
             String hdfsPath,
             String name,
@@ -273,6 +278,7 @@ public class HDFSVectorSourceBuilder {
             int limitPerLoop,
             int numLoops,
             int bulkSize,
+            double deleteRatio,
             RateControllerBuilder rateControllerBuilder) {
 
         // Binary files
@@ -284,7 +290,7 @@ public class HDFSVectorSourceBuilder {
             fileType = FloatVectorBinaryInputFormat.FileType.B_VEC;
         }
 
-        FileSource<FloatVector> fileSource =
+        FileSource<VectorData> fileSource =
                 FileSource.forBulkFileFormat(
                                 new FloatVectorBinaryInputFormatAdaptor(
                                         new FloatVectorBinaryInputFormat(
@@ -295,6 +301,7 @@ public class HDFSVectorSourceBuilder {
                                                 limitPerLoop,
                                                 vectorDim,
                                                 numLoops,
+                                                deleteRatio,
                                                 rateControllerBuilder),
                                         bulkSize,
                                         vectorDim),
@@ -304,14 +311,14 @@ public class HDFSVectorSourceBuilder {
 
         return env.fromSource(
                         fileSource,
-                        WatermarkStrategy.<FloatVector>forMonotonousTimestamps()
+                        WatermarkStrategy.<VectorData>forMonotonousTimestamps()
                                 .withTimestampAssigner(
                                         (vector, timestamp) -> vector.getEventTime()),
                         "hdfs-vector-source")
                 .setParallelism(1)
                 .setMaxParallelism(1)
                 .name(name + " input")
-                .returns(FloatVector.class)
+                .returns(VectorData.class)
                 .disableChaining();
     }
 

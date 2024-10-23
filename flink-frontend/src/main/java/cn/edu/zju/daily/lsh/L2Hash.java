@@ -1,6 +1,7 @@
 package cn.edu.zju.daily.lsh;
 
 import cn.edu.zju.daily.data.vector.FloatVector;
+import cn.edu.zju.daily.data.vector.VectorData;
 import java.util.Random;
 
 /**
@@ -31,7 +32,7 @@ public class L2Hash implements LSHash {
         this.a = new FloatVector(-1, arr);
     }
 
-    public int hash(FloatVector vector) {
+    public int hash(VectorData vector) {
         float hashValue = (a.dot(vector) + b) / r;
         return (int) Math.floor(hashValue);
     }

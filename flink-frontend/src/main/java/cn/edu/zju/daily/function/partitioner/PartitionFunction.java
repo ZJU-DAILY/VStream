@@ -2,8 +2,8 @@ package cn.edu.zju.daily.function.partitioner;
 
 import static java.util.stream.Collectors.toList;
 
-import cn.edu.zju.daily.data.PartitionedData;
-import cn.edu.zju.daily.data.vector.FloatVector;
+import cn.edu.zju.daily.data.PartitionedElement;
+import cn.edu.zju.daily.data.vector.VectorData;
 import cn.edu.zju.daily.util.Parameters;
 import java.util.HashMap;
 import java.util.List;
@@ -15,11 +15,11 @@ import org.apache.flink.util.Collector;
 import org.apache.flink.util.MathUtils;
 
 public interface PartitionFunction
-        extends CoFlatMapFunction<FloatVector, FloatVector, PartitionedData>,
-                FlatMapFunction<PartitionedData, PartitionedData> {
+        extends CoFlatMapFunction<VectorData, VectorData, PartitionedElement>,
+                FlatMapFunction<PartitionedElement, PartitionedElement> {
 
     static Map<Integer, Integer> getNodeIdMap(int parallelism) {
-        Map<Integer, Integer> nodeIdMap = new HashMap<>();
+        Map<Integer, Integer> nodeIdMap = new HashMap<>(); // physical node id -> key
         int count = 0;
         for (int key = 0; count < parallelism; key++) {
             int nodeId = MathUtils.murmurHash(key) % parallelism;
@@ -32,17 +32,18 @@ public interface PartitionFunction
     }
 
     @Override
-    default void flatMap(PartitionedData value, Collector<PartitionedData> out) throws Exception {
-        if (value.getDataType().equals(PartitionedData.DataType.INSERT_OR_DELETE)) {
-            flatMap1(value.getVector(), out);
-        } else if (value.getDataType().equals(PartitionedData.DataType.QUERY)) {
-            flatMap2(value.getVector(), out);
+    default void flatMap(PartitionedElement value, Collector<PartitionedElement> out)
+            throws Exception {
+        if (value.getDataType().equals(PartitionedElement.DataType.INSERT_OR_DELETE)) {
+            flatMap1(value.getData(), out);
+        } else if (value.getDataType().equals(PartitionedElement.DataType.QUERY)) {
+            flatMap2(value.getData(), out);
         } else {
             throw new RuntimeException("Unsupported data type: " + value.getDataType());
         }
     }
 
-    static FlatMapFunction<FloatVector, PartitionedData> getUnaryPartitionFunction(
+    static FlatMapFunction<VectorData, PartitionedElement> getUnaryPartitionFunction(
             Parameters params, Random random, boolean isQuery) {
         switch (params.getPartitioner()) {
             case "lsh+hilbert":
