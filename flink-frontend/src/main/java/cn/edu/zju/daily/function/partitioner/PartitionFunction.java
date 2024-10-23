@@ -4,6 +4,7 @@ import static java.util.stream.Collectors.toList;
 
 import cn.edu.zju.daily.data.PartitionedElement;
 import cn.edu.zju.daily.data.vector.VectorData;
+import cn.edu.zju.daily.function.partitioner.curve.HilbertCurve;
 import cn.edu.zju.daily.util.Parameters;
 import java.util.HashMap;
 import java.util.List;
@@ -58,6 +59,7 @@ public interface PartitionFunction
                         params.getLshHilbertMaxRetainedElements(),
                         params.getMaxTTL(),
                         params.getParallelism(),
+                        new HilbertCurve.Builder(),
                         isQuery);
             case "simple":
                 return new SimpleUnaryPartitionFunction(params.getParallelism(), isQuery);
@@ -109,7 +111,8 @@ public interface PartitionFunction
                         params.getMaxTTL(),
                         observedInsertIntervals,
                         params.getInsertThrottleThresholds(),
-                        params.getParallelism());
+                        params.getParallelism(),
+                        new HilbertCurve.Builder());
             case "simple":
                 return new SimplePartitionFunction(params.getParallelism());
             default:

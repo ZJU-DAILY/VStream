@@ -4,6 +4,7 @@ import cn.edu.zju.daily.data.result.GroundTruthResultIterator;
 import cn.edu.zju.daily.data.result.SearchResult;
 import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.data.vector.FloatVectorIterator;
+import cn.edu.zju.daily.function.partitioner.curve.HilbertCurve;
 import com.github.jelmerk.knn.DistanceFunctions;
 import com.github.jelmerk.knn.hnsw.HnswIndex;
 import java.io.IOException;
@@ -21,7 +22,16 @@ public class L2HilbertPartitionerTest {
 
         L2HilbertPartitioner partitioner =
                 new L2HilbertPartitioner(
-                        128, 8, 1, 7, 1000000, 10000, TTL, numPartitions, new Random());
+                        128,
+                        8,
+                        1,
+                        7,
+                        1000000,
+                        10000,
+                        TTL,
+                        numPartitions,
+                        new HilbertCurve.Builder(),
+                        new Random());
 
         FloatVectorIterator iter =
                 FloatVectorIterator.fromFile(
@@ -73,6 +83,7 @@ public class L2HilbertPartitionerTest {
                             numElements,
                             numElements,
                             numPartitions,
+                            new HilbertCurve.Builder(),
                             new Random()));
         }
 
@@ -181,6 +192,7 @@ public class L2HilbertPartitionerTest {
                             numElements,
                             maxTTL,
                             numPartitions,
+                            new HilbertCurve.Builder(),
                             new Random()));
         }
 

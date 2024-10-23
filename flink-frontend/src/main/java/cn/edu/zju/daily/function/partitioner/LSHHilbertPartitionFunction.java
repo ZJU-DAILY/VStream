@@ -5,6 +5,7 @@ import cn.edu.zju.daily.data.PartitionedElement;
 import cn.edu.zju.daily.data.PartitionedQuery;
 import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.data.vector.VectorData;
+import cn.edu.zju.daily.function.partitioner.curve.SpaceFillingCurve;
 import cn.edu.zju.daily.lsh.L2HilbertPartitioner;
 import java.time.Duration;
 import java.util.*;
@@ -58,7 +59,8 @@ public class LSHHilbertPartitionFunction
             long updateInterval,
             int maxRetainedElements,
             long maxTTL,
-            int numPartitions) {
+            int numPartitions,
+            SpaceFillingCurve.Builder curveBuilder) {
         this(
                 random,
                 dim,
@@ -71,7 +73,8 @@ public class LSHHilbertPartitionFunction
                 maxTTL,
                 Collections.singletonList(0L),
                 Collections.singletonList(0L),
-                numPartitions);
+                numPartitions,
+                curveBuilder);
     }
 
     /** Insert interval in nanoseconds, observed by this partitioner. */
@@ -109,7 +112,8 @@ public class LSHHilbertPartitionFunction
             long maxTTL,
             List<Long> observedInsertIntervals,
             List<Long> insertThresholds,
-            int numPartitions) {
+            int numPartitions,
+            SpaceFillingCurve.Builder curveBuilder) {
         //        if (numHashFunctions * numHilbertBits > 63) {
         //            LOG.warn("numHashFunctions * numHilbertBits > 63, cannot use small options for
         // hilbert curve.");
@@ -131,6 +135,7 @@ public class LSHHilbertPartitionFunction
                             maxRetainedElements,
                             maxTTL,
                             numPartitions,
+                            curveBuilder,
                             new Random(random.nextLong())));
         }
 

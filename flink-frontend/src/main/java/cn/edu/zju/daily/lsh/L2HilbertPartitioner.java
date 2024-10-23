@@ -5,6 +5,8 @@ import cn.edu.zju.daily.data.vector.VectorData;
 import java.io.Serializable;
 import java.math.BigInteger;
 import java.util.*;
+
+import cn.edu.zju.daily.function.partitioner.curve.SpaceFillingCurve;
 import org.davidmoten.hilbert.HilbertCurve;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +24,7 @@ public class L2HilbertPartitioner implements Serializable {
         final List<BigInteger> partitionHeads;
         boolean firstInterval;
         boolean initialized;
+
         //  boolean relaxed = true;  todo: relax the query partition scheme
 
         HashFamilyRange(int numHashFunctions, boolean firstInterval) {
@@ -207,6 +210,7 @@ public class L2HilbertPartitioner implements Serializable {
     private final int maxRetainedElements;
     private final long maxTTL;
     private final int hilbertBits;
+    private final SpaceFillingCurve.Builder curveBuilder;
 
     /**
      * Constructor.
@@ -224,6 +228,7 @@ public class L2HilbertPartitioner implements Serializable {
             int maxRetainedElements,
             long maxTTL,
             int numPartitions,
+            SpaceFillingCurve.Builder curveBuilder,
             Random random) {
         if (numHashFunctions * hilbertBits > 63) {
             LOG.warn(
@@ -237,6 +242,7 @@ public class L2HilbertPartitioner implements Serializable {
         this.numPartitions = numPartitions;
         this.maxRetainedElements = maxRetainedElements;
         this.hilbertBits = hilbertBits;
+        this.curveBuilder = curveBuilder;
         this.maxTTL = maxTTL;
     }
 

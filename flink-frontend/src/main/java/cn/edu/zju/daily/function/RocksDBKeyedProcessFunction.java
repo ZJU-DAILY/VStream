@@ -55,7 +55,7 @@ public class RocksDBKeyedProcessFunction
 
     private void insert(FloatVector vector, int nodeId) throws Exception {
 
-        if (vector.getId() % 16043 == 0) { // gcd(1z
+        if (vector.getId() % 1 == 0) { // gcd(1z
             logger.info(
                     "Partition {} (ts = {}): Inserting vector #{}",
                     nodeId,

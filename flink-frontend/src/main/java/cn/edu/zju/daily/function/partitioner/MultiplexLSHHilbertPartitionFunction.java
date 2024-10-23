@@ -6,6 +6,7 @@ import cn.edu.zju.daily.data.PartitionedElement;
 import cn.edu.zju.daily.data.PartitionedQuery;
 import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.data.vector.VectorData;
+import cn.edu.zju.daily.function.partitioner.curve.SpaceFillingCurve;
 import cn.edu.zju.daily.lsh.L2HilbertPartitioner;
 import java.util.*;
 import org.apache.flink.api.common.functions.FlatMapFunction;
@@ -52,6 +53,7 @@ public class MultiplexLSHHilbertPartitionFunction
             int maxRetainedElements,
             long maxTTL,
             int numPartitions,
+            SpaceFillingCurve.Builder curveBuilder,
             boolean isQuery) {
         //        if (numHashFunctions * numHilbertBits > 63) {
         //            LOG.warn("numHashFunctions * numHilbertBits > 63, cannot use small options for
@@ -87,6 +89,7 @@ public class MultiplexLSHHilbertPartitionFunction
                             maxRetainedElements,
                             maxTTL,
                             numPartitions,
+                            curveBuilder,
                             new Random(random.nextLong())));
         }
 

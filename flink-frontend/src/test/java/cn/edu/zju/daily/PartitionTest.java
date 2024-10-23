@@ -4,6 +4,7 @@ import cn.edu.zju.daily.data.result.GroundTruthResultIterator;
 import cn.edu.zju.daily.data.result.SearchResult;
 import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.data.vector.FloatVectorIterator;
+import cn.edu.zju.daily.function.partitioner.curve.HilbertCurve;
 import cn.edu.zju.daily.lsh.L2HilbertPartitioner;
 import cn.edu.zju.daily.util.Parameters;
 import com.github.jelmerk.knn.DistanceFunctions;
@@ -70,6 +71,7 @@ public class PartitionTest {
                             10000,
                             Integer.MAX_VALUE,
                             numPartitions,
+                            new HilbertCurve.Builder(),
                             new Random(random.nextLong()));
             Iterator<FloatVector> vectors = FloatVectorIterator.fromFile(dataPath, 1, 100000);
             partitioner.initializeWith(vectors, 0);
