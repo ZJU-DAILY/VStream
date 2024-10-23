@@ -2772,7 +2772,11 @@ void Version::Get(const ReadOptions& read_options, const LookupKey& k,
     if (key_exists != nullptr) {
       *key_exists = false;
     }
-    *status = Status::NotFound();  // Use an empty error message for speed
+    if (read_options.GetType() == ReadOptions::kVectorSearch) {
+      *status = Status::OK();
+    } else {
+      *status = Status::NotFound(); // Use an empty error message for speed
+    }
   }
 }
 
