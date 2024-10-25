@@ -44,3 +44,7 @@ src/test/resources/*.yaml
 src/main/resources/chroma_addresses.txt
 src/test/resources/test_chroma_addresses.txt
 params/
+
+scripts/cluster/.syslog_dir
+scripts/chroma/chroma.log
+scripts/chroma/chroma_data
