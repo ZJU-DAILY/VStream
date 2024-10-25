@@ -31,8 +31,9 @@ if [ $? -ne 0 ]; then
 fi
 
 for worker in $workers; do
+  echo "Deploying to $worker"
   # Copy the build directory to the worker
-  ssh $master -p $SSH_PORT "rsync -azv -e \"ssh -p $SSH_PORT\" --exclude flink-frontend/ $REMOTE_PROJECT_DIR/build '$worker':$REMOTE_PROJECT_DIR"
+  ssh $master -p $SSH_PORT "rsync -azv -e \"ssh -p $SSH_PORT\" --exclude CMakeFiles/ $REMOTE_PROJECT_DIR/build '$worker':$REMOTE_PROJECT_DIR"
   # Copy rocksdbjni_classes.jar to $FLINK_HOME/lib
   ssh $worker -p $SSH_PORT "\
     if [ -d \"\$FLINK_HOME/lib\" ]; then \
