@@ -49,7 +49,7 @@ class ChromaDBKeyedProcessFunctionTest {
     @Test
     void testReadAddresses() throws IOException {
         List<String> addresses =
-                ChromaUtil.readAddresses("src/test/resources/test_chroma_addresses.txt");
+                ChromaUtil.readAddressGroups("src/test/resources/test_chroma_addresses.txt");
         List<String> actualLines = new ArrayList<>();
         actualLines.add("localhost:8000");
         actualLines.add("localhost:8001");

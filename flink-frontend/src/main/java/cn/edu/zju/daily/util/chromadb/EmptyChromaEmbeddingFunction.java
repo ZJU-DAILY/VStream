@@ -5,7 +5,7 @@ import tech.amikos.chromadb.EFException;
 import tech.amikos.chromadb.Embedding;
 import tech.amikos.chromadb.embeddings.EmbeddingFunction;
 
-public class EmptyChromaEmbeddingFunction implements EmbeddingFunction {
+public final class EmptyChromaEmbeddingFunction implements EmbeddingFunction {
 
     private static final EmptyChromaEmbeddingFunction INSTANCE = new EmptyChromaEmbeddingFunction();
 

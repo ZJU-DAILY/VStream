@@ -22,30 +22,10 @@ import org.yaml.snakeyaml.constructor.Constructor;
  */
 public @Data class Parameters implements Serializable {
 
-    public static Parameters load(String path, boolean isResource) {
-        try {
-            Yaml yaml = new Yaml(new Constructor(Parameters.class, new LoaderOptions()));
-            String url = null;
-            if (isResource) {
-                if (path.startsWith("/")) {
-                    url = path;
-                } else {
-                    url = "/" + path;
-                }
-                System.out.println("Reading params from resource " + url);
-                return yaml.load(Parameters.class.getResourceAsStream(url));
-            } else {
-                System.out.println("Reading params from file " + path);
-                return yaml.load(Files.newInputStream(Paths.get(path)));
-            }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     // ===============================
     // FLINK CLUSTER INFORMATION
     // ===============================
+
     private String flinkJobManagerHost;
     private int flinkJobManagerPort;
     private int parallelism;
@@ -54,6 +34,7 @@ public @Data class Parameters implements Serializable {
     // ===============================
     // DATASETS
     // ===============================
+
     private int vectorDim;
 
     // ----
@@ -172,6 +153,7 @@ public @Data class Parameters implements Serializable {
     // =================
     // Partitioners
     // =================
+
     /** Partitioner name. */
     private String partitioner;
 
@@ -292,16 +274,24 @@ public @Data class Parameters implements Serializable {
     // --------
     // ChromaDB
     // --------
-    private String chromaCollectionName;
+    /** ChromaDB collection name prefix. The full name is {@code prefix_<subtask index>}. */
+    private String chromaCollectionNamePrefix;
 
     /**
      * ChromaDB addresses on all task managers. This is a multi-line file, each line in the format
      * of {@code host:port_low:port_high}, where {@code host} is a task manager. On each host,
      * {@code port_high - port_low + 1} ChromaDB instances are expected to be listening on ports
-     * from {@code port_low} to {@code port_high}. There should be enough ChromaDB instances on each
-     * task manager to cover the subtasks running on that task manager.
+     * from {@code port_low} to {@code port_high}.
      */
     private String chromaAddressFile;
+
+    /**
+     * Whether to use multiple ChromaDB instances on each task manager. If true, all subtasks use
+     * the first Chroma instances specified in {@link Parameters#chromaAddressFile} for that TM. If
+     * false, each subtask uses one instance, in which case there should be enough ChromaDB
+     * instances to cover the subtasks running on that TM.
+     */
+    private boolean chromaMultiInstancesOnTM;
 
     private int chromaInsertBatchSize;
     private int chromaQueryBatchSize;
@@ -314,6 +304,10 @@ public @Data class Parameters implements Serializable {
 
     /** Whether to remove the ChromaDB data before starting the job. */
     private boolean chromaClearData;
+
+    // ===============================
+    // CONSTRUCTORS WITH VALIDATIONS
+    // ===============================
 
     public void setInsertThrottleThresholds(List<Long> insertThrottleThresholds) {
         if (!insertThrottleThresholds.get(0).equals(0L)) {
@@ -343,5 +337,30 @@ public @Data class Parameters implements Serializable {
             throw new RuntimeException("ChromaDB data should be cleared before running the job.");
         }
         this.chromaClearData = true;
+    }
+
+    // ===================
+    // YAML LOADER
+    // ===================
+
+    public static Parameters load(String path, boolean isResource) {
+        try {
+            Yaml yaml = new Yaml(new Constructor(Parameters.class, new LoaderOptions()));
+            String url = null;
+            if (isResource) {
+                if (path.startsWith("/")) {
+                    url = path;
+                } else {
+                    url = "/" + path;
+                }
+                System.out.println("Reading params from resource " + url);
+                return yaml.load(Parameters.class.getResourceAsStream(url));
+            } else {
+                System.out.println("Reading params from file " + path);
+                return yaml.load(Files.newInputStream(Paths.get(path)));
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

@@ -1,7 +1,5 @@
 package cn.edu.zju.daily.function;
 
-import static cn.edu.zju.daily.util.chromadb.ChromaUtil.chooseAddressToUse;
-import static cn.edu.zju.daily.util.chromadb.ChromaUtil.readAddresses;
 import static java.util.stream.Collectors.toList;
 
 import cn.edu.zju.daily.data.vector.FloatVector;
@@ -19,10 +17,6 @@ import tech.amikos.chromadb.handler.ApiException;
 
 /** Chroma insert function. */
 public class ChromaDBKeyedDataProcessFunction extends VectorKeyedDataProcessFunction {
-
-    private static final int HNSW_SYNC_THRESHOLD_FACTOR = 100;
-    private static final double HNSW_RESIZE_FACTOR = 1.2;
-    private static final int HNSW_NUM_THREADS = Runtime.getRuntime().availableProcessors();
 
     private static final Logger LOG =
             LoggerFactory.getLogger(ChromaDBKeyedDataProcessFunction.class);
@@ -44,44 +38,18 @@ public class ChromaDBKeyedDataProcessFunction extends VectorKeyedDataProcessFunc
         super.open(parameters);
 
         int subtaskIndex = getRuntimeContext().getIndexOfThisSubtask();
-        collectionName = params.getChromaCollectionName() + "_" + subtaskIndex;
-        String addressFile = params.getChromaAddressFile();
-        List<String> addresses = readAddresses(addressFile); // host:port_low:port_high
+        collectionName = params.getChromaCollectionNamePrefix() + "_" + subtaskIndex;
+        String chromaAddress = ChromaUtil.getChromaAddress(params, getRuntimeContext());
+        LOG.info("Subtask {}: Using Chroma server at {}", subtaskIndex, chromaAddress);
 
-        // Get the hostname of the current task executor
-        JobInfo jobInfo =
-                new JobInfo(params.getFlinkJobManagerHost(), params.getFlinkJobManagerPort());
-        String hostName =
-                jobInfo.getHost(getRuntimeContext().getTaskName(), subtaskIndex).toLowerCase();
-
-        // Find the chroma server address on this task executor
-        String address = null;
-        for (String a : addresses) {
-            String host = a.split(":")[0].toLowerCase();
-            if (host.equals(hostName)) {
-                address = a;
-                break;
-            }
-        }
-        if (address == null) {
-            throw new RuntimeException("No Chroma server address found for " + hostName);
-        }
-
-        String addressToUse = chooseAddressToUse(address, jobInfo, getRuntimeContext());
-        LOG.info("Subtask {}: Using Chroma server at {}", subtaskIndex, addressToUse);
-
-        client = new ChromaClient(addressToUse);
+        client = new ChromaClient(chromaAddress);
         client.setTimeout(600); // 10 minutes
 
         // Clear the collection if it already exists
         if (params.isChromaClearData()) {
-            List<ChromaCollection> collections = client.listCollections();
-            for (ChromaCollection c : collections) {
-                try {
-                    client.deleteCollection(c.getName());
-                } catch (Exception e) {
-                    LOG.error("Error deleting collection", e);
-                }
+            try {
+                client.deleteCollection(collectionName);
+            } catch (Exception ignored) {
             }
         }
 

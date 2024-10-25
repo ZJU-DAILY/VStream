@@ -1,6 +1,6 @@
 package cn.edu.zju.daily.util.chromadb;
 
-import static cn.edu.zju.daily.util.chromadb.ChromaUtil.readAddresses;
+import static cn.edu.zju.daily.util.chromadb.ChromaUtil.readAddressGroups;
 import static java.util.stream.Collectors.toList;
 
 import cn.edu.zju.daily.data.vector.FloatVector;
@@ -31,7 +31,7 @@ public class ChromaClientTest {
 
     @BeforeEach
     void setUp() throws IOException {
-        List<String> lines = readAddresses(addressPath);
+        List<String> lines = readAddressGroups(addressPath);
         chromaAddresses = new ArrayList<>();
         for (String line : lines) {
             String[] parts = line.split(":");

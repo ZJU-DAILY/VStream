@@ -37,36 +37,14 @@ public class ChromaDBKeyedQueryProcessFunction
         super.open(parameters);
 
         int subtaskIndex = getRuntimeContext().getIndexOfThisSubtask();
-        collectionName = params.getChromaCollectionName() + "_" + subtaskIndex;
-        String addressFile = params.getChromaAddressFile();
-        List<String> addresses = ChromaUtil.readAddresses(addressFile); // host:port_low:port_high
+        collectionName = params.getChromaCollectionNamePrefix() + "_" + subtaskIndex;
+        String chromaAddress = ChromaUtil.getChromaAddress(params, getRuntimeContext());
+        LOG.info("Subtask {}: Using Chroma server at {}", subtaskIndex, chromaAddress);
 
-        // Get the hostname of the current task executor
-        JobInfo jobInfo =
-                new JobInfo(params.getFlinkJobManagerHost(), params.getFlinkJobManagerPort());
-        String hostName =
-                jobInfo.getHost(getRuntimeContext().getTaskName(), subtaskIndex).toLowerCase();
-
-        // Find the chroma server address on this task executor
-        String address = null;
-        for (String a : addresses) {
-            String host = a.split(":")[0].toLowerCase();
-            if (host.equals(hostName)) {
-                address = a;
-                break;
-            }
-        }
-        if (address == null) {
-            throw new RuntimeException("No Chroma server address found for " + hostName);
-        }
-
-        String addressToUse = ChromaUtil.chooseAddressToUse(address, jobInfo, getRuntimeContext());
-        LOG.info("Subtask {}: Using Chroma server at {}", subtaskIndex, addressToUse);
-
-        client = new ChromaClient(addressToUse);
+        client = new ChromaClient(chromaAddress);
         client.setTimeout(600); // 10 minutes
 
-        this.collection = null; // initialized on demand
+        this.collection = null; // lazy initialization
         this.queryData = new ArrayList<>();
     }
 

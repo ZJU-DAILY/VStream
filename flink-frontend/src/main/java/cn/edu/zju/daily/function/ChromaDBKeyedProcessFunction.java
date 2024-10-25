@@ -1,7 +1,5 @@
 package cn.edu.zju.daily.function;
 
-import static cn.edu.zju.daily.util.chromadb.ChromaUtil.chooseAddressToUse;
-import static cn.edu.zju.daily.util.chromadb.ChromaUtil.readAddresses;
 import static java.util.stream.Collectors.toList;
 
 import cn.edu.zju.daily.data.PartitionedElement;
@@ -61,32 +59,11 @@ public class ChromaDBKeyedProcessFunction
         insertExecutor = Executors.newSingleThreadExecutor();
 
         int subtaskIndex = getRuntimeContext().getIndexOfThisSubtask();
-        String collectionName = params.getChromaCollectionName() + "_" + subtaskIndex;
-        String addressFile = params.getChromaAddressFile();
-        List<String> addresses = readAddresses(addressFile); // host:port_low:port_high
+        String collectionName = params.getChromaCollectionNamePrefix() + "_" + subtaskIndex;
+        String chromaAddress = ChromaUtil.getChromaAddress(params, getRuntimeContext());
+        LOG.info("Subtask {}: Using Chroma server at {}", subtaskIndex, chromaAddress);
 
-        // Get the hostname of the current task executor
-        JobInfo jobInfo =
-                new JobInfo(params.getFlinkJobManagerHost(), params.getFlinkJobManagerPort());
-        String hostName =
-                jobInfo.getHost(getRuntimeContext().getTaskName(), subtaskIndex).toLowerCase();
-
-        // Find the chroma server address on this task executor
-        String address = null;
-        for (String a : addresses) {
-            String host = a.split(":")[0].toLowerCase();
-            if (host.equals(hostName)) {
-                address = a;
-                break;
-            }
-        }
-        if (address == null) {
-            throw new RuntimeException("No Chroma server address found for " + hostName);
-        }
-
-        String addressToUse = chooseAddressToUse(address, jobInfo, getRuntimeContext());
-
-        ChromaClient client = new ChromaClient(addressToUse);
+        ChromaClient client = new ChromaClient(chromaAddress);
         client.setTimeout(600); // 10 minutes
 
         // Clear the collection if it already exists
@@ -106,7 +83,7 @@ public class ChromaDBKeyedProcessFunction
         this.collection =
                 client.createCollection(
                         collectionName, metadata, true, EmptyChromaEmbeddingFunction.getInstance());
-        LOG.info("Subtask {}: Connected to Chroma server at {}", subtaskIndex, addressToUse);
+        LOG.info("Subtask {}: Connected to Chroma server at {}", subtaskIndex, chromaAddress);
     }
 
     @Override
