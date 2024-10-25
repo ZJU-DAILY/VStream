@@ -25,12 +25,12 @@ EMBEDDING_SIZE = 128
 
 class FvecIterator:
     class InputType:
-        F_VEC = 'F_VEC'
-        B_VEC = 'B_VEC'
+        F_VEC = "F_VEC"
+        B_VEC = "B_VEC"
 
-    def __init__(self, filename, num_loops=1, skip=0, limit=float('inf')):
+    def __init__(self, filename, num_loops=1, skip=0, limit=float("inf")):
         self.logger = logging.getLogger(__name__)
-        self.file = open(filename, 'rb')
+        self.file = open(filename, "rb")
         self.num_loops = num_loops
         self.loop = 0
         self.length = self._get_file_length()
@@ -39,7 +39,9 @@ class FvecIterator:
         self.count = 0
 
         dimension = self._read_int_little_endian()
-        vector_width = 4 + dimension * (4 if self.input_type == self.InputType.F_VEC else 1)
+        vector_width = 4 + dimension * (
+            4 if self.input_type == self.InputType.F_VEC else 1
+        )
         self.start_position = vector_width * skip
         self.file.seek(self.start_position)
 
@@ -59,7 +61,7 @@ class FvecIterator:
         dimension = self._read_int_little_endian()
 
         if self.input_type == self.InputType.F_VEC:
-            vector = struct.unpack('<' + 'f' * dimension, self.file.read(dimension * 4))
+            vector = struct.unpack("<" + "f" * dimension, self.file.read(dimension * 4))
             return vector
         elif self.input_type == self.InputType.B_VEC:
             vector = self.file.read(dimension)
@@ -68,10 +70,12 @@ class FvecIterator:
             raise RuntimeError("Impossible branch.")
 
     def _is_eof(self):
-        return (self.count != 0 and self.count % self.limit == 0) or self.file.tell() == self.length
+        return (
+            self.count != 0 and self.count % self.limit == 0
+        ) or self.file.tell() == self.length
 
     def _read_int_little_endian(self) -> int:
-        return struct.unpack('<I', self.file.read(4))[0]
+        return struct.unpack("<I", self.file.read(4))[0]
 
     def _get_file_length(self):
         self.file.seek(0, 2)  # Move to end of file
@@ -80,9 +84,9 @@ class FvecIterator:
         return length
 
     def _determine_input_type(self, filename):
-        if filename.endswith('.fvecs'):
+        if filename.endswith(".fvecs"):
             return self.InputType.F_VEC
-        elif filename.endswith('.bvecs'):
+        elif filename.endswith(".bvecs"):
             return self.InputType.B_VEC
         else:
             raise RuntimeError("Unknown file type.")
@@ -105,19 +109,19 @@ class Ring:
 
 
 def get_random_str():
-    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+    return "".join(random.choices(string.ascii_uppercase + string.digits, k=10))
 
 
 def read_addresses(filename):
     addresses = []
-    with open(filename, 'r') as f:
+    with open(filename, "r") as f:
         for line in f:
             host, port_low, port_high = line.strip().split(":")
             port_low = int(port_low)
             port_high = int(port_high)
             for port in range(port_low, port_high + 1):
                 addresses.append((host, port))
-    return [('node193', 8000)]
+    return [("node193", 8000)]
     # return addresses
 
 
@@ -138,12 +142,15 @@ class ChromaInsert(Thread):
             "hnsw:construction_ef": 128,
             "hnsw:num_threads": 16,
             "hnsw:space": "l2",
-            "hnsw:resize_factor": 1.2
+            "hnsw:resize_factor": 1.2,
         }
-        self.collection = self.client.create_collection(self.collection_name, metadata=metadata,
-                                                        embedding_function=DefaultEmbeddingFunction())
+        self.collection = self.client.create_collection(
+            self.collection_name,
+            metadata=metadata,
+            embedding_function=DefaultEmbeddingFunction(),
+        )
         self.embeddings = Ring(embeddings)
-        print('Collection ' + self.collection_name + ' created.')
+        print("Collection " + self.collection_name + " created.")
 
     def run(self):
         pass
@@ -160,7 +167,7 @@ class ChromaInsert(Thread):
         #         start_time = now
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     vectors = []
     # it = FvecIterator(DATA_FILE)
     # for vector in it:

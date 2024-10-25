@@ -8,7 +8,7 @@ index_name = "embedding"
 def get_index_build_ratio():
     progress = utility.index_building_progress(collection_name, index_name)
     print(progress)
-    ratio = progress['indexed_rows'] / progress['total_rows']
+    ratio = progress["indexed_rows"] / progress["total_rows"]
     print("Ratio: " + str(ratio))
     return ratio
 
