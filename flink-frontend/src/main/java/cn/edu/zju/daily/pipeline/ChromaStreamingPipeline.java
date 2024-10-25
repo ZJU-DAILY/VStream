@@ -40,8 +40,8 @@ public class ChromaStreamingPipeline {
             SingleOutputStreamOperator<VectorData> vectors,
             SingleOutputStreamOperator<VectorData> queries) {
 
-        if (params.getParallelism() < params.getNumCopies()) {
-            throw new RuntimeException("parallelism must be >= numCopies");
+        if (params.getParallelism() < params.getLshNumFamilies()) {
+            throw new RuntimeException("parallelism must be >= lshNumFamilies");
         }
         PartitionFunction partitioner = getPartitioner();
         return applyToPartitionedData(

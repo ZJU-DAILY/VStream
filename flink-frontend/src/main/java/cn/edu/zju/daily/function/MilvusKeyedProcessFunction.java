@@ -51,16 +51,16 @@ public class MilvusKeyedProcessFunction
         milvusUtil.connect(params.getMilvusHost(), params.getMilvusPort());
 
         if (!milvusUtil.collectionExists(params.getMilvusCollectionName())) {
-            LOG.error("Collection {} does not exist!", params.getMilvusCollectionName());
-            throw new IllegalArgumentException("Collection does not exist.");
+            LOG.error("ChromaCollection {} does not exist!", params.getMilvusCollectionName());
+            throw new IllegalArgumentException("ChromaCollection does not exist.");
         }
         if (!milvusUtil.hasIndex(params.getMilvusCollectionName())) {
             LOG.error("No index on collection {}!", params.getMilvusCollectionName());
             throw new IllegalArgumentException("No index.");
         }
         if (!milvusUtil.isLoaded(params.getMilvusCollectionName())) {
-            LOG.error("Collection {} not loaded!", params.getMilvusCollectionName());
-            throw new IllegalArgumentException("Collection not loaded.");
+            LOG.error("ChromaCollection {} not loaded!", params.getMilvusCollectionName());
+            throw new IllegalArgumentException("ChromaCollection not loaded.");
         }
     }
 

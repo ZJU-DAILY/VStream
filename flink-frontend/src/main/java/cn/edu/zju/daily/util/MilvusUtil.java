@@ -61,7 +61,7 @@ public class MilvusUtil {
                 milvusServiceClient.getCollectionStatistics(param);
         if (response.getStatus() == 0) {
             GetCollStatResponseWrapper wrapper = new GetCollStatResponseWrapper(response.getData());
-            LOG.info("Collection {} row count: {}", collectionName, wrapper.getRowCount());
+            LOG.info("ChromaCollection {} row count: {}", collectionName, wrapper.getRowCount());
             return wrapper;
         } else {
             LOG.info("RPC failed: {}", response.getMessage());
@@ -87,9 +87,9 @@ public class MilvusUtil {
                 milvusServiceClient.hasCollection(
                         HasCollectionParam.newBuilder().withCollectionName(collectionName).build());
         if (response.getData()) {
-            LOG.info("Collection {} already exists.", collectionName);
+            LOG.info("ChromaCollection {} already exists.", collectionName);
         } else {
-            LOG.info("Collection {} not exists.", collectionName);
+            LOG.info("ChromaCollection {} not exists.", collectionName);
         }
         return response.getData();
     }
@@ -101,11 +101,11 @@ public class MilvusUtil {
                                 .withCollectionName(collectionName)
                                 .build());
         if (rpcStatusR.getStatus() == 0) {
-            LOG.info("Collection {} has been dropped.", collectionName);
+            LOG.info("ChromaCollection {} has been dropped.", collectionName);
             return true;
         } else {
             LOG.error(
-                    "Collection {} drop failed, error code: {}",
+                    "ChromaCollection {} drop failed, error code: {}",
                     collectionName,
                     rpcStatusR.getStatus());
             return false;
@@ -146,10 +146,10 @@ public class MilvusUtil {
         R<RpcStatus> response = milvusServiceClient.createCollection(createCollectionParam);
 
         if (response.getStatus() == 0) {
-            LOG.info("Collection " + collectionName + " has been created.");
+            LOG.info("ChromaCollection " + collectionName + " has been created.");
         } else {
             LOG.error(
-                    "Collection "
+                    "ChromaCollection "
                             + collectionName
                             + " create failed, error code: "
                             + response.getStatus());
@@ -268,7 +268,7 @@ public class MilvusUtil {
         if (response.getStatus() != R.Status.Success.getCode()) {
             System.out.println(response.getMessage());
         }
-        LOG.info("Collection {} flushed.", collectionName);
+        LOG.info("ChromaCollection {} flushed.", collectionName);
     }
 
     public boolean loadCollection(String collectionName) {
@@ -283,7 +283,7 @@ public class MilvusUtil {
             LOG.error(response.getMessage());
             return false;
         } else {
-            LOG.info("Collection " + collectionName + " load success.");
+            LOG.info("ChromaCollection " + collectionName + " load success.");
             return true;
         }
     }

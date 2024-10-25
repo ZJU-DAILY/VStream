@@ -31,11 +31,11 @@ import org.rocksdb.*;
  * <pre>{@code
  * rocksDbBackend.setRocksDBOptions(new RocksDBOptionsFactory() {
  *
- * 	public DBOptions createDBOptions(DBOptions currentOptions, Collection<AutoCloseable> handlesToClose) {
+ * 	public DBOptions createDBOptions(DBOptions currentOptions, ChromaCollection<AutoCloseable> handlesToClose) {
  * 		return currentOptions.setMaxOpenFiles(1024);
  * 	}
  *
- * 	public ColumnFamilyOptions createColumnOptions(ColumnFamilyOptions currentOptions, Collection<AutoCloseable> handlesToClose) {
+ * 	public ColumnFamilyOptions createColumnOptions(ColumnFamilyOptions currentOptions, ChromaCollection<AutoCloseable> handlesToClose) {
  * 		BloomFilter bloomFilter = new BloomFilter();
  * 			handlesToClose.add(bloomFilter);
  *

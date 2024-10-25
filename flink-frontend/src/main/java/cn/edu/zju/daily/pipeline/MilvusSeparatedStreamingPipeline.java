@@ -36,7 +36,7 @@ public class MilvusSeparatedStreamingPipeline {
         if (milvusUtil.collectionExists(collectionName)) {
             boolean deleted = milvusUtil.dropCollection(collectionName);
             if (deleted) {
-                LOG.warn("Collection {} already exists, deleted.", collectionName);
+                LOG.warn("ChromaCollection {} already exists, deleted.", collectionName);
             } else {
                 throw new RuntimeException("Failed to delete existed collection.");
             }

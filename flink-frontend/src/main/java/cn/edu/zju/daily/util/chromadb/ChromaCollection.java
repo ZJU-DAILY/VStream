@@ -1,4 +1,4 @@
-package cn.edu.zju.daily.util;
+package cn.edu.zju.daily.util.chromadb;
 
 import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
@@ -6,12 +6,14 @@ import com.google.gson.internal.LinkedTreeMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import tech.amikos.chromadb.EmbeddingFunction;
+import tech.amikos.chromadb.ChromaException;
+import tech.amikos.chromadb.Embedding;
+import tech.amikos.chromadb.embeddings.EmbeddingFunction;
 import tech.amikos.chromadb.handler.ApiException;
 import tech.amikos.chromadb.handler.DefaultApi;
 import tech.amikos.chromadb.model.*;
 
-public class CustomChromaCollection {
+public class ChromaCollection {
     static Gson gson = new Gson();
     DefaultApi api;
     String collectionName;
@@ -20,9 +22,9 @@ public class CustomChromaCollection {
 
     LinkedTreeMap<String, Object> metadata = new LinkedTreeMap<>();
 
-    private EmbeddingFunction embeddingFunction;
+    private final EmbeddingFunction embeddingFunction;
 
-    public CustomChromaCollection(
+    public ChromaCollection(
             DefaultApi api, String collectionName, EmbeddingFunction embeddingFunction) {
         this.api = api;
         this.collectionName = collectionName;
@@ -42,23 +44,27 @@ public class CustomChromaCollection {
     }
 
     @SuppressWarnings("unchecked")
-    public CustomChromaCollection fetch() throws ApiException {
-        LinkedTreeMap<String, ?> resp =
-                (LinkedTreeMap<String, ?>) api.getCollection(collectionName);
-        this.collectionName = resp.get("name").toString();
-        this.collectionId = resp.get("id").toString();
-        this.metadata = (LinkedTreeMap<String, Object>) resp.get("metadata");
-        return this;
+    public ChromaCollection fetch() throws ApiException {
+        try {
+            LinkedTreeMap<String, ?> resp =
+                    (LinkedTreeMap<String, ?>) api.getCollection(collectionName);
+            this.collectionName = resp.get("name").toString();
+            this.collectionId = resp.get("id").toString();
+            this.metadata = (LinkedTreeMap<String, Object>) resp.get("metadata");
+            return this;
+        } catch (ApiException e) {
+            throw e;
+        }
     }
 
-    public static CustomChromaCollection getInstance(DefaultApi api, String collectionName)
+    public static ChromaCollection getInstance(DefaultApi api, String collectionName)
             throws ApiException {
-        return new CustomChromaCollection(api, collectionName, null);
+        return new ChromaCollection(api, collectionName, null);
     }
 
     @Override
     public String toString() {
-        return "Collection{"
+        return "ChromaCollection{"
                 + "collectionName='"
                 + collectionName
                 + '\''
@@ -70,62 +76,35 @@ public class CustomChromaCollection {
                 + '}';
     }
 
-    public GetResult get(
-            List<String> ids, Map<String, String> where, Map<String, Object> whereDocument)
-            throws ApiException {
-        GetEmbedding req = new GetEmbedding();
-        req.ids(ids).where(where).whereDocument(whereDocument);
-        Gson gson = new Gson();
-        String json = gson.toJson(api.get(req, this.collectionId));
-        return new Gson().fromJson(json, GetResult.class);
-    }
-
-    public GetResult get() throws ApiException {
-        return this.get(null, null, null);
-    }
-
     public Object delete() throws ApiException {
         return this.delete(null, null, null);
     }
 
     @SuppressWarnings("unchecked")
-    public Object upsert(
-            List<List<Float>> embeddings,
-            List<Map<String, String>> metadatas,
-            List<String> documents,
-            List<String> ids)
-            throws ApiException {
-        AddEmbedding req = new AddEmbedding();
-        List<List<Float>> _embeddings = embeddings;
-        if (_embeddings == null) {
-            _embeddings = this.embeddingFunction.createEmbedding(documents);
-        }
-        req.setEmbeddings((List<Object>) (Object) _embeddings);
-        req.setMetadatas((List<Map<String, Object>>) (Object) metadatas);
-        req.setDocuments(documents);
-        req.incrementIndex(true);
-        req.setIds(ids);
-        return api.upsert(req, this.collectionId);
-    }
-
-    @SuppressWarnings("unchecked")
     public Object add(
-            List<List<Float>> embeddings,
+            List<float[]> embeddings,
             List<Map<String, String>> metadatas,
             List<String> documents,
             List<String> ids)
-            throws ApiException {
+            throws ChromaException {
         AddEmbedding req = new AddEmbedding();
-        List<List<Float>> _embeddings = embeddings;
+        List<float[]> _embeddings = embeddings;
         if (_embeddings == null) {
-            _embeddings = this.embeddingFunction.createEmbedding(documents);
+            _embeddings =
+                    this.embeddingFunction.embedDocuments(documents).stream()
+                            .map(Embedding::asArray)
+                            .collect(Collectors.toList());
         }
         req.setEmbeddings((List<Object>) (Object) _embeddings);
         req.setMetadatas((List<Map<String, Object>>) (Object) metadatas);
         req.setDocuments(documents);
         req.incrementIndex(true);
         req.setIds(ids);
-        return api.add(req, this.collectionId);
+        try {
+            return api.add(req, this.collectionId);
+        } catch (ApiException e) {
+            throw new ChromaException(e);
+        }
     }
 
     public Integer count() throws ApiException {
@@ -154,73 +133,28 @@ public class CustomChromaCollection {
         return delete(ids, null, null);
     }
 
-    public Object deleteWhere(Map<String, Object> where) throws ApiException {
-        return delete(null, where, null);
-    }
-
-    public Object deleteWhereWhereDocuments(
-            Map<String, Object> where, Map<String, Object> whereDocument) throws ApiException {
-        return delete(null, where, whereDocument);
-    }
-
-    public Object deleteWhereDocuments(Map<String, Object> whereDocument) throws ApiException {
-        return delete(null, null, whereDocument);
-    }
-
-    public Object update(String newName, Map<String, Object> newMetadata) throws ApiException {
-        UpdateCollection req = new UpdateCollection();
-        if (newName != null) {
-            req.setNewName(newName);
-        }
-        if (newMetadata != null && embeddingFunction != null) {
-            if (!newMetadata.containsKey("embedding_function")) {
-                newMetadata.put("embedding_function", embeddingFunction.getClass().getName());
-            }
-            req.setNewMetadata(newMetadata);
-        }
-        Object resp = api.updateCollection(req, this.collectionId);
-        this.collectionName = newName;
-        this.fetch(); // do we really need to fetch?
-        return resp;
-    }
-
-    public Object updateEmbeddings(
-            List<List<Float>> embeddings,
-            List<Map<String, String>> metadatas,
-            List<String> documents,
-            List<String> ids)
-            throws ApiException {
-        UpdateEmbedding req = new UpdateEmbedding();
-        List<List<Float>> _embeddings = embeddings;
-        if (_embeddings == null) {
-            _embeddings = this.embeddingFunction.createEmbedding(documents);
-        }
-        req.setEmbeddings((List<Object>) (Object) _embeddings);
-        req.setDocuments(documents);
-        req.setMetadatas((List<Object>) (Object) metadatas);
-        req.setIds(ids);
-        return api.update(req, this.collectionId);
-    }
-
     public QueryResponse query(
             List<String> queryTexts,
             Integer nResults,
             Map<String, Object> where,
             Map<String, Object> whereDocument,
             List<QueryEmbedding.IncludeEnum> include)
-            throws ApiException {
-        List<List<Float>> embeddings = this.embeddingFunction.createEmbedding(queryTexts);
+            throws ChromaException {
+        List<float[]> embeddings =
+                this.embeddingFunction.embedDocuments(queryTexts).stream()
+                        .map(Embedding::asArray)
+                        .collect(Collectors.toList());
         return queryEmbeddings(embeddings, nResults, where, whereDocument, include);
     }
 
     @SuppressWarnings("unchecked")
     public QueryResponse queryEmbeddings(
-            List<List<Float>> embeddings,
+            List<float[]> embeddings,
             Integer nResults,
             Map<String, Object> where,
             Map<String, Object> whereDocument,
             List<QueryEmbedding.IncludeEnum> include)
-            throws ApiException {
+            throws ChromaException {
         QueryEmbedding body = new QueryEmbedding();
         body.queryEmbeddings((List<Object>) (Object) embeddings);
         body.nResults(nResults);
@@ -235,9 +169,13 @@ public class CustomChromaCollection {
                     whereDocument.entrySet().stream()
                             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
         }
-        Gson gson = new Gson();
-        String json = gson.toJson(api.getNearestNeighbors(body, this.collectionId));
-        return new Gson().fromJson(json, QueryResponse.class);
+        try {
+            Gson gson = new Gson();
+            String json = gson.toJson(api.getNearestNeighbors(body, this.collectionId));
+            return new Gson().fromJson(json, QueryResponse.class);
+        } catch (ApiException e) {
+            throw new ChromaException(e);
+        }
     }
 
     public static class QueryResponse {

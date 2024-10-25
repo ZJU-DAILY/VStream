@@ -28,7 +28,7 @@ public class RocksDBRecoveryTest {
         Configuration conf = new Configuration();
         conf.setInteger("parallelism.default", 1);
         conf.setInteger("taskmanager.numberOfTaskSlots", 20);
-        conf.setString("execution.savepoint.path", SAVEPOINT_PATH);
+        // conf.setString("execution.savepoint.path", SAVEPOINT_PATH);
         StreamExecutionEnvironment env =
                 StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(conf);
         //                StreamExecutionEnvironment.getExecutionEnvironment();

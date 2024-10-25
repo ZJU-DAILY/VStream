@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import org.apache.flink.contrib.streaming.vstate.*;
+import org.junit.jupiter.api.Test;
 import org.rocksdb.*;
 
 public class RocksDBLocalTest {
@@ -197,6 +198,7 @@ public class RocksDBLocalTest {
 
             vectorSearchOptions.setTriggerSort(true);
             vectorSearchOptions.setTs(Math.max(0, query.getEventTime() - query.getTTL()));
+            vectorSearchOptions.setSearchSST(false);
             try {
                 resultBytes = db.vectorSearch(vectorCFHandle, vectorSearchOptions, queryVec);
             } catch (RocksDBException e) {
@@ -205,6 +207,7 @@ public class RocksDBLocalTest {
             vectorSearchOptions.setTriggerSort(false);
         } else {
             vectorSearchOptions.setTs(Math.max(0, query.getEventTime() - query.getTTL()));
+            vectorSearchOptions.setSearchSST(false);
             try {
                 resultBytes = db.vectorSearch(vectorCFHandle, vectorSearchOptions, queryVec);
             } catch (RocksDBException e) {
@@ -225,7 +228,8 @@ public class RocksDBLocalTest {
         }
     }
 
-    static void test() throws Exception {
+    @Test
+    void test() throws Exception {
 
         String dir =
                 "./tmp/rocksdb-standalone-"
@@ -266,12 +270,8 @@ public class RocksDBLocalTest {
         }
 
         flush();
-        createCheckpoint(dir + "/checkpoint");
+        // createCheckpoint(dir + "/checkpoint");
         closeDB();
         writer.close();
-    }
-
-    public static void main(String[] args) throws Exception {
-        test();
     }
 }

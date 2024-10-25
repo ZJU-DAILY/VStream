@@ -1,12 +1,16 @@
 package cn.edu.zju.daily.function;
 
-import static cn.edu.zju.daily.util.ChromaUtil.chooseAddressToUse;
-import static cn.edu.zju.daily.util.ChromaUtil.readAddresses;
+import static cn.edu.zju.daily.util.chromadb.ChromaUtil.chooseAddressToUse;
+import static cn.edu.zju.daily.util.chromadb.ChromaUtil.readAddresses;
 import static java.util.stream.Collectors.toList;
 
 import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.data.vector.VectorDeletion;
 import cn.edu.zju.daily.util.*;
+import cn.edu.zju.daily.util.chromadb.ChromaClient;
+import cn.edu.zju.daily.util.chromadb.ChromaCollection;
+import cn.edu.zju.daily.util.chromadb.ChromaUtil;
+import cn.edu.zju.daily.util.chromadb.EmptyChromaEmbeddingFunction;
 import java.util.*;
 import org.apache.flink.configuration.Configuration;
 import org.slf4j.Logger;
@@ -16,12 +20,16 @@ import tech.amikos.chromadb.handler.ApiException;
 /** Chroma insert function. */
 public class ChromaDBKeyedDataProcessFunction extends VectorKeyedDataProcessFunction {
 
+    private static final int HNSW_SYNC_THRESHOLD_FACTOR = 100;
+    private static final double HNSW_RESIZE_FACTOR = 1.2;
+    private static final int HNSW_NUM_THREADS = Runtime.getRuntime().availableProcessors();
+
     private static final Logger LOG =
             LoggerFactory.getLogger(ChromaDBKeyedDataProcessFunction.class);
 
-    private CustomChromaClient client;
+    private ChromaClient client;
     private String collectionName;
-    private CustomChromaCollection collection;
+    private ChromaCollection collection;
     private final Parameters params;
 
     // private ExecutorService insertExecutor;
@@ -62,13 +70,13 @@ public class ChromaDBKeyedDataProcessFunction extends VectorKeyedDataProcessFunc
         String addressToUse = chooseAddressToUse(address, jobInfo, getRuntimeContext());
         LOG.info("Subtask {}: Using Chroma server at {}", subtaskIndex, addressToUse);
 
-        client = new CustomChromaClient(addressToUse);
+        client = new ChromaClient(addressToUse);
         client.setTimeout(600); // 10 minutes
 
         // Clear the collection if it already exists
         if (params.isChromaClearData()) {
-            List<CustomChromaCollection> collections = client.listCollections();
-            for (CustomChromaCollection c : collections) {
+            List<ChromaCollection> collections = client.listCollections();
+            for (ChromaCollection c : collections) {
                 try {
                     client.deleteCollection(c.getName());
                 } catch (Exception e) {
@@ -80,24 +88,15 @@ public class ChromaDBKeyedDataProcessFunction extends VectorKeyedDataProcessFunc
         this.collection = getOrCreateCollection();
     }
 
-    private CustomChromaCollection getOrCreateCollection() {
+    private ChromaCollection getOrCreateCollection() {
         try {
-            // Create a new collection
-            Map<String, String> metadata = new HashMap<>();
-            metadata.put("hnsw:space", params.getMetricType().toLowerCase());
-            metadata.put("hnsw:M", Integer.toString(params.getHnswM()));
-            metadata.put("hnsw:construction_ef", Integer.toString(params.getHnswEfConstruction()));
-            metadata.put("hnsw:search_ef", Integer.toString(params.getHnswEfSearch()));
-            metadata.put("hnsw:batch_size", Integer.toString(params.getChromaHnswBatchSize()));
-            metadata.put(
-                    "hnsw:sync_threshold", Integer.toString(10 * params.getChromaHnswBatchSize()));
-
+            Map<String, Object> metadata = ChromaUtil.getHnswParams(params);
             return collection =
                     client.createCollection(
                             collectionName,
                             metadata,
                             true,
-                            CustomEmptyChromaEmbeddingFunction.getInstance());
+                            EmptyChromaEmbeddingFunction.getInstance());
         } catch (ApiException e) {
             LOG.error("Error creating collection", e);
             return null;
@@ -107,15 +106,17 @@ public class ChromaDBKeyedDataProcessFunction extends VectorKeyedDataProcessFunc
     @Override
     protected void flushInserts(List<FloatVector> pendingInserts) {
         try {
-            List<List<Float>> vectors =
-                    pendingInserts.stream().map(FloatVector::list).collect(toList());
+            List<float[]> vectors =
+                    pendingInserts.stream().map(FloatVector::getValue).collect(toList());
             List<String> ids =
                     pendingInserts.stream()
                             .map(FloatVector::getId)
                             .map(Object::toString)
                             .collect(toList());
-            List<Map<String, String>> metadatas =
-                    pendingInserts.stream().map(FloatVector::getMetadata).collect(toList());
+            // Insertion with metadata is extremely slow, if it weren't so slow we would have used
+            // it to store the timestamp, and perform time-based search. For now, we insert without
+            // the timestamp, and search the whole data.
+            List<Map<String, String>> metadatas = null;
             long now = System.currentTimeMillis();
             addToCollection(vectors, ids, metadatas);
             LOG.info(
@@ -130,7 +131,7 @@ public class ChromaDBKeyedDataProcessFunction extends VectorKeyedDataProcessFunc
     }
 
     private void addToCollection(
-            List<List<Float>> vectors, List<String> ids, List<Map<String, String>> metadatas) {
+            List<float[]> vectors, List<String> ids, List<Map<String, String>> metadatas) {
         if (collection == null) {
             collection = getOrCreateCollection();
         }

@@ -1,7 +1,7 @@
 package cn.edu.zju.daily.function;
 
-import static cn.edu.zju.daily.util.ChromaUtil.chooseAddressToUse;
-import static cn.edu.zju.daily.util.ChromaUtil.readAddresses;
+import static cn.edu.zju.daily.util.chromadb.ChromaUtil.chooseAddressToUse;
+import static cn.edu.zju.daily.util.chromadb.ChromaUtil.readAddresses;
 import static java.util.stream.Collectors.toList;
 
 import cn.edu.zju.daily.data.PartitionedElement;
@@ -9,6 +9,10 @@ import cn.edu.zju.daily.data.result.SearchResult;
 import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.data.vector.VectorData;
 import cn.edu.zju.daily.util.*;
+import cn.edu.zju.daily.util.chromadb.ChromaClient;
+import cn.edu.zju.daily.util.chromadb.ChromaCollection;
+import cn.edu.zju.daily.util.chromadb.ChromaUtil;
+import cn.edu.zju.daily.util.chromadb.EmptyChromaEmbeddingFunction;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -32,7 +36,7 @@ public class ChromaDBKeyedProcessFunction
 
     private static final Logger LOG = LoggerFactory.getLogger(ChromaDBKeyedProcessFunction.class);
 
-    private CustomChromaCollection collection;
+    private ChromaCollection collection;
     private ListState<VectorData> state;
     private ValueState<Integer> count;
     private final Parameters params;
@@ -82,13 +86,13 @@ public class ChromaDBKeyedProcessFunction
 
         String addressToUse = chooseAddressToUse(address, jobInfo, getRuntimeContext());
 
-        CustomChromaClient client = new CustomChromaClient(addressToUse);
+        ChromaClient client = new ChromaClient(addressToUse);
         client.setTimeout(600); // 10 minutes
 
         // Clear the collection if it already exists
         if (params.isChromaClearData()) {
-            List<CustomChromaCollection> collections = client.listCollections();
-            for (CustomChromaCollection c : collections) {
+            List<ChromaCollection> collections = client.listCollections();
+            for (ChromaCollection c : collections) {
                 try {
                     client.deleteCollection(c.getName());
                 } catch (Exception e) {
@@ -98,18 +102,10 @@ public class ChromaDBKeyedProcessFunction
         }
 
         // Create a new collection
-        Map<String, String> metadata = new HashMap<>();
-        metadata.put("hnsw:space", params.getMetricType().toLowerCase());
-        metadata.put("hnsw:M", Integer.toString(params.getHnswM()));
-        metadata.put("hnsw:construction_ef", Integer.toString(params.getHnswEfConstruction()));
-        metadata.put("hnsw:search_ef", Integer.toString(params.getHnswEfSearch()));
-
+        Map<String, Object> metadata = ChromaUtil.getHnswParams(params);
         this.collection =
                 client.createCollection(
-                        collectionName,
-                        metadata,
-                        true,
-                        CustomEmptyChromaEmbeddingFunction.getInstance());
+                        collectionName, metadata, true, EmptyChromaEmbeddingFunction.getInstance());
         LOG.info("Subtask {}: Connected to Chroma server at {}", subtaskIndex, addressToUse);
     }
 
@@ -174,8 +170,8 @@ public class ChromaDBKeyedProcessFunction
 
             if (!vectorsToAdd.isEmpty()) {
                 try {
-                    List<List<Float>> vectors =
-                            vectorsToAdd.stream().map(FloatVector::list).collect(toList());
+                    List<float[]> vectors =
+                            vectorsToAdd.stream().map(FloatVector::getValue).collect(toList());
                     List<String> ids =
                             vectorsToAdd.stream()
                                     .map(FloatVector::getId)
@@ -198,9 +194,13 @@ public class ChromaDBKeyedProcessFunction
             throws Exception {
 
         long now = System.currentTimeMillis();
-        CustomChromaCollection.QueryResponse queryResponse =
+        ChromaCollection.QueryResponse queryResponse =
                 collection.queryEmbeddings(
-                        Collections.singletonList(query.list()), params.getK(), null, null, null);
+                        Collections.singletonList(query.getValue()),
+                        params.getK(),
+                        null,
+                        null,
+                        null);
         LOG.info("1 query returned in {} ms", System.currentTimeMillis() - now);
         List<Long> ids =
                 queryResponse.getIds().get(0).stream().map(Long::parseLong).collect(toList());

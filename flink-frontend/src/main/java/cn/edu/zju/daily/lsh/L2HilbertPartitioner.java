@@ -2,11 +2,10 @@ package cn.edu.zju.daily.lsh;
 
 import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.data.vector.VectorData;
+import cn.edu.zju.daily.function.partitioner.curve.SpaceFillingCurve;
 import java.io.Serializable;
 import java.math.BigInteger;
 import java.util.*;
-
-import cn.edu.zju.daily.function.partitioner.curve.SpaceFillingCurve;
 import org.davidmoten.hilbert.HilbertCurve;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

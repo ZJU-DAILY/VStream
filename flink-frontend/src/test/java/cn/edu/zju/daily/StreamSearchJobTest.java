@@ -61,7 +61,7 @@ public class StreamSearchJobTest {
                 new LSHPartitionFunction(
                         random,
                         params.getVectorDim(),
-                        params.getNumCopies(),
+                        params.getLshNumFamilies(),
                         params.getLshNumHashes(),
                         params.getParallelism(),
                         params.getLshBucketWidth());
@@ -155,7 +155,7 @@ public class StreamSearchJobTest {
                 new LSHPartitionFunction(
                         random,
                         params.getVectorDim(),
-                        params.getNumCopies(),
+                        params.getLshNumFamilies(),
                         params.getLshNumHashes(),
                         params.getParallelism(),
                         0.5F);

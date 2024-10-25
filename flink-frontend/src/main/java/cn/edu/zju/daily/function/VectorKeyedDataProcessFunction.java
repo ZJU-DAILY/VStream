@@ -12,6 +12,7 @@ import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
 import org.apache.flink.util.Collector;
 
+/** This class provides buffering for vector insertions and deletions. */
 public abstract class VectorKeyedDataProcessFunction
         extends KeyedProcessFunction<Integer, PartitionedElement, Object>
         implements CheckpointedFunction {

@@ -75,7 +75,7 @@ public interface PartitionFunction
                 return new LSHPartitionFunction(
                         random,
                         params.getVectorDim(),
-                        params.getNumCopies(),
+                        params.getLshNumFamilies(),
                         params.getLshNumHashes(),
                         params.getParallelism(),
                         params.getLshBucketWidth());
@@ -83,7 +83,7 @@ public interface PartitionFunction
                 return new LSHAndRandomPartitionFunction(
                         random,
                         params.getVectorDim(),
-                        params.getNumCopies(),
+                        params.getLshNumFamilies(),
                         params.getLshNumHashes(),
                         params.getParallelism(),
                         params.getLshBucketWidth());
@@ -91,7 +91,7 @@ public interface PartitionFunction
                 return new LSHProximityPartitionFunction(
                         random,
                         params.getVectorDim(),
-                        params.getNumCopies(),
+                        params.getLshNumFamilies(),
                         params.getLshNumHashes(),
                         params.getParallelism(),
                         params.getLshBucketWidth(),

@@ -15,7 +15,7 @@ master=$(head -n 1 workers)
 workers=$(tail -n +2 workers)
 
 # Copy the project to the master, excluding anything from the build directory
-rsync -avz --delete --exclude "/flink-frontend/nohup.out" --exclude "/build/" --exclude "/cmake-build-*" --exclude "/examples/" --exclude "/flink-frontend/tmp" --exclude ".git" . $master:$REMOTE_PROJECT_DIR
+rsync -avz --delete --exclude "/flink-frontend/nohup.out" --exclude "/build/" --exclude "/cmake-build-*" --exclude "/examples/" --exclude "/flink-frontend/tmp" --exclude "/flink-frontend/params/completed" --exclude ".git" . $master:$REMOTE_PROJECT_DIR
 
 if [ "$BUILD_FLAGS" == "scripts" ]; then
   echo "Scripts copied to master. Done."

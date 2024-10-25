@@ -224,7 +224,15 @@
         <dependency>
             <groupId>io.github.amikos-tech</groupId>
             <artifactId>chromadb-java-client</artifactId>
-            <version>0.1.6</version>
+            <version>0.1.7</version>
+        </dependency>
+
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.34</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 

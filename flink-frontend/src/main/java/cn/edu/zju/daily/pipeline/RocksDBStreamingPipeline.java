@@ -40,7 +40,7 @@ public class RocksDBStreamingPipeline {
             SingleOutputStreamOperator<VectorData> vectors,
             SingleOutputStreamOperator<VectorData> queries) {
 
-        if (params.getParallelism() < params.getNumCopies()) {
+        if (params.getParallelism() < params.getLshNumFamilies()) {
             throw new RuntimeException("parallelism must be >= numCopies");
         }
         PartitionFunction partitioner = getPartitioner();

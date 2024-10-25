@@ -4,8 +4,11 @@ import static java.util.stream.Collectors.toList;
 
 import cn.edu.zju.daily.data.PartitionedElement;
 import cn.edu.zju.daily.data.result.SearchResult;
-import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.util.*;
+import cn.edu.zju.daily.util.chromadb.ChromaClient;
+import cn.edu.zju.daily.util.chromadb.ChromaCollection;
+import cn.edu.zju.daily.util.chromadb.ChromaUtil;
+import cn.edu.zju.daily.util.chromadb.EmptyChromaEmbeddingFunction;
 import java.util.*;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
@@ -19,8 +22,8 @@ public class ChromaDBKeyedQueryProcessFunction
     private static final Logger LOG =
             LoggerFactory.getLogger(ChromaDBKeyedQueryProcessFunction.class);
 
-    private CustomChromaClient client;
-    private CustomChromaCollection collection;
+    private ChromaClient client;
+    private ChromaCollection collection;
     private String collectionName;
     private final Parameters params;
     private List<PartitionedElement> queryData;
@@ -60,7 +63,7 @@ public class ChromaDBKeyedQueryProcessFunction
         String addressToUse = ChromaUtil.chooseAddressToUse(address, jobInfo, getRuntimeContext());
         LOG.info("Subtask {}: Using Chroma server at {}", subtaskIndex, addressToUse);
 
-        client = new CustomChromaClient(addressToUse);
+        client = new ChromaClient(addressToUse);
         client.setTimeout(600); // 10 minutes
 
         this.collection = null; // initialized on demand
@@ -99,13 +102,15 @@ public class ChromaDBKeyedQueryProcessFunction
             try {
                 collection =
                         client.getCollection(
-                                collectionName, CustomEmptyChromaEmbeddingFunction.getInstance());
+                                collectionName, EmptyChromaEmbeddingFunction.getInstance());
             } catch (Exception e) {
-                LOG.error("Collection {} does not exist yet.", collectionName);
+                LOG.error("ChromaCollection {} does not exist yet.", collectionName);
                 return getResultList(queryData, null, null);
             }
         }
 
+        /*
+        If metadata weren't this slow, we would have included this where condition:
         Map<String, Object> where =
                 Collections.singletonMap(
                         FloatVector.METADATA_TS_FIELD,
@@ -113,17 +118,18 @@ public class ChromaDBKeyedQueryProcessFunction
                                 "$gte",
                                 queryData.get(0).getData().getEventTime()
                                         - queryData.get(0).getData().getTTL()));
+        */
 
-        CustomChromaCollection.QueryResponse queryResponse;
+        ChromaCollection.QueryResponse queryResponse;
         long now = System.currentTimeMillis();
         try {
             queryResponse =
                     collection.queryEmbeddings(
                             queryData.stream()
-                                    .map(d -> d.getData().asVector().list())
+                                    .map(d -> d.getData().asVector().getValue())
                                     .collect(toList()),
                             params.getK(),
-                            where,
+                            null,
                             null,
                             null);
         } catch (Exception e) {

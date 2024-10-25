@@ -2,22 +2,22 @@ package cn.edu.zju.daily.function;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import cn.edu.zju.daily.util.ChromaUtil;
-import cn.edu.zju.daily.util.CustomChromaClient;
-import cn.edu.zju.daily.util.CustomChromaCollection;
+import cn.edu.zju.daily.util.chromadb.ChromaClient;
+import cn.edu.zju.daily.util.chromadb.ChromaCollection;
+import cn.edu.zju.daily.util.chromadb.ChromaUtil;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import tech.amikos.chromadb.DefaultEmbeddingFunction;
+import tech.amikos.chromadb.embeddings.DefaultEmbeddingFunction;
 
 class ChromaDBKeyedProcessFunctionTest {
 
     @Test
     void testConnection() {
-        CustomChromaClient client = new CustomChromaClient("http://localhost:8001");
-        CustomChromaCollection collection = null;
+        ChromaClient client = new ChromaClient("http://localhost:8001");
+        ChromaCollection collection = null;
         try {
             collection =
                     client.createCollection(
@@ -28,12 +28,12 @@ class ChromaDBKeyedProcessFunctionTest {
         } catch (Exception e) {
             System.err.println("Failed: " + e.toString());
         }
-        List<List<Float>> vectors = new ArrayList<>();
+        List<float[]> vectors = new ArrayList<>();
         List<String> ids = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
-            List<Float> vector = new ArrayList<>();
+            float[] vector = new float[10];
             for (int j = 0; j < 10; j++) {
-                vector.add((float) (j + i * 10));
+                vector[j] = (float) (j + i * 10);
             }
             vectors.add(vector);
             ids.add(Integer.toString(i));

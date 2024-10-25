@@ -1,22 +1,23 @@
-package cn.edu.zju.daily.util;
+package cn.edu.zju.daily.util.chromadb;
 
 import com.google.gson.internal.LinkedTreeMap;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import tech.amikos.chromadb.EmbeddingFunction;
+import tech.amikos.chromadb.embeddings.EmbeddingFunction;
 import tech.amikos.chromadb.handler.ApiClient;
 import tech.amikos.chromadb.handler.ApiException;
 import tech.amikos.chromadb.handler.DefaultApi;
 import tech.amikos.chromadb.model.CreateCollection;
 
-public class CustomChromaClient {
+/** ChromaDB Client */
+public class ChromaClient {
     final ApiClient apiClient = new ApiClient();
     private int timeout = 60;
     DefaultApi api;
 
-    public CustomChromaClient(String basePath) {
+    public ChromaClient(String basePath) {
         apiClient.setBasePath(basePath);
         api = new DefaultApi(apiClient);
         apiClient.setHttpClient(
@@ -56,45 +57,44 @@ public class CustomChromaClient {
         }
     }
 
-    public CustomChromaCollection getCollection(
+    public ChromaCollection getCollection(
             String collectionName, EmbeddingFunction embeddingFunction) throws ApiException {
-        return new CustomChromaCollection(api, collectionName, embeddingFunction).fetch();
+        return new ChromaCollection(api, collectionName, embeddingFunction).fetch();
     }
 
     public Map<String, BigDecimal> heartbeat() throws ApiException {
         return api.heartbeat();
     }
 
-    public CustomChromaCollection createCollection(
+    public ChromaCollection createCollection(
             String collectionName,
-            Map<String, String> metadata,
+            Map<String, Object> metadata,
             Boolean createOrGet,
             EmbeddingFunction embeddingFunction)
             throws ApiException {
         CreateCollection req = new CreateCollection();
         req.setName(collectionName);
-        Map<String, String> _metadata = metadata;
-        if (metadata == null || metadata.isEmpty() || !metadata.containsKey("embedding_function")) {
+        Map<String, Object> _metadata = metadata;
+        if (metadata == null) {
             _metadata = new LinkedTreeMap<>();
-            _metadata.put("embedding_function", embeddingFunction.getClass().getName());
         }
         req.setMetadata(_metadata);
         req.setGetOrCreate(createOrGet);
         LinkedTreeMap resp = (LinkedTreeMap) api.createCollection(req);
-        return new CustomChromaCollection(api, (String) resp.get("name"), embeddingFunction)
-                .fetch();
+        return new ChromaCollection(api, (String) resp.get("name"), embeddingFunction).fetch();
     }
 
-    public CustomChromaCollection deleteCollection(String collectionName) throws ApiException {
-        CustomChromaCollection collection = CustomChromaCollection.getInstance(api, collectionName);
+    public ChromaCollection deleteCollection(String collectionName) throws ApiException {
+        ChromaCollection collection = ChromaCollection.getInstance(api, collectionName);
         api.deleteCollection(collectionName);
         return collection;
     }
 
-    public CustomChromaCollection upsert(String collectionName, EmbeddingFunction ef)
+    public ChromaCollection upsert(String collectionName, EmbeddingFunction ef)
             throws ApiException {
+        ChromaCollection collection = getCollection(collectionName, ef);
         //        collection.upsert();
-        return getCollection(collectionName, ef);
+        return collection;
     }
 
     public Boolean reset() throws ApiException {
@@ -102,7 +102,7 @@ public class CustomChromaClient {
     }
 
     @SuppressWarnings("unchecked")
-    public List<CustomChromaCollection> listCollections() throws ApiException {
+    public List<ChromaCollection> listCollections() throws ApiException {
         List<LinkedTreeMap> apiResponse = (List<LinkedTreeMap>) api.listCollections();
         return apiResponse.stream()
                 .map(

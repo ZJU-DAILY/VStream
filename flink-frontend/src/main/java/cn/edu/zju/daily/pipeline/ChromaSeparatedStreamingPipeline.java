@@ -5,7 +5,6 @@ import cn.edu.zju.daily.data.result.SearchResult;
 import cn.edu.zju.daily.data.vector.VectorData;
 import cn.edu.zju.daily.function.*;
 import cn.edu.zju.daily.function.partitioner.PartitionFunction;
-import cn.edu.zju.daily.util.MilvusUtil;
 import cn.edu.zju.daily.util.Parameters;
 import java.util.Random;
 import org.apache.flink.api.common.functions.FlatMapFunction;
@@ -19,7 +18,6 @@ import org.slf4j.LoggerFactory;
 public class ChromaSeparatedStreamingPipeline {
 
     private final Parameters params;
-    MilvusUtil milvusUtil = new MilvusUtil();
 
     Logger LOG = LoggerFactory.getLogger(ChromaSeparatedStreamingPipeline.class);
 

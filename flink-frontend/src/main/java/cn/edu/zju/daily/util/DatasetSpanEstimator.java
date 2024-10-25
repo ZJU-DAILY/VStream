@@ -64,8 +64,8 @@ public class DatasetSpanEstimator {
         LSHPartitionFunction partitioner =
                 new LSHPartitionFunction(
                         params.getVectorDim(),
-                        params.getNumCopies(),
-                        params.getNumCopies(),
+                        params.getLshNumFamilies(),
+                        params.getLshNumHashes(),
                         params.getParallelism(),
                         width);
 
