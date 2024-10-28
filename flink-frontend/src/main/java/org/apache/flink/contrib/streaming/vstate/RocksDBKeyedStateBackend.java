@@ -168,7 +168,9 @@ public class RocksDBKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
     /** Factory function to create column family options from state name. */
     private final Function<String, ColumnFamilyOptions> columnFamilyOptionsFactory;
 
-    private final Function<String, VectorColumnFamilyOptions> vectorColumnFamilyOptionsFactory;
+    private final Function<String, VectorColumnFamilyOptions> vectorCFOptionsFactory;
+
+    private final Function<String, ColumnFamilyOptions> vectorVersionCFOptionsFactory;
 
     /** The container of RocksDB option factory and predefined options. */
     private final RocksDBResourceContainer optionsContainer;
@@ -257,7 +259,8 @@ public class RocksDBKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
             File instanceBasePath,
             RocksDBResourceContainer optionsContainer,
             Function<String, ColumnFamilyOptions> columnFamilyOptionsFactory,
-            Function<String, VectorColumnFamilyOptions> vectorColumnFamilyOptionsFactory,
+            Function<String, VectorColumnFamilyOptions> vectorCFOptionsFactory,
+            Function<String, ColumnFamilyOptions> vectorVersionCFOptionsFactory,
             TaskKvStateRegistry kvStateRegistry,
             TypeSerializer<K> keySerializer,
             ExecutionConfig executionConfig,
@@ -295,8 +298,9 @@ public class RocksDBKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
 
         // ensure that we use the right merge operator, because other code relies on this
         this.columnFamilyOptionsFactory = Preconditions.checkNotNull(columnFamilyOptionsFactory);
-        this.vectorColumnFamilyOptionsFactory =
-                Preconditions.checkNotNull(vectorColumnFamilyOptionsFactory);
+        this.vectorCFOptionsFactory = Preconditions.checkNotNull(vectorCFOptionsFactory);
+        this.vectorVersionCFOptionsFactory =
+                Preconditions.checkNotNull(vectorVersionCFOptionsFactory);
 
         this.optionsContainer = Preconditions.checkNotNull(optionsContainer);
 
@@ -708,7 +712,8 @@ public class RocksDBKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
                     RocksDBOperationUtils.createVectorStateInfo(
                             newMetaInfo,
                             db,
-                            vectorColumnFamilyOptionsFactory,
+                            vectorCFOptionsFactory,
+                            vectorVersionCFOptionsFactory,
                             ttlCompactFiltersManager,
                             optionsContainer.getWriteBufferManagerCapacity());
             RocksDBOperationUtils.registerKvStateInformation(

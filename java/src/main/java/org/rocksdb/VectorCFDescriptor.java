@@ -7,36 +7,39 @@ package org.rocksdb;
 
 import java.util.Arrays;
 
-/**
- * <p>Describes a vector column family with a
- * name and respective Options.</p>
- */
+/** Describes a vector column family with a name and respective Options. */
 public class VectorCFDescriptor {
 
   /**
-   * <p>Creates a new Vector Column Family using a name and default
-   * options,</p>
+   * Creates a new Vector Column Family using a name and default options,
    *
    * @param columnFamilyName name of column family.
    * @since 3.10.0
    */
   public VectorCFDescriptor(final byte[] columnFamilyName) {
-    this(columnFamilyName, new VectorColumnFamilyOptions());
+    this(columnFamilyName, new VectorColumnFamilyOptions(), new ColumnFamilyOptions());
+  }
+
+  public VectorCFDescriptor(
+      final byte[] columnFamilyName, final VectorColumnFamilyOptions vectorCFOptions) {
+    this(columnFamilyName, vectorCFOptions, new ColumnFamilyOptions());
   }
 
   /**
-   * <p>Creates a new Column Family using a name and custom
-   * options.</p>
+   * Creates a new Column Family using a name and custom options.
    *
    * @param columnFamilyName name of column family.
-   * @param columnFamilyOptions options to be used with
-   *     column family.
+   * @param vectorCFOptions options to be used with column family.
+   * @param vectorVersionCFOptions options to be used with version column family.
    * @since 3.10.0
    */
-  public VectorCFDescriptor(final byte[] columnFamilyName,
-                            final VectorColumnFamilyOptions columnFamilyOptions) {
+  public VectorCFDescriptor(
+      final byte[] columnFamilyName,
+      final VectorColumnFamilyOptions vectorCFOptions,
+      final ColumnFamilyOptions vectorVersionCFOptions) {
     columnFamilyName_ = columnFamilyName;
-    columnFamilyOptions_ = columnFamilyOptions;
+    vectorCFOptions_ = vectorCFOptions;
+    vectorVersionCFOptions_ = vectorVersionCFOptions;
   }
 
   /**
@@ -55,7 +58,11 @@ public class VectorCFDescriptor {
    * @return Options instance assigned to this instance.
    */
   public VectorColumnFamilyOptions getOptions() {
-    return columnFamilyOptions_;
+    return vectorCFOptions_;
+  }
+
+  public ColumnFamilyOptions getVersionOptions() {
+    return vectorVersionCFOptions_;
   }
 
   @Override
@@ -69,16 +76,17 @@ public class VectorCFDescriptor {
 
     final VectorCFDescriptor that = (VectorCFDescriptor) o;
     return Arrays.equals(columnFamilyName_, that.columnFamilyName_)
-            && columnFamilyOptions_.nativeHandle_ == that.columnFamilyOptions_.nativeHandle_;
+        && vectorCFOptions_.nativeHandle_ == that.vectorCFOptions_.nativeHandle_;
   }
 
   @Override
   public int hashCode() {
-    int result = (int) (columnFamilyOptions_.nativeHandle_ ^ (columnFamilyOptions_.nativeHandle_ >>> 32));
+    int result = Long.hashCode(vectorCFOptions_.nativeHandle_);
     result = 31 * result + Arrays.hashCode(columnFamilyName_);
     return result;
   }
 
   private final byte[] columnFamilyName_;
-  private final VectorColumnFamilyOptions columnFamilyOptions_;
+  private final VectorColumnFamilyOptions vectorCFOptions_;
+  private final ColumnFamilyOptions vectorVersionCFOptions_;
 }

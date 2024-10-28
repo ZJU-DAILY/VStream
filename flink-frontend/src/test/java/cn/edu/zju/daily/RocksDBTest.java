@@ -27,6 +27,7 @@ public class RocksDBTest {
     RocksDB db;
     DBOptions dbOptions;
     VectorColumnFamilyOptions vectorCFOptions;
+    ColumnFamilyOptions vectorVersionCFOptions;
     WriteOptions writeOptions;
     VectorSearchOptions vectorSearchOptions;
     VectorColumnFamilyHandle vectorCFHandle;
@@ -97,14 +98,17 @@ public class RocksDBTest {
         dbOptions = container.getDbOptions();
         vectorSearchOptions = container.getVectorSearchOptions();
         vectorCFOptions = container.getVectorColumnOptions();
+        vectorVersionCFOptions = container.getVectorVersionColumnOptions();
         writeOptions = container.getWriteOptions();
         VectorCFDescriptor vectorCFDescriptor =
-                new VectorCFDescriptor("test".getBytes(), vectorCFOptions);
+                new VectorCFDescriptor("test".getBytes(), vectorCFOptions, vectorVersionCFOptions);
 
         String dir = "./tmp/rocksdb-" + System.currentTimeMillis();
         new File(dir).mkdirs();
         db = RocksDB.open(dbOptions, dir, columnFamilyDescriptors, new ArrayList<>());
-        vectorCFHandle = db.createVectorColumnFamily(vectorCFDescriptor);
+        vectorCFHandle =
+                db.createVectorColumnFamily(
+                        vectorCFDescriptor, vectorCFDescriptor.getVersionOptions());
     }
 
     @AfterEach
@@ -112,6 +116,7 @@ public class RocksDBTest {
         db.close();
         dbOptions.close();
         vectorCFOptions.close();
+        vectorVersionCFOptions.close();
         writeOptions.close();
         vectorSearchOptions.close();
     }

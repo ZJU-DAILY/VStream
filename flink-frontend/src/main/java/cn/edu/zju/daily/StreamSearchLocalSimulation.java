@@ -41,6 +41,7 @@ public class StreamSearchLocalSimulation {
     static VectorColumnFamilyOptions vectorCFOptions;
     static WriteOptions writeOptions;
     static VectorSearchOptions vectorSearchOptions;
+    static ColumnFamilyOptions vectorVersionCFOptions;
     static VectorColumnFamilyHandle vectorCFHandle;
     static FlushOptions flushOptions = new FlushOptions();
 
@@ -121,15 +122,18 @@ public class StreamSearchLocalSimulation {
         dbOptions = container.getDbOptions();
         vectorSearchOptions = container.getVectorSearchOptions();
         vectorCFOptions = container.getVectorColumnOptions();
+        vectorVersionCFOptions = container.getVectorVersionColumnOptions();
         writeOptions = container.getWriteOptions();
         VectorCFDescriptor vectorCFDescriptor =
-                new VectorCFDescriptor("test".getBytes(), vectorCFOptions);
+                new VectorCFDescriptor("test".getBytes(), vectorCFOptions, vectorVersionCFOptions);
 
         System.out.println("RocksDB dir: " + dir);
         // String dir = "./tmp/rocksdb- ???";
         new File(dir).mkdirs();
         db = RocksDB.open(dbOptions, dir, columnFamilyDescriptors, new ArrayList<>());
-        vectorCFHandle = db.createVectorColumnFamily(vectorCFDescriptor);
+        vectorCFHandle =
+                db.createVectorColumnFamily(
+                        vectorCFDescriptor, vectorCFDescriptor.getVersionOptions());
     }
 
     static void closeDB() {

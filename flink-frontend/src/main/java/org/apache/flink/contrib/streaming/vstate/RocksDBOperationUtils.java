@@ -193,14 +193,16 @@ public class RocksDBOperationUtils {
     public static RocksDBKeyedStateBackend.RocksDbKvStateInfo createVectorStateInfo(
             RegisteredStateMetaInfoBase metaInfoBase,
             RocksDB db,
-            Function<String, VectorColumnFamilyOptions> vectorColumnFamilyOptionsFactory,
+            Function<String, VectorColumnFamilyOptions> vectorCFOptionsFactory,
+            Function<String, ColumnFamilyOptions> vectorVersionCFOptionsFactory,
             @Nullable RocksDbTtlCompactFiltersManager ttlCompactFiltersManager,
             @Nullable Long writeBufferManagerCapacity) {
 
         VectorCFDescriptor columnFamilyDescriptor =
                 createVectorCFDescriptor(
                         metaInfoBase,
-                        vectorColumnFamilyOptionsFactory,
+                        vectorCFOptionsFactory,
+                        vectorVersionCFOptionsFactory,
                         ttlCompactFiltersManager,
                         writeBufferManagerCapacity);
         return new RocksDBKeyedStateBackend.RocksDbKvStateInfo(
@@ -247,12 +249,15 @@ public class RocksDBOperationUtils {
      */
     public static VectorCFDescriptor createVectorCFDescriptor(
             RegisteredStateMetaInfoBase metaInfoBase,
-            Function<String, VectorColumnFamilyOptions> columnFamilyOptionsFactory,
+            Function<String, VectorColumnFamilyOptions> vectorCFOptionsFactory,
+            Function<String, ColumnFamilyOptions> vectorVersionCFOptionsFactory,
             @Nullable RocksDbTtlCompactFiltersManager ttlCompactFiltersManager,
             @Nullable Long writeBufferManagerCapacity) {
 
         VectorColumnFamilyOptions options =
-                createVectorColumnFamilyOptions(columnFamilyOptionsFactory, metaInfoBase.getName());
+                createVectorColumnFamilyOptions(vectorCFOptionsFactory, metaInfoBase.getName());
+        ColumnFamilyOptions versionOptions =
+                createColumnFamilyOptions(vectorVersionCFOptionsFactory, metaInfoBase.getName());
         if (ttlCompactFiltersManager != null) {
             ttlCompactFiltersManager.setAndRegisterCompactFilterIfStateTtl(metaInfoBase, options);
         }
@@ -270,7 +275,7 @@ public class RocksDBOperationUtils {
                     writeBufferManagerCapacity);
         }
 
-        return new VectorCFDescriptor(nameBytes, options);
+        return new VectorCFDescriptor(nameBytes, options, versionOptions);
     }
 
     /**
@@ -339,7 +344,8 @@ public class RocksDBOperationUtils {
     private static VectorColumnFamilyHandle createVectorColumnFamily(
             VectorCFDescriptor vectorColumnDescriptor, RocksDB db) {
         try {
-            return db.createVectorColumnFamily(vectorColumnDescriptor);
+            return db.createVectorColumnFamily(
+                    vectorColumnDescriptor, vectorColumnDescriptor.getVersionOptions());
         } catch (RocksDBException e) {
             IOUtils.closeQuietly(vectorColumnDescriptor.getOptions());
             throw new FlinkRuntimeException("Error creating ColumnFamilyHandle.", e);

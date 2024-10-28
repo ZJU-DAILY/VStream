@@ -246,6 +246,53 @@ public final class RocksDBResourceContainer implements AutoCloseable {
         return opt;
     }
 
+    /**
+     * Gets the RocksDB {@link ColumnFamilyOptions} to be used for vector version column families.
+     */
+    public ColumnFamilyOptions getVectorVersionColumnOptions() {
+        // initial options from common profile
+        ColumnFamilyOptions opt = createBaseCommonColumnOptions();
+        handlesToClose.add(opt);
+
+        // load configurable options on top of pre-defined profile
+        setColumnFamilyOptionsFromConfigurableOptions(opt, handlesToClose);
+
+        // add user-defined options, if specified
+        if (optionsFactory != null) {
+            opt = optionsFactory.createVectorVersionColumnOptions(opt, handlesToClose);
+        }
+
+        // if sharedResources is non-null, use the block cache from it and
+        // set necessary options for performance consideration with memory control
+        if (sharedResources != null) {
+            final RocksDBSharedResources rocksResources = sharedResources.getResourceHandle();
+            final Cache blockCache = rocksResources.getCache();
+            TableFormatConfig tableFormatConfig = opt.tableFormatConfig();
+            BlockBasedTableConfig blockBasedTableConfig;
+            if (tableFormatConfig == null) {
+                blockBasedTableConfig = new BlockBasedTableConfig();
+            } else {
+                Preconditions.checkArgument(
+                        tableFormatConfig instanceof BlockBasedTableConfig,
+                        "We currently only support BlockBasedTableConfig When bounding total memory.");
+                blockBasedTableConfig = (BlockBasedTableConfig) tableFormatConfig;
+            }
+            if (rocksResources.isUsingPartitionedIndexFilters()
+                    && overwriteFilterIfExist(blockBasedTableConfig)) {
+                blockBasedTableConfig.setIndexType(IndexType.kTwoLevelIndexSearch);
+                blockBasedTableConfig.setPartitionFilters(true);
+                blockBasedTableConfig.setPinTopLevelIndexAndFilter(true);
+            }
+            blockBasedTableConfig.setBlockCache(blockCache);
+            blockBasedTableConfig.setCacheIndexAndFilterBlocks(true);
+            blockBasedTableConfig.setCacheIndexAndFilterBlocksWithHighPriority(true);
+            blockBasedTableConfig.setPinL0FilterAndIndexBlocksInCache(true);
+            opt.setTableFormatConfig(blockBasedTableConfig);
+        }
+
+        return opt;
+    }
+
     /** Gets the RocksDB {@link WriteOptions} to be used for write operations. */
     public WriteOptions getWriteOptions() {
         // Disable WAL by default

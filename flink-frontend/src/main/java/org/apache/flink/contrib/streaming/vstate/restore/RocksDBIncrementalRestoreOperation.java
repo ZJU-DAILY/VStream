@@ -110,6 +110,7 @@ public class RocksDBIncrementalRestoreOperation<K> implements RocksDBRestoreOper
             DBOptions dbOptions,
             Function<String, ColumnFamilyOptions> columnFamilyOptionsFactory,
             Function<String, VectorColumnFamilyOptions> vectorCFOptionsFactory,
+            Function<String, ColumnFamilyOptions> vectorVersionCFOptionsFactory,
             RocksDBNativeMetricOptions nativeMetricOptions,
             MetricGroup metricGroup,
             @Nonnull Collection<KeyedStateHandle> restoreStateHandles,
@@ -124,6 +125,7 @@ public class RocksDBIncrementalRestoreOperation<K> implements RocksDBRestoreOper
                         dbOptions,
                         columnFamilyOptionsFactory,
                         vectorCFOptionsFactory,
+                        vectorVersionCFOptionsFactory,
                         nativeMetricOptions,
                         metricGroup,
                         ttlCompactFiltersManager,
@@ -530,6 +532,7 @@ public class RocksDBIncrementalRestoreOperation<K> implements RocksDBRestoreOper
                         RocksDBOperationUtils.createVectorCFDescriptor(
                                 metaInfoBase,
                                 this.rocksHandle.getVectorCFOptionsFactory(),
+                                this.rocksHandle.getVectorVersionCFOptionsFactory(),
                                 null,
                                 this.rocksHandle.getWriteBufferManagerCapacity());
                 vectorCFDescriptors.add(vectorCFDescriptor);

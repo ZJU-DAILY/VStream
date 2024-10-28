@@ -42,6 +42,7 @@ public class RocksDBParallelTest {
     static RocksDB db;
     static DBOptions dbOptions;
     static VectorColumnFamilyOptions vectorCFOptions;
+    static ColumnFamilyOptions vectorVersionCFOptions;
     static WriteOptions writeOptions;
     static VectorSearchOptions vectorSearchOptions;
     static VectorColumnFamilyHandle vectorCFHandle;
@@ -125,15 +126,18 @@ public class RocksDBParallelTest {
         dbOptions = container.getDbOptions();
         vectorSearchOptions = container.getVectorSearchOptions();
         vectorCFOptions = container.getVectorColumnOptions();
+        vectorVersionCFOptions = container.getVectorVersionColumnOptions();
         writeOptions = container.getWriteOptions();
         VectorCFDescriptor vectorCFDescriptor =
-                new VectorCFDescriptor("test".getBytes(), vectorCFOptions);
+                new VectorCFDescriptor("test".getBytes(), vectorCFOptions, vectorVersionCFOptions);
 
         System.out.println("RocksDB dir: " + dir);
         // String dir = "./tmp/rocksdb- ???";
         new File(dir).mkdirs();
         db = RocksDB.open(dbOptions, dir, columnFamilyDescriptors, new ArrayList<>());
-        vectorCFHandle = db.createVectorColumnFamily(vectorCFDescriptor);
+        vectorCFHandle =
+                db.createVectorColumnFamily(
+                        vectorCFDescriptor, vectorCFDescriptor.getVersionOptions());
     }
 
     static void closeDB() {
@@ -141,6 +145,7 @@ public class RocksDBParallelTest {
         dbOptions.close();
         vectorCFOptions.close();
         writeOptions.close();
+        vectorVersionCFOptions.close();
         vectorSearchOptions.close();
         vectorCFHandle.close();
         flushOptions.close();

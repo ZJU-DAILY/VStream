@@ -487,6 +487,7 @@ public class EmbeddedRocksDBStateBackend extends AbstractManagedMemoryStateBacke
                                 resourceContainer,
                                 stateName -> resourceContainer.getColumnOptions(),
                                 stateName -> resourceContainer.getVectorColumnOptions(),
+                                stateName -> resourceContainer.getVectorVersionColumnOptions(),
                                 kvStateRegistry,
                                 keySerializer,
                                 numberOfKeyGroups,

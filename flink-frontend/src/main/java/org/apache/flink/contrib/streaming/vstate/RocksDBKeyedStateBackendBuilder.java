@@ -93,8 +93,10 @@ public class RocksDBKeyedStateBackendBuilder<K> extends AbstractKeyedStateBacken
     /** Factory function to create column family options from state name. */
     private final Function<String, ColumnFamilyOptions> columnFamilyOptionsFactory;
 
-    /** Factory function to create column family options from state name. */
-    private final Function<String, VectorColumnFamilyOptions> vectorColumnFamilyOptionsFactory;
+    /** Factory function to create vector column family options from state name. */
+    private final Function<String, VectorColumnFamilyOptions> vectorCFOptionsFactory;
+
+    private final Function<String, ColumnFamilyOptions> vectorVersionCFOptionsFactory;
 
     /** The container of RocksDB option factory and predefined options. */
     private final RocksDBResourceContainer optionsContainer;
@@ -128,7 +130,8 @@ public class RocksDBKeyedStateBackendBuilder<K> extends AbstractKeyedStateBacken
             File instanceBasePath,
             RocksDBResourceContainer optionsContainer,
             Function<String, ColumnFamilyOptions> columnFamilyOptionsFactory,
-            Function<String, VectorColumnFamilyOptions> vectorColumnFamilyOptionsFactory,
+            Function<String, VectorColumnFamilyOptions> vectorCFOptionsFactory,
+            Function<String, ColumnFamilyOptions> vectorVersionCFOptionsFactory,
             TaskKvStateRegistry kvStateRegistry,
             TypeSerializer<K> keySerializer,
             int numberOfKeyGroups,
@@ -161,8 +164,9 @@ public class RocksDBKeyedStateBackendBuilder<K> extends AbstractKeyedStateBacken
         this.localRecoveryConfig = localRecoveryConfig;
         // ensure that we use the right merge operator, because other code relies on this
         this.columnFamilyOptionsFactory = Preconditions.checkNotNull(columnFamilyOptionsFactory);
-        this.vectorColumnFamilyOptionsFactory =
-                Preconditions.checkNotNull(vectorColumnFamilyOptionsFactory);
+        this.vectorCFOptionsFactory = Preconditions.checkNotNull(vectorCFOptionsFactory);
+        this.vectorVersionCFOptionsFactory =
+                Preconditions.checkNotNull(vectorVersionCFOptionsFactory);
         this.optionsContainer = optionsContainer;
         this.instanceBasePath = instanceBasePath;
         this.instanceRocksDBPath = getInstanceRocksDBPath(instanceBasePath);
@@ -180,7 +184,8 @@ public class RocksDBKeyedStateBackendBuilder<K> extends AbstractKeyedStateBacken
             File instanceBasePath,
             RocksDBResourceContainer optionsContainer,
             Function<String, ColumnFamilyOptions> columnFamilyOptionsFactory,
-            Function<String, VectorColumnFamilyOptions> vectorColumnFamilyOptionsFactory,
+            Function<String, VectorColumnFamilyOptions> vectorCFOptionsFactory,
+            Function<String, ColumnFamilyOptions> vectorVersionCFOptionsFactory,
             TaskKvStateRegistry kvStateRegistry,
             TypeSerializer<K> keySerializer,
             int numberOfKeyGroups,
@@ -202,7 +207,8 @@ public class RocksDBKeyedStateBackendBuilder<K> extends AbstractKeyedStateBacken
                 instanceBasePath,
                 optionsContainer,
                 columnFamilyOptionsFactory,
-                vectorColumnFamilyOptionsFactory,
+                vectorCFOptionsFactory,
+                vectorVersionCFOptionsFactory,
                 kvStateRegistry,
                 keySerializer,
                 numberOfKeyGroups,
@@ -417,7 +423,8 @@ public class RocksDBKeyedStateBackendBuilder<K> extends AbstractKeyedStateBacken
                 this.instanceBasePath,
                 this.optionsContainer,
                 columnFamilyOptionsFactory,
-                vectorColumnFamilyOptionsFactory,
+                vectorCFOptionsFactory,
+                vectorVersionCFOptionsFactory,
                 this.kvStateRegistry,
                 this.keySerializerProvider.currentSchemaSerializer(),
                 this.executionConfig,
@@ -454,7 +461,8 @@ public class RocksDBKeyedStateBackendBuilder<K> extends AbstractKeyedStateBacken
                     instanceRocksDBPath,
                     dbOptions,
                     columnFamilyOptionsFactory,
-                    vectorColumnFamilyOptionsFactory,
+                    vectorCFOptionsFactory,
+                    vectorVersionCFOptionsFactory,
                     nativeMetricOptions,
                     metricGroup,
                     ttlCompactFiltersManager,
@@ -475,7 +483,8 @@ public class RocksDBKeyedStateBackendBuilder<K> extends AbstractKeyedStateBacken
                     instanceRocksDBPath,
                     dbOptions,
                     columnFamilyOptionsFactory,
-                    vectorColumnFamilyOptionsFactory,
+                    vectorCFOptionsFactory,
+                    vectorVersionCFOptionsFactory,
                     nativeMetricOptions,
                     metricGroup,
                     restoreStateHandles,
@@ -496,7 +505,8 @@ public class RocksDBKeyedStateBackendBuilder<K> extends AbstractKeyedStateBacken
                     instanceRocksDBPath,
                     dbOptions,
                     columnFamilyOptionsFactory,
-                    vectorColumnFamilyOptionsFactory,
+                    vectorCFOptionsFactory,
+                    vectorVersionCFOptionsFactory,
                     nativeMetricOptions,
                     metricGroup,
                     restoreStateHandles,
@@ -512,7 +522,8 @@ public class RocksDBKeyedStateBackendBuilder<K> extends AbstractKeyedStateBacken
                     instanceRocksDBPath,
                     dbOptions,
                     columnFamilyOptionsFactory,
-                    vectorColumnFamilyOptionsFactory,
+                    vectorCFOptionsFactory,
+                    vectorVersionCFOptionsFactory,
                     nativeMetricOptions,
                     metricGroup,
                     restoreStateHandles,

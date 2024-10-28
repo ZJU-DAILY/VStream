@@ -13,6 +13,8 @@ public class VectorEnvironmentCreator implements Serializable {
 
     Parameters params;
     String dbStoragePath;
+    private static final long ESTIMATED_VERSION_RECORD_BYTES = 41L;
+    private static final long DEFAULT_WRITE_BUFFER_SIZE = 67108864L;
 
     public VectorEnvironmentCreator(Parameters params) {
         this.params = params;
@@ -76,6 +78,19 @@ public class VectorEnvironmentCreator implements Serializable {
                 currentOptions.setLevel0SlowdownWritesTrigger(Integer.MAX_VALUE);
                 currentOptions.setLevel0StopWritesTrigger(Integer.MAX_VALUE);
                 currentOptions.setLevel0FileNumCompactionTrigger(Integer.MAX_VALUE);
+                return currentOptions;
+            }
+
+            @Override
+            public ColumnFamilyOptions createVectorVersionColumnOptions(
+                    ColumnFamilyOptions currentOptions, Collection<AutoCloseable> handlesToClose) {
+                long writeBufferSize =
+                        ESTIMATED_VERSION_RECORD_BYTES
+                                * params.getRocksDBMaxElementsPerHnswTable()
+                                * params.getRocksDBFlushThreshold();
+                currentOptions.setWriteBufferSize(
+                        Math.max(writeBufferSize, DEFAULT_WRITE_BUFFER_SIZE));
+                currentOptions.setMaxWriteBufferNumber(2);
                 return currentOptions;
             }
 

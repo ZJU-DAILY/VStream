@@ -31,9 +31,9 @@ public class RocksDBDeleteTest {
 
     private static final long MAX_TTL = 1000;
     private static final String DATA_PATH =
-            "/mnt/sda1/work/vector-search/dataset/sift/sift_base.fvecs";
+            "/mnt/sda1/work/vector-search/dataset/siftsmall/siftsmall_base.fvecs";
     private static final String QUERY_PATH =
-            "/mnt/sda1/work/vector-search/dataset/sift/sift_query.fvecs";
+            "/mnt/sda1/work/vector-search/dataset/siftsmall/siftsmall_query.fvecs";
     private static final int DIM = 128;
     private static final double DELETE_RATIO = 0.1;
 
@@ -59,6 +59,7 @@ public class RocksDBDeleteTest {
     RocksDB db;
     DBOptions dbOptions;
     VectorColumnFamilyOptions vectorCFOptions;
+    ColumnFamilyOptions vectorVersionCFOptions;
     WriteOptions writeOptions;
     VectorColumnFamilyHandle vectorCFHandle;
     FlushOptions flushOptions = new FlushOptions();
@@ -119,6 +120,16 @@ public class RocksDBDeleteTest {
                             }
 
                             @Override
+                            public ColumnFamilyOptions createVectorVersionColumnOptions(
+                                    ColumnFamilyOptions currentOptions,
+                                    Collection<AutoCloseable> handlesToClose) {
+                                System.out.println("createVectorVersionColumnOptions");
+                                currentOptions.setWriteBufferSize(12345678);
+                                currentOptions.setMaxWriteBufferNumber(3);
+                                return currentOptions;
+                            }
+
+                            @Override
                             public VectorSearchOptions createVectorSearchOptions(
                                     VectorSearchOptions currentOptions,
                                     Collection<AutoCloseable> handlesToClose) {
@@ -141,21 +152,25 @@ public class RocksDBDeleteTest {
 
         dbOptions = container.getDbOptions();
         vectorCFOptions = container.getVectorColumnOptions();
+        vectorVersionCFOptions = container.getVectorVersionColumnOptions();
         writeOptions = container.getWriteOptions();
         VectorCFDescriptor vectorCFDescriptor =
-                new VectorCFDescriptor("test".getBytes(), vectorCFOptions);
+                new VectorCFDescriptor("test".getBytes(), vectorCFOptions, vectorVersionCFOptions);
 
         System.out.println("RocksDB dir: " + dir);
         // String dir = "./tmp/rocksdb- ???";
         new File(dir).mkdirs();
         db = RocksDB.open(dbOptions, dir, columnFamilyDescriptors, new ArrayList<>());
-        vectorCFHandle = db.createVectorColumnFamily(vectorCFDescriptor);
+        vectorCFHandle =
+                db.createVectorColumnFamily(
+                        vectorCFDescriptor, vectorCFDescriptor.getVersionOptions());
     }
 
     private void closeDB() {
         db.close();
         dbOptions.close();
         vectorCFOptions.close();
+        vectorVersionCFOptions.close();
         writeOptions.close();
         vectorCFHandle.close();
         flushOptions.close();

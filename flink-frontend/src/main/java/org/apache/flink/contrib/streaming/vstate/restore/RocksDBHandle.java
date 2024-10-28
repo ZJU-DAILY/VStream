@@ -54,6 +54,7 @@ class RocksDBHandle implements AutoCloseable {
 
     private final Function<String, ColumnFamilyOptions> columnFamilyOptionsFactory;
     private final Function<String, VectorColumnFamilyOptions> vectorCFOptionsFactory;
+    private final Function<String, ColumnFamilyOptions> vectorVersionCFOptionsFactory;
     private final DBOptions dbOptions;
     private final Map<String, RocksDbKvStateInfo> kvStateInformation;
     private final String dbPath;
@@ -88,6 +89,7 @@ class RocksDBHandle implements AutoCloseable {
             DBOptions dbOptions,
             Function<String, ColumnFamilyOptions> columnFamilyOptionsFactory,
             Function<String, VectorColumnFamilyOptions> vectorCFOptionsFactory,
+            Function<String, ColumnFamilyOptions> vectorVersionCFOptionsFactory,
             RocksDBNativeMetricOptions nativeMetricOptions,
             MetricGroup metricGroup,
             @Nonnull RocksDbTtlCompactFiltersManager ttlCompactFiltersManager,
@@ -97,6 +99,7 @@ class RocksDBHandle implements AutoCloseable {
         this.dbOptions = dbOptions;
         this.columnFamilyOptionsFactory = columnFamilyOptionsFactory;
         this.vectorCFOptionsFactory = vectorCFOptionsFactory;
+        this.vectorVersionCFOptionsFactory = vectorVersionCFOptionsFactory;
         this.nativeMetricOptions = nativeMetricOptions;
         this.metricGroup = metricGroup;
         this.ttlCompactFiltersManager = ttlCompactFiltersManager;
@@ -344,6 +347,10 @@ class RocksDBHandle implements AutoCloseable {
 
     public Function<String, VectorColumnFamilyOptions> getVectorCFOptionsFactory() {
         return vectorCFOptionsFactory;
+    }
+
+    public Function<String, ColumnFamilyOptions> getVectorVersionCFOptionsFactory() {
+        return vectorVersionCFOptionsFactory;
     }
 
     public DBOptions getDbOptions() {

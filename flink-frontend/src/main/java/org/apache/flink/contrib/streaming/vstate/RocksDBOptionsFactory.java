@@ -96,6 +96,24 @@ public interface RocksDBOptionsFactory extends java.io.Serializable {
             VectorColumnFamilyOptions currentOptions, Collection<AutoCloseable> handlesToClose);
 
     /**
+     * This method should set the additional options on top of the current options object. The
+     * current options object may contain pre-defined options based on flags that have been
+     * configured on the state backend.
+     *
+     * <p>It is important to set the options on the current object and return the result from the
+     * setter methods, otherwise the pre-defined options may get lost.
+     *
+     * @param currentOptions The options object with the pre-defined options.
+     * @param handlesToClose The collection to register newly created {@link
+     *     org.rocksdb.RocksObject}s.
+     * @return The options object on which the additional options are set.
+     */
+    default ColumnFamilyOptions createVectorVersionColumnOptions(
+            ColumnFamilyOptions currentOptions, Collection<AutoCloseable> handlesToClose) {
+        return currentOptions;
+    }
+
+    /**
      * This method should enable certain RocksDB metrics to be forwarded to Flink's metrics
      * reporter.
      *

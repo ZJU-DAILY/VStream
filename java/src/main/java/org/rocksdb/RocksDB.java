@@ -346,7 +346,7 @@ public class RocksDB extends RocksObject {
         System.arraycopy(vectorCFDescriptor.getName(), 0, cfName,0, vectorCFDescriptor.getName().length);
         System.arraycopy(vectorCFExtension.getBytes(), 0, cfName, vectorCFDescriptor.getName().length, vectorCFExtension.length());
         cfNames[cfnum + i] = cfName;
-        cfOptionHandles[cfnum + i] = vectorCFDescriptor.getOptions().nativeHandle_;
+        cfOptionHandles[cfnum + i] = vectorCFDescriptor.getVersionOptions().nativeHandle_;
         vcfNames[i] = vectorCFDescriptor.getName();
         vcfOptionHandles[i] = vectorCFDescriptor.getOptions().nativeHandle_;
       }
