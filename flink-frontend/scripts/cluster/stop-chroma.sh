@@ -51,7 +51,7 @@ if [ -z "$answer" ]; then
   read -r answer
 fi
 
-if [ "$answer" != "${answer#[Nn]}" ]; then
+if [ "$answer" == "${answer#[Nn]}" ]; then
   echo "Saving du log..."
   for node in $MONITORED; do
     ssh $SSH_CONFIG $node "tree --du $CHROMA_STORAGE_DIR > $SYSLOG_DIR/$folder/du.log"

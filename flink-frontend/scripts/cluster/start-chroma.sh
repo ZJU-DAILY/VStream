@@ -78,8 +78,8 @@ echo "Starting monitoring tools..."
 for node in $MONITORED; do
   ssh $SSH_CONFIG $node "mkdir -p $syslog_dir"
   ssh $SSH_CONFIG root@$node 'bash -c "ps aux >> '$syslog_dir'/ps.log"'
-  ssh $SSH_CONFIG root@$node 'nohup bash -c "/usr/local/bin/pidstat 10 -urd -p $(pgrep -f "java|chroma" | tr "\n" ",") > '$syslog_dir'/pidstat.log 2>&1 &" </dev/null >/dev/null 2>/dev/null'
-  ssh $SSH_CONFIG root@$node 'nohup bash -c "/usr/sbin/nethogs -t -d 10 > '$syslog_dir'/nethogs.log 2>&1 &" </dev/null >/dev/null 2>/dev/null'
+  ssh $SSH_CONFIG root@$node 'nohup bash -c "/usr/local/bin/pidstat 2 -urd -p $(pgrep -f "java|chroma|dockerd" | tr "\n" ",") > '$syslog_dir'/pidstat.log 2>&1 &" </dev/null >/dev/null 2>/dev/null'
+  ssh $SSH_CONFIG root@$node 'nohup bash -c "/usr/sbin/nethogs -t -d 2 > '$syslog_dir'/nethogs.log 2>&1 &" </dev/null >/dev/null 2>/dev/null'
 done
 
 # On RUN_HOST

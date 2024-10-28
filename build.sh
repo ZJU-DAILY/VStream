@@ -28,7 +28,7 @@ if [ "$?" -ne 0 ]; then
   exit 1
 fi
 
-ln -s librocksdbjni-shared.so java/librocksdbjni.so
+ln -sf librocksdbjni-shared.so java/librocksdbjni.so
 # Copy rocksdbjni_classes.jar to $FLINK_HOME/lib
 if [ -d "$FLINK_HOME/lib" ]; then
   cp java/rocksdbjni_classes.jar $FLINK_HOME/lib

@@ -1,4 +1,4 @@
-# Check if root
+#!/bin/bash
 while getopts f:n:a: flag
 do
   case "${flag}" in
@@ -9,16 +9,16 @@ do
   esac
 done
 
-SCRIPT_DIR=$(dirname -- "${BASH_SOURCE}")
-CLUSTER="node10 node11 node12 node13 node14 node15 node21 node22 node23 node182 node193"
+CLUSTER="node10 node11 node12 node13 node14 node15 node21 node22 node23 node182"
 FLINK_MASTER="node11"
-MILVUS_DATA_PATH="/home/auroflow/milvus/milvus-cluster-deploy-script/volumes"
 FLINK_MASTER_PORT="4978"
-RUN_HOST="node11"
+RUN_HOST="node182"
 MONITORED="$CLUSTER"
 SSH_CONFIG="-p 4399"
 SYSLOG_DIR="/home/auroflow/storage/syslogs"
+STORAGE_DIR="/home/auroflow/storage/rocksdb"
 FLINK_FRONTEND_DIR="/home/auroflow/code/vector-search/VStream/flink-frontend"
+
 
 # Input previous folder name
 if [ -z "$folder" ]; then
@@ -28,7 +28,6 @@ if [ -z "$folder" ]; then
 else
   echo "Previous syslogs folder: $folder"
 fi
-
 
 # If -n argument is given, don't run flink
 if [ "$noexec" == "true" ]; then
@@ -54,14 +53,12 @@ fi
 if [ "$answer" == "${answer#[Nn]}" ]; then
   echo "Saving du log..."
   for node in $MONITORED; do
-    ssh $SSH_CONFIG root@$node "tree --du $MILVUS_DATA_PATH > $SYSLOG_DIR/$folder/du.log"
+    ssh $SSH_CONFIG $node "tree --du $STORAGE_DIR > $SYSLOG_DIR/$folder/du.log"
   done
 fi
 
-for node in $MONITORED; do
-  echo "Killing alarm utility on $node"
-  ssh $SSH_CONFIG root@$node 'pkill -f "bash '$SCRIPT_DIR'/check-milvus.sh"'
-done
+echo "Killing flink memory monitor on $FLINK_MASTER"
+ssh $SSH_CONFIG $FLINK_MASTER 'pkill -f "/usr/bin/python3 -u '$FLINK_FRONTEND_DIR'/scripts/cluster/monitor-flink-memory.py"'
 
 # If Flink is running on master, stop
 if ssh $SSH_CONFIG $FLINK_MASTER "jps | grep StandaloneSessionClusterEntrypoint | grep -v grep"; then
@@ -69,8 +66,7 @@ if ssh $SSH_CONFIG $FLINK_MASTER "jps | grep StandaloneSessionClusterEntrypoint 
   ssh $SSH_CONFIG $FLINK_MASTER "\$FLINK_HOME/bin/stop-cluster.sh"
 fi
 
-
-if [ "$answer" != "${answer#[Nn]}" ] ;then
+if [ "$answer" != "${answer#[Nn]}" ]; then
   echo "Drop the previous result"
   echo "Dropping..."
   for node in $MONITORED; do
@@ -90,4 +86,3 @@ else
   done
 fi
 echo "done"
-
