@@ -4,8 +4,8 @@ import time
 import sched
 
 
-HOST = "10.214.151.20"
-PORT = "8081"
+HOST = "10.214.151.11"
+PORT = "4978"
 
 
 def get_task_managers():
@@ -40,7 +40,7 @@ def monitor(taskmanager):
 
 
 def monitor_all(s):
-    s.enter(10, 1, monitor_all, (s,))
+    s.enter(2, 1, monitor_all, (s,))
     taskmanagers = sorted(get_task_managers())
     ts = datetime.now()
     print("Refresh: " + ts.strftime("%Y-%m-%d %H:%M:%S"))
@@ -51,5 +51,5 @@ def monitor_all(s):
 
 if __name__ == "__main__":
     s = sched.scheduler(time.time, time.sleep)
-    s.enter(10, 1, monitor_all, (s,))
+    s.enter(2, 1, monitor_all, (s,))
     s.run()

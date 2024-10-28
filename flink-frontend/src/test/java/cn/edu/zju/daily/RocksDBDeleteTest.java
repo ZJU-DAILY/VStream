@@ -2,11 +2,12 @@ package cn.edu.zju.daily;
 
 import cn.edu.zju.daily.data.DataSerializer;
 import cn.edu.zju.daily.data.result.SearchResult;
+import cn.edu.zju.daily.data.source.format.FloatVectorBinaryInputFormat;
 import cn.edu.zju.daily.data.vector.FloatVector;
-import cn.edu.zju.daily.data.vector.FloatVectorIterator;
+import cn.edu.zju.daily.data.vector.VectorData;
+import cn.edu.zju.daily.data.vector.VectorDeletion;
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -14,23 +15,34 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import org.apache.flink.contrib.streaming.vstate.*;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.MemorySize;
+import org.apache.flink.connector.file.src.reader.StreamFormat;
+import org.apache.flink.contrib.streaming.vstate.PredefinedOptions;
+import org.apache.flink.contrib.streaming.vstate.RocksDBOptionsFactory;
+import org.apache.flink.contrib.streaming.vstate.RocksDBResourceContainer;
+import org.apache.flink.core.fs.local.LocalDataInputStream;
 import org.junit.jupiter.api.Test;
 import org.rocksdb.*;
 
-public class RocksDBLocalTest {
+@Slf4j
+public class RocksDBDeleteTest {
 
-    static boolean doInsert = true;
-    static long timestamp = System.currentTimeMillis();
-    static String backupDir = "./tmp/rocksdb-0";
-    static long maxTTL = 250000;
+    private static final long MAX_TTL = 1000;
+    private static final String DATA_PATH =
+            "/mnt/sda1/work/vector-search/dataset/sift/sift_base.fvecs";
+    private static final String QUERY_PATH =
+            "/mnt/sda1/work/vector-search/dataset/sift/sift_query.fvecs";
+    private static final int DIM = 128;
+    private static final double DELETE_RATIO = 0.1;
 
     static int m = 16;
     static int dim = 128;
     static int efSearch = 16;
     static int efConstruction = 128;
     static int k = 10;
-    static long maxElements = 25000L;
+    static long maxElements = 1000L;
     static long ssTableSize = 4096L * (1 << 21); // 4 G
     static long blockSize = 4 << 10; // 4 KB
     static long blockCacheSize = 26214400L; // 25 MB
@@ -39,20 +51,20 @@ public class RocksDBLocalTest {
     static float terminationFactor = 0.8f;
     static float terminationThreshold = 0f;
     static float terminationLowerBound = 0.0f;
-    static int sortInterval = 100;
-    static int flushThreshold = 2;
-    static int maxWriteBufferNumber = 7;
+    static int sortInterval = 10000;
+    static int flushThreshold = 12;
+    static int maxWriteBufferNumber = 15;
     static int blockRestartInterval = 4;
 
-    static RocksDB db;
-    static DBOptions dbOptions;
-    static VectorColumnFamilyOptions vectorCFOptions;
-    static WriteOptions writeOptions;
-    static VectorColumnFamilyHandle vectorCFHandle;
-    static FlushOptions flushOptions = new FlushOptions();
-    static RocksDBResourceContainer container = null;
+    RocksDB db;
+    DBOptions dbOptions;
+    VectorColumnFamilyOptions vectorCFOptions;
+    WriteOptions writeOptions;
+    VectorColumnFamilyHandle vectorCFHandle;
+    FlushOptions flushOptions = new FlushOptions();
+    RocksDBResourceContainer container = null;
 
-    static void openDB(String dir, boolean create) throws RocksDBException {
+    private void openDB(String dir, boolean create) throws RocksDBException {
         container =
                 new RocksDBResourceContainer(
                         PredefinedOptions.DEFAULT,
@@ -64,7 +76,7 @@ public class RocksDBLocalTest {
                                 currentOptions.setUseDirectIoForFlushAndCompaction(true);
                                 currentOptions.setAvoidUnnecessaryBlockingIO(true);
                                 currentOptions.setInfoLogLevel(InfoLogLevel.INFO_LEVEL);
-
+                                currentOptions.setFlushVerifyMemtableCount(false);
                                 return currentOptions;
                             }
 
@@ -140,7 +152,7 @@ public class RocksDBLocalTest {
         vectorCFHandle = db.createVectorColumnFamily(vectorCFDescriptor);
     }
 
-    static void closeDB() {
+    private void closeDB() {
         db.close();
         dbOptions.close();
         vectorCFOptions.close();
@@ -149,15 +161,15 @@ public class RocksDBLocalTest {
         flushOptions.close();
     }
 
-    static int flushCount = 0;
+    private int flushCount = 0;
 
-    static void flush() throws RocksDBException {
+    private void flush() throws RocksDBException {
         db.flush(flushOptions, vectorCFHandle);
         System.out.println("Flushed #" + flushCount + ".");
         flushCount++;
     }
 
-    static void copyDirectory(String sourceDirectoryLocation, String destinationDirectoryLocation)
+    private void copyDirectory(String sourceDirectoryLocation, String destinationDirectoryLocation)
             throws IOException {
         Files.walk(Paths.get(sourceDirectoryLocation))
                 .forEach(
@@ -179,7 +191,8 @@ public class RocksDBLocalTest {
     static byte[] vec = new byte[dim * Float.BYTES + Long.BYTES];
     static byte[] queryVec = new byte[dim * Float.BYTES];
 
-    static void insert(FloatVector vector) {
+    private void insert(FloatVector vector) {
+        // System.out.println("Inserting #" + vector.getId());
         DataSerializer.serializeFloatVectorWithTimestamp(vector, id, vec);
         try {
             db.put(vectorCFHandle, writeOptions, id, vec);
@@ -188,28 +201,43 @@ public class RocksDBLocalTest {
         }
     }
 
-    static SearchResult search(FloatVector query) {
+    private void delete(VectorDeletion marker) {
+        // System.out.println("Deleting #" + marker.getId());
+        DataSerializer.serializeLong(marker.getId(), id);
+        try {
+            db.delete(vectorCFHandle, writeOptions, id);
+        } catch (RocksDBException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private SearchResult search(FloatVector query) {
         DataSerializer.serializeFloatVector(query, queryVec);
         byte[] resultBytes;
         VectorSearchOptions vectorSearchOptions = container.getVectorSearchOptions();
 
-        long start = System.currentTimeMillis();
         if (query.getId() % sortInterval == sortInterval - 1) {
 
             vectorSearchOptions.setTriggerSort(true);
             vectorSearchOptions.setTs(Math.max(0, query.getEventTime() - query.getTTL()));
-            vectorSearchOptions.setSearchSST(false);
+            vectorSearchOptions.setSearchSST(true);
             try {
+                long start = System.currentTimeMillis();
                 resultBytes = db.vectorSearch(vectorCFHandle, vectorSearchOptions, queryVec);
+                long duration = System.currentTimeMillis() - start;
+                System.out.println("Query " + query.getId() + " searched in " + duration + " ms.");
             } catch (RocksDBException e) {
                 throw new RuntimeException(e);
             }
             vectorSearchOptions.setTriggerSort(false);
         } else {
             vectorSearchOptions.setTs(Math.max(0, query.getEventTime() - query.getTTL()));
-            vectorSearchOptions.setSearchSST(false);
+            vectorSearchOptions.setSearchSST(true);
             try {
+                long start = System.currentTimeMillis();
                 resultBytes = db.vectorSearch(vectorCFHandle, vectorSearchOptions, queryVec);
+                long duration = System.currentTimeMillis() - start;
+                System.out.println("Query " + query.getId() + " searched in " + duration + " ms.");
             } catch (RocksDBException e) {
                 throw new RuntimeException(e);
             }
@@ -220,16 +248,8 @@ public class RocksDBLocalTest {
                 resultBytes, 0, query.getId(), 1, query.getEventTime());
     }
 
-    private static void createCheckpoint(String dir) {
-        try (Checkpoint checkpoint = Checkpoint.create(db)) {
-            checkpoint.createCheckpoint(dir);
-        } catch (RocksDBException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     @Test
-    void test() throws Exception {
+    void test() throws IOException, RocksDBException {
 
         String dir =
                 "./tmp/rocksdb-standalone-"
@@ -237,41 +257,72 @@ public class RocksDBLocalTest {
 
         openDB(dir, true);
 
-        FloatVectorIterator vectors =
-                FloatVectorIterator.fromFile(
-                        "/home/auroflow/code/vector-search/data/sift/sift_base.fvecs", 1, 10000);
-        FloatVectorIterator queries =
-                FloatVectorIterator.fromFile(
-                        "/home/auroflow/code/vector-search/data/sift/sift_query.fvecs");
-        PrintWriter writer = new PrintWriter("./results.txt", "UTF-8");
-        int index = 0;
-        for (FloatVector vector : vectors) {
-            vector.setEventTime(index);
-            insert(vector);
-            index++;
-            if (index % 100 == 0) {
-                FloatVector query = queries.next();
-                query.setEventTime(index);
-                query.setTTL(maxTTL);
-                long start = System.currentTimeMillis();
-                SearchResult result = search(query);
-                System.out.println(
-                        "Query "
-                                + query.getId()
-                                + " done in "
-                                + (System.currentTimeMillis() - start)
-                                + " ms: "
-                                + result);
-                writer.println(result);
+        Configuration conf = new Configuration();
+        conf.set(
+                StreamFormat.FETCH_IO_SIZE,
+                new MemorySize(10 * (Integer.BYTES + DIM * Float.BYTES)));
+
+        FloatVectorBinaryInputFormat dataFormat =
+                new FloatVectorBinaryInputFormat(
+                        "data",
+                        MAX_TTL,
+                        FloatVectorBinaryInputFormat.FileType.F_VEC,
+                        0,
+                        1000000,
+                        DIM,
+                        1,
+                        DELETE_RATIO,
+                        null);
+        FloatVectorBinaryInputFormat.Reader dataReader =
+                dataFormat.createReader(conf, new LocalDataInputStream(new File(DATA_PATH)));
+
+        FloatVectorBinaryInputFormat queryFormat =
+                new FloatVectorBinaryInputFormat(
+                        "query",
+                        MAX_TTL,
+                        FloatVectorBinaryInputFormat.FileType.F_VEC,
+                        0,
+                        10000,
+                        DIM,
+                        1,
+                        0,
+                        null);
+        FloatVectorBinaryInputFormat.Reader queryReader =
+                queryFormat.createReader(conf, new LocalDataInputStream(new File(QUERY_PATH)));
+
+        long ts = 0;
+        while (true) {
+            boolean eof = false;
+
+            // query
+            VectorData query = queryReader.read();
+            if (query == null) {
+                break;
             }
-            if (index >= 1_000_000) {
+            query.setEventTime(ts);
+            SearchResult result = search(query.asVector());
+            // System.out.println(result);
+
+            // insert + delete
+            for (int i = 0; i < 100; i++) {
+                VectorData vector = dataReader.read();
+                if (vector == null) {
+                    eof = true;
+                    break;
+                }
+                if (vector.isDeletion()) {
+                    delete(vector.asDeletion());
+                } else {
+                    vector.setEventTime(ts++);
+                    insert(vector.asVector());
+                }
+            }
+
+            if (eof) {
                 break;
             }
         }
 
-        flush();
-        // createCheckpoint(dir + "/checkpoint");
         closeDB();
-        writer.close();
     }
 }

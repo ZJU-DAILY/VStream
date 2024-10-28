@@ -17,7 +17,7 @@ public class VectorEnvironmentCreator implements Serializable {
     public VectorEnvironmentCreator(Parameters params) {
         this.params = params;
         this.dbStoragePath =
-                "/home/auroflow/code/vector-search/VStream/flink-frontend/tmp/rocksdb-backend-"
+                params.getRocksDBStoragePrefix()
                         + LocalDateTime.now().toString().split("\\.")[0].replace(":", "-");
     }
 
@@ -28,7 +28,7 @@ public class VectorEnvironmentCreator implements Serializable {
                     DBOptions currentOptions, Collection<AutoCloseable> handlesToClose) {
                 currentOptions.setDbLogDir(dbStoragePath); // log in rocksdb data dir
                 currentOptions.setUseDirectIoForFlushAndCompaction(true);
-                currentOptions.setInfoLogLevel(InfoLogLevel.INFO_LEVEL);
+                currentOptions.setInfoLogLevel(params.getRocksDBInfoLogLevel());
                 currentOptions.setMaxBackgroundJobs(params.getRocksDBMaxBackgroundJobs());
                 currentOptions.setAvoidFlushDuringRecovery(true);
                 currentOptions.setAvoidFlushDuringShutdown(true);
@@ -68,8 +68,14 @@ public class VectorEnvironmentCreator implements Serializable {
                 currentOptions.setTerminationWeight(params.getRocksDBTerminationWeight());
                 currentOptions.setTerminationThreshold(params.getRocksDBTerminationThreshold());
                 currentOptions.setTerminationLowerBound(params.getRocksDBTerminationLowerBound());
+                int flushThreshold = params.getRocksDBFlushThreshold();
+                int maxWriteBufferNumber = params.getRocksDBMaxWriteBufferNumber();
                 currentOptions.setFlushThreshold(params.getRocksDBFlushThreshold());
-                currentOptions.setMaxWriteBufferNumber(params.getRocksDBMaxWriteBufferNumber());
+                currentOptions.setMaxWriteBufferNumber(
+                        Math.min(flushThreshold + 3, maxWriteBufferNumber));
+                currentOptions.setLevel0SlowdownWritesTrigger(Integer.MAX_VALUE);
+                currentOptions.setLevel0StopWritesTrigger(Integer.MAX_VALUE);
+                currentOptions.setLevel0FileNumCompactionTrigger(Integer.MAX_VALUE);
                 return currentOptions;
             }
 
@@ -78,8 +84,8 @@ public class VectorEnvironmentCreator implements Serializable {
                     VectorSearchOptions currentOptions, Collection<AutoCloseable> handlesToClose) {
                 currentOptions.setK(params.getK());
                 currentOptions.setAsyncIO(true);
-                currentOptions.setSearchSST(true); // skip sstables
-                currentOptions.setEvict(true);
+                currentOptions.setSearchSST(!params.isRocksDBSkipSST());
+                currentOptions.setEvict(false);
                 currentOptions.setTerminationFactor(params.getRocksDBTerminationFactor());
                 return currentOptions;
             }

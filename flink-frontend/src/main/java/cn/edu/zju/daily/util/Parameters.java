@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
 import lombok.Data;
+import org.rocksdb.InfoLogLevel;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
@@ -207,19 +208,24 @@ public @Data class Parameters implements Serializable {
     // Backends
     // =================
 
+    // -----------------------
+    // VStream (RocksDB-based)
+    // -----------------------
+    private String rocksDBStoragePrefix;
+
     /**
      * Max elements per HNSW table. Currently, the memtable will be flushed when it reaches this
      * limit.
      */
     private int rocksDBMaxElementsPerHnswTable;
 
-    /** Max SSTable size, i.e. write buffer size. */
+    /** Max SSTable size, i.e. write buffer size, in bytes. */
     private long rocksDBSSTableSize;
 
-    /** Data block size. */
+    /** Data block size in bytes. */
     private long rocksDBBlockSize;
 
-    /** Size of block cache in bytes, which caches data blocks and vectors. */
+    /** Block cache size in bytes, which caches data blocks and vectors. */
     private long rocksDBBlockCacheSize;
 
     /** Termination weight. */
@@ -251,6 +257,11 @@ public @Data class Parameters implements Serializable {
      * of vectors.
      */
     private int rocksDBBlockRestartInterval;
+
+    /** Whether to skip sstables during search. */
+    private boolean rocksDBSkipSST;
+
+    private InfoLogLevel rocksDBInfoLogLevel;
 
     // ------
     // Milvus

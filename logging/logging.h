@@ -26,26 +26,26 @@ inline const char* RocksLogShorterFileName(const char* file) {
 
 // Don't inclide file/line info in HEADER level
 #define ROCKS_LOG_HEADER(LGR, FMT, ...) \
-  ROCKSDB_NAMESPACE::Log(InfoLogLevel::HEADER_LEVEL, LGR, FMT, ##__VA_ARGS__)
+  ROCKSDB_NAMESPACE::Log(ROCKSDB_NAMESPACE::InfoLogLevel::HEADER_LEVEL, LGR, FMT, ##__VA_ARGS__)
 
 #define ROCKS_LOG_AT_LEVEL(LGR, LVL, FMT, ...)                           \
   ROCKSDB_NAMESPACE::Log((LVL), (LGR), ROCKS_LOG_PREPEND_FILE_LINE(FMT), \
                          RocksLogShorterFileName(__FILE__), ##__VA_ARGS__)
 
 #define ROCKS_LOG_DEBUG(LGR, FMT, ...) \
-  ROCKS_LOG_AT_LEVEL((LGR), InfoLogLevel::DEBUG_LEVEL, FMT, ##__VA_ARGS__)
+  ROCKS_LOG_AT_LEVEL((LGR), ROCKSDB_NAMESPACE::InfoLogLevel::DEBUG_LEVEL, FMT, ##__VA_ARGS__)
 
 #define ROCKS_LOG_INFO(LGR, FMT, ...) \
-  ROCKS_LOG_AT_LEVEL((LGR), InfoLogLevel::INFO_LEVEL, FMT, ##__VA_ARGS__)
+  ROCKS_LOG_AT_LEVEL((LGR), ROCKSDB_NAMESPACE::InfoLogLevel::INFO_LEVEL, FMT, ##__VA_ARGS__)
 
 #define ROCKS_LOG_WARN(LGR, FMT, ...) \
-  ROCKS_LOG_AT_LEVEL((LGR), InfoLogLevel::WARN_LEVEL, FMT, ##__VA_ARGS__)
+  ROCKS_LOG_AT_LEVEL((LGR), ROCKSDB_NAMESPACE::InfoLogLevel::WARN_LEVEL, FMT, ##__VA_ARGS__)
 
 #define ROCKS_LOG_ERROR(LGR, FMT, ...) \
-  ROCKS_LOG_AT_LEVEL((LGR), InfoLogLevel::ERROR_LEVEL, FMT, ##__VA_ARGS__)
+  ROCKS_LOG_AT_LEVEL((LGR), ROCKSDB_NAMESPACE::InfoLogLevel::ERROR_LEVEL, FMT, ##__VA_ARGS__)
 
 #define ROCKS_LOG_FATAL(LGR, FMT, ...) \
-  ROCKS_LOG_AT_LEVEL((LGR), InfoLogLevel::FATAL_LEVEL, FMT, ##__VA_ARGS__)
+  ROCKS_LOG_AT_LEVEL((LGR), ROCKSDB_NAMESPACE::InfoLogLevel::FATAL_LEVEL, FMT, ##__VA_ARGS__)
 
 #define ROCKS_LOG_BUFFER(LOG_BUF, FMT, ...)                                 \
   ROCKSDB_NAMESPACE::LogToBuffer(LOG_BUF, ROCKS_LOG_PREPEND_FILE_LINE(FMT), \

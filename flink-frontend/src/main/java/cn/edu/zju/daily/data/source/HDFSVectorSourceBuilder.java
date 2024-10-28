@@ -134,7 +134,7 @@ public class HDFSVectorSourceBuilder {
                                 params.getHdfsUser(),
                                 params.getQueryRatePollingPath(),
                                 QUERY_POLLING_INTERVAL_MILLIS,
-                                params.getInitialQueryRate());
+                                rateToInterval(params.getInitialQueryRate()));
             }
 
             return getBinarySource(
