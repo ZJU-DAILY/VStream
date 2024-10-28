@@ -853,7 +853,7 @@ Status MemTable::Add(SequenceNumber s, ValueType type,
     is_range_del_table_empty_.store(false, std::memory_order_relaxed);
   }
   UpdateOldestKeyTime();
-  if (table->VectorIndexName() != nullptr) {
+  if (table->VectorIndexName() != nullptr && type == kTypeValue) {
     assert(value.size() > sizeof(uint64_t));
     uint64_t ts = DecodeFixed64(value.data());
     uint64_t latest_key_time = latest_key_time_.load(std::memory_order_relaxed);

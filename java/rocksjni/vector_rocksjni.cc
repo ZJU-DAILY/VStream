@@ -414,7 +414,12 @@ jbyteArray rocksdb_vectorSearch_helper(
     if (s.ok()) {
       const char *data = value_str.data();
       uint16_t result_size;
-      memcpy(&result_size, data, sizeof(uint16_t));
+      if (value_str.size() == 0) {
+        // empty result set
+        result_size = 0;
+      } else {
+        memcpy(&result_size, data, sizeof(uint16_t));
+      }
       data += sizeof(uint16_t);
       result.reserve(
           result_size *
