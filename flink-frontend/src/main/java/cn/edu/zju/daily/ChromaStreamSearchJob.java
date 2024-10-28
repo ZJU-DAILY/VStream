@@ -42,6 +42,6 @@ public class ChromaStreamSearchJob {
                         .build();
         results.sinkTo(sink);
 
-        env.executeAsync();
+        env.executeAsync("ChromaStreamSearchJob");
     }
 }

@@ -12,14 +12,10 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.SideOutputDataStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.util.OutputTag;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class ChromaSeparatedStreamingPipeline {
 
     private final Parameters params;
-
-    Logger LOG = LoggerFactory.getLogger(ChromaSeparatedStreamingPipeline.class);
 
     public ChromaSeparatedStreamingPipeline(Parameters params) throws InterruptedException {
         this.params = params;

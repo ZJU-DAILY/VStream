@@ -1,15 +1,13 @@
 package cn.edu.zju.daily.rate;
 
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.functions.RichMapFunction;
 import org.apache.flink.configuration.Configuration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /** @author auroflow */
+@Slf4j
 public abstract class Throttler<U, V> extends RichMapFunction<U, V> {
-
-    private static final Logger logger = LoggerFactory.getLogger(Throttler.class);
 
     private final List<Long> thresholds;
     private final List<Long> intervals; // nanoseconds
@@ -44,7 +42,7 @@ public abstract class Throttler<U, V> extends RichMapFunction<U, V> {
         // Assume: `thresholds` are sorted, and `processed` and `index` never decreases.
         if (index < thresholds.size() - 1 && count >= thresholds.get(index + 1)) {
             index++;
-            logger.info("Count reaches {}, interval is now {}", count, getThisInterval());
+            LOG.info("Count reaches {}, interval is now {}", count, getThisInterval());
         }
         count++;
     }

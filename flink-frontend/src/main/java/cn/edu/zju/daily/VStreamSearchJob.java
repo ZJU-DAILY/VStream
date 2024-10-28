@@ -45,6 +45,6 @@ public class VStreamSearchJob {
                         .build();
         results.sinkTo(sink);
 
-        env.executeAsync();
+        env.executeAsync("VStreamSearchJob");
     }
 }

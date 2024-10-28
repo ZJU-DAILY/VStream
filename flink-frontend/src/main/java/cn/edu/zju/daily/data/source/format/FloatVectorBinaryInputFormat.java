@@ -12,6 +12,7 @@ import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.time.Duration;
 import java.util.Random;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.IllegalConfigurationException;
@@ -19,12 +20,9 @@ import org.apache.flink.connector.file.src.reader.SimpleStreamFormat;
 import org.apache.flink.connector.file.src.reader.StreamFormat;
 import org.apache.flink.core.fs.FSDataInputStream;
 import org.apache.flink.util.MathUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+@Slf4j
 public class FloatVectorBinaryInputFormat extends SimpleStreamFormat<VectorData> {
-
-    private static final Logger LOG = LoggerFactory.getLogger(FloatVectorBinaryInputFormat.class);
 
     private static final int MAX_BUFFER_SIZE = Integer.MAX_VALUE - 8;
 
@@ -207,7 +205,7 @@ public class FloatVectorBinaryInputFormat extends SimpleStreamFormat<VectorData>
                             .order(ByteOrder.LITTLE_ENDIAN);
             this.deleteIdStart = -1;
             this.allowedEmitNanos = 0;
-            this.random = new Random();
+            this.random = new Random(66);
 
             try {
                 this.stream.seek(startPos);

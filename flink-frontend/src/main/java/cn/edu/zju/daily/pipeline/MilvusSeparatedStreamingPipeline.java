@@ -11,20 +11,18 @@ import cn.edu.zju.daily.function.partitioner.PartitionFunction;
 import cn.edu.zju.daily.util.MilvusUtil;
 import cn.edu.zju.daily.util.Parameters;
 import java.util.Random;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.SideOutputDataStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.util.OutputTag;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+@Slf4j
 public class MilvusSeparatedStreamingPipeline {
 
     private final Parameters params;
     MilvusUtil milvusUtil = new MilvusUtil();
-
-    Logger LOG = LoggerFactory.getLogger(MilvusSeparatedStreamingPipeline.class);
 
     public MilvusSeparatedStreamingPipeline(Parameters params) throws InterruptedException {
         this.params = params;

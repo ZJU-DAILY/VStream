@@ -37,6 +37,7 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.state.State;
@@ -88,8 +89,6 @@ import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.ResourceGuard;
 import org.apache.flink.util.StateMigrationException;
 import org.rocksdb.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * An {@link AbstractKeyedStateBackend} that stores its state in {@code RocksDB} and serializes
@@ -102,9 +101,8 @@ import org.slf4j.LoggerFactory;
  * href="https://github.com/facebook/rocksdb/wiki/RocksJava-Basics#opening-a-database-with-column-families">
  * this document</a>.
  */
+@Slf4j
 public class RocksDBKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
-
-    private static final Logger LOG = LoggerFactory.getLogger(RocksDBKeyedStateBackend.class);
 
     /**
      * The name of the merge operator in RocksDB. Do not change except you know exactly what you do.

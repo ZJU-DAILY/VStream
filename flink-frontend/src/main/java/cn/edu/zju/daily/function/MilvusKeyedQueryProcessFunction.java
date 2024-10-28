@@ -10,6 +10,7 @@ import cn.edu.zju.daily.util.Parameters;
 import io.milvus.response.SearchResultsWrapper;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.state.ValueState;
@@ -17,10 +18,9 @@ import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
 import org.apache.flink.util.Collector;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /** Milvus search function. */
+@Slf4j
 public class MilvusKeyedQueryProcessFunction
         extends KeyedProcessFunction<Integer, PartitionedElement, SearchResult> {
 
@@ -28,8 +28,6 @@ public class MilvusKeyedQueryProcessFunction
     ListState<PartitionedElement> buffer;
     ValueState<Integer> count;
     private MilvusUtil milvusUtil = null;
-    private static final Logger LOG =
-            LoggerFactory.getLogger(MilvusKeyedQueryProcessFunction.class);
 
     public MilvusKeyedQueryProcessFunction(Parameters params) {
         this.params = params;

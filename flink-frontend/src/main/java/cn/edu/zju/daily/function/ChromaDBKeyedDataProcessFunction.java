@@ -10,16 +10,13 @@ import cn.edu.zju.daily.util.chromadb.ChromaCollection;
 import cn.edu.zju.daily.util.chromadb.ChromaUtil;
 import cn.edu.zju.daily.util.chromadb.EmptyChromaEmbeddingFunction;
 import java.util.*;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.configuration.Configuration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import tech.amikos.chromadb.handler.ApiException;
 
 /** Chroma insert function. */
+@Slf4j
 public class ChromaDBKeyedDataProcessFunction extends VectorKeyedDataProcessFunction {
-
-    private static final Logger LOG =
-            LoggerFactory.getLogger(ChromaDBKeyedDataProcessFunction.class);
 
     private ChromaClient client;
     private String collectionName;

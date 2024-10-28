@@ -9,11 +9,10 @@ import cn.edu.zju.daily.function.partitioner.curve.SpaceFillingCurve;
 import cn.edu.zju.daily.lsh.L2HilbertPartitioner;
 import java.time.Duration;
 import java.util.*;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.co.RichCoFlatMapFunction;
 import org.apache.flink.util.Collector;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * 使用 LSH 函数和 Hilbert 曲线为向量数据和查询分配分区. 该函数扩展 RichCoFlatMapFunction，需要同时处理输入向量和查询向量。
@@ -32,11 +31,10 @@ import org.slf4j.LoggerFactory;
  * <p>因此，为了能够直接控制得到的分区 ID，我们需要确保 parallelism = maxParallelism，且 {@code murmurHash(key.hashCode())}
  * 等于分区 ID。getNodeIdMap 函数旨在寻找一组 key，这组 key 可以通过 murmurHash(key) 映射为各 个分区 ID。
  */
+@Slf4j
 public class LSHHilbertPartitionFunction
         extends RichCoFlatMapFunction<VectorData, VectorData, PartitionedElement>
         implements PartitionFunction {
-
-    private static final Logger LOG = LoggerFactory.getLogger(LSHHilbertPartitionFunction.class);
 
     private final List<L2HilbertPartitioner> partitioners;
 

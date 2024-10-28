@@ -23,6 +23,7 @@ import java.math.BigInteger;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.metrics.Gauge;
 import org.apache.flink.metrics.MetricGroup;
@@ -32,16 +33,14 @@ import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 import org.rocksdb.Statistics;
 import org.rocksdb.TickerType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * A monitor which pulls {{@link RocksDB}} native metrics and forwards them to Flink's metric group.
  * All metrics are unsigned longs and are reported at the column family level.
  */
+@Slf4j
 @Internal
 public class RocksDBNativeMetricMonitor implements Closeable {
-    private static final Logger LOG = LoggerFactory.getLogger(RocksDBNativeMetricMonitor.class);
 
     private final RocksDBNativeMetricOptions options;
 

@@ -9,18 +9,15 @@ import cn.edu.zju.daily.data.vector.VectorData;
 import cn.edu.zju.daily.function.partitioner.curve.SpaceFillingCurve;
 import cn.edu.zju.daily.lsh.L2HilbertPartitioner;
 import java.util.*;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.util.Collector;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+@Slf4j
 public class MultiplexLSHHilbertPartitionFunction
         implements FlatMapFunction<VectorData, PartitionedElement>,
                 MapFunction<VectorData, MultiPartitionQuery> {
-
-    private static final Logger LOG =
-            LoggerFactory.getLogger(MultiplexLSHHilbertPartitionFunction.class);
 
     private final List<L2HilbertPartitioner> partitioners;
 

@@ -6,22 +6,21 @@ import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Iterator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * This class reads a float or binary vector file in SIFT format as float arrays.
  *
- * @see http://corpus-texmex.irisa.fr/
+ * @see <a href="http://corpus-texmex.irisa.fr/">Datasets for approximate nearest neighbor
+ *     search</a>
  */
+@Slf4j
 public class FvecIterator implements Iterator<float[]> {
 
     public enum InputType {
         F_VEC,
         B_VEC
     }
-
-    private static final Logger logger = LoggerFactory.getLogger(FvecIterator.class);
 
     private final RandomAccessFile file;
     private final int numLoops;
@@ -104,7 +103,7 @@ public class FvecIterator implements Iterator<float[]> {
             // There are no more vectors if the fp is at EOF, and we're at the last loop
             return !(isEOF() && loop == numLoops - 1);
         } catch (IOException e) {
-            logger.error("Failed to get file pointer.");
+            LOG.error("Failed to get file pointer.");
             throw new RuntimeException(e);
         }
     }
@@ -114,7 +113,7 @@ public class FvecIterator implements Iterator<float[]> {
         try {
             if (isEOF()) {
                 if (loop < numLoops) {
-                    logger.debug("File reached limit, seek to start pos");
+                    LOG.debug("File reached limit, seek to start pos");
                     file.seek(startPosition);
                     loop += 1;
                 } else {
@@ -145,7 +144,7 @@ public class FvecIterator implements Iterator<float[]> {
                 throw new RuntimeException("Impossible branch.");
             }
         } catch (IOException e) {
-            logger.error("Failed to read file.");
+            LOG.error("Failed to read file.");
             throw new RuntimeException(e);
         }
     }

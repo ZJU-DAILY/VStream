@@ -10,17 +10,15 @@ import cn.edu.zju.daily.util.chromadb.ChromaCollection;
 import cn.edu.zju.daily.util.chromadb.ChromaUtil;
 import cn.edu.zju.daily.util.chromadb.EmptyChromaEmbeddingFunction;
 import java.util.*;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
 import org.apache.flink.util.Collector;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /** Chroma search function. */
+@Slf4j
 public class ChromaDBKeyedQueryProcessFunction
         extends KeyedProcessFunction<Integer, PartitionedElement, SearchResult> {
-    private static final Logger LOG =
-            LoggerFactory.getLogger(ChromaDBKeyedQueryProcessFunction.class);
 
     private ChromaClient client;
     private ChromaCollection collection;

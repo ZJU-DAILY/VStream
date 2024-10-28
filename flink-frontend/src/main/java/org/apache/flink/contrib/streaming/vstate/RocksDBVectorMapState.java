@@ -30,6 +30,7 @@ import java.util.Map;
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.state.MapState;
 import org.apache.flink.api.common.state.State;
 import org.apache.flink.api.common.state.StateDescriptor;
@@ -48,8 +49,6 @@ import org.apache.flink.util.FlinkRuntimeException;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.StateMigrationException;
 import org.rocksdb.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * {@link MapState} implementation that stores state in RocksDB vector backend.
@@ -57,10 +56,9 @@ import org.slf4j.LoggerFactory;
  * @param <K> The type of the key.
  * @param <N> The type of the namespace.
  */
+@Slf4j
 public class RocksDBVectorMapState<K, N> extends AbstractRocksDBState<K, N, Map<byte[], byte[]>>
         implements InternalMapState<K, N, byte[], byte[]> {
-
-    private static final Logger LOG = LoggerFactory.getLogger(RocksDBVectorMapState.class);
 
     /** Serializer for the keys and values. */
     private TypeSerializer<byte[]> userKeySerializer;
@@ -196,7 +194,7 @@ public class RocksDBVectorMapState<K, N> extends AbstractRocksDBState<K, N, Map<
      */
     @Override
     public void remove(byte[] userKey) throws IOException, RocksDBException {
-        backend.db.delete(columnFamily, writeOptions, userKey);
+        backend.db.delete(vectorColumnFamily, writeOptions, userKey);
     }
 
     @Override

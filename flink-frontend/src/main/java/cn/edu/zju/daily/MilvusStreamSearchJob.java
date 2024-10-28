@@ -41,6 +41,6 @@ public class MilvusStreamSearchJob {
                         .build();
         results.sinkTo(sink);
 
-        env.executeAsync();
+        env.executeAsync("MilvusStreamSearchJob");
     }
 }

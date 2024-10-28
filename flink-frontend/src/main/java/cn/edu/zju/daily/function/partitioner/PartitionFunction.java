@@ -32,6 +32,30 @@ public interface PartitionFunction
         return nodeIdMap;
     }
 
+    /**
+     * Augments a data vector or a deletion marker with a partition ID.
+     *
+     * @param value The data vector or deletion marker
+     * @param out The collector to emit resulting elements to
+     */
+    @Override
+    void flatMap1(VectorData value, Collector<PartitionedElement> out) throws Exception;
+
+    /**
+     * Augments a query vector with a partition ID.
+     *
+     * @param value The query vector
+     * @param out The collector to emit resulting elements to
+     */
+    @Override
+    void flatMap2(VectorData value, Collector<PartitionedElement> out) throws Exception;
+
+    /**
+     * Augments a PartitionedData with a partition ID.
+     *
+     * @param value The input value.
+     * @param out The collector for returning result values.
+     */
     @Override
     default void flatMap(PartitionedElement value, Collector<PartitionedElement> out)
             throws Exception {

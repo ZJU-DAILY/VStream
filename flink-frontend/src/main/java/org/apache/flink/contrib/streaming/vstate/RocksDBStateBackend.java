@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
@@ -50,8 +51,6 @@ import org.apache.flink.runtime.state.StateBackend;
 import org.apache.flink.runtime.state.filesystem.FsStateBackend;
 import org.apache.flink.runtime.state.ttl.TtlTimeProvider;
 import org.apache.flink.util.TernaryBoolean;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * <b>IMPORTANT</b> {@link RocksDBStateBackend} is deprecated in favor of {@link
@@ -83,6 +82,7 @@ import org.slf4j.LoggerFactory;
  * #setRocksDBOptions(RocksDBOptionsFactory)}.
  */
 @Deprecated
+@Slf4j
 public class RocksDBStateBackend extends AbstractManagedMemoryStateBackend
         implements CheckpointStorage, ConfigurableStateBackend {
 
@@ -94,8 +94,6 @@ public class RocksDBStateBackend extends AbstractManagedMemoryStateBackend
     }
 
     private static final long serialVersionUID = 1L;
-
-    private static final Logger LOG = LoggerFactory.getLogger(RocksDBStateBackend.class);
 
     // ------------------------------------------------------------------------
 

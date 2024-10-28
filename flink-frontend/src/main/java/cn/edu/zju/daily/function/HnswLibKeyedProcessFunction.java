@@ -10,12 +10,12 @@ import com.github.jelmerk.knn.hnsw.HnswIndex;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
 import org.apache.flink.util.Collector;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+@Slf4j
 public class HnswLibKeyedProcessFunction
         extends KeyedProcessFunction<Integer, PartitionedElement, SearchResult> {
 
@@ -25,8 +25,6 @@ public class HnswLibKeyedProcessFunction
     private final Parameters params;
 
     private HnswIndex<Long, float[], FloatVector, Float> index;
-
-    private static final Logger logger = LoggerFactory.getLogger(HnswLibKeyedProcessFunction.class);
 
     private List<FloatVector> insertBuffer;
 
@@ -72,7 +70,7 @@ public class HnswLibKeyedProcessFunction
                             index.findNearest(data.getData().asVector().getValue(), params.getK()),
                             data.getData().asVector().id());
             if (data.getData().asVector().getId() % 1 == 0) {
-                logger.info(
+                LOG.info(
                         "Searching query #{} in {} ms",
                         data.getData().getId(),
                         (System.currentTimeMillis() - start));
@@ -89,7 +87,7 @@ public class HnswLibKeyedProcessFunction
                 index.addAll(insertBuffer);
                 insertBuffer.clear();
                 if (data.getData().getId() % 10000 < 100) {
-                    logger.info(
+                    LOG.info(
                             "Inserting vector #{} in {} ms",
                             data.getData().getId(),
                             (System.currentTimeMillis() - start));

@@ -6,16 +6,15 @@ import cn.edu.zju.daily.util.MilvusUtil;
 import cn.edu.zju.daily.util.Parameters;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.configuration.Configuration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /** Milvus insert function. */
+@Slf4j
 public class MilvusKeyedDataProcessFunction extends VectorKeyedDataProcessFunction {
 
     private final Parameters params;
     private MilvusUtil milvusUtil = null;
-    private static final Logger LOG = LoggerFactory.getLogger(MilvusKeyedDataProcessFunction.class);
 
     public MilvusKeyedDataProcessFunction(Parameters params) {
         super(params.getMilvusInsertBufferCapacity());

@@ -8,26 +8,24 @@ import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.data.vector.VectorDeletion;
 import java.util.List;
 import java.util.concurrent.*;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.state.MapState;
 import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.util.Collector;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Main insert & search process function.
  *
  * <p>为插入和搜索分别创建一个线程池，
  */
+@Slf4j
 public class RocksDBKeyedProcessFunction
         extends KeyedProcessFunction<Integer, PartitionedElement, SearchResult> {
 
     private MapState<byte[], byte[]> mapState = null;
-
-    private static final Logger logger = LoggerFactory.getLogger(RocksDBKeyedProcessFunction.class);
 
     private final long sortInterval;
 
@@ -55,10 +53,10 @@ public class RocksDBKeyedProcessFunction
 
     private void insert(FloatVector vector, int nodeId) throws Exception {
 
-        if (vector.getId() % 1 == 0) { // gcd(1z
-            logger.info(
+        if (vector.getId() % 15193 == 0) { // gcd(1z
+            LOG.info(
                     "Partition {} (ts = {}): Inserting vector #{}",
-                    nodeId,
+                    getRuntimeContext().getIndexOfThisSubtask(),
                     vector.getEventTime(),
                     vector.getId());
         }
@@ -68,9 +66,15 @@ public class RocksDBKeyedProcessFunction
         mapState.put(id, array);
     }
 
-    private void delete(VectorDeletion vector, int nodeId) throws Exception {
+    private void delete(VectorDeletion marker, int nodeId) throws Exception {
+        if (marker.getId() % 15193 == 0) { // gcd(1z
+            LOG.info(
+                    "Partition {}: Deleting vector #{}",
+                    getRuntimeContext().getIndexOfThisSubtask(),
+                    marker.getId());
+        }
         byte[] id = new byte[Long.BYTES];
-        serializeLong(vector.getId(), id);
+        serializeLong(marker.getId(), id);
         mapState.remove(id);
     }
 
@@ -118,9 +122,9 @@ public class RocksDBKeyedProcessFunction
             }
         }
         long current = System.currentTimeMillis();
-        logger.info(
+        LOG.info(
                 "Partition {} ({} ms since partition): Searching query #{} in {} ms",
-                query.getValue().getPartitionId(),
+                getRuntimeContext().getIndexOfThisSubtask(),
                 (current - partitionedAt),
                 queryVector.getId(),
                 (current - start));

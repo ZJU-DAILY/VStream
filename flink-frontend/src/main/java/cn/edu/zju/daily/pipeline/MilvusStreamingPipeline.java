@@ -10,17 +10,15 @@ import cn.edu.zju.daily.util.MilvusUtil;
 import cn.edu.zju.daily.util.Parameters;
 import java.util.Map;
 import java.util.Random;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+@Slf4j
 public class MilvusStreamingPipeline {
 
     private final Parameters params;
     MilvusUtil milvusUtil = new MilvusUtil();
-
-    Logger LOG = LoggerFactory.getLogger(MilvusStreamingPipeline.class);
 
     public MilvusStreamingPipeline(Parameters params) throws InterruptedException {
         this.params = params;
@@ -83,7 +81,8 @@ public class MilvusStreamingPipeline {
             SingleOutputStreamOperator<VectorData> vectors,
             SingleOutputStreamOperator<VectorData> queries) {
 
-        if (params.getParallelism() < params.getLshNumFamilies()) {
+        if (params.getPartitioner().startsWith("lsh")
+                && params.getParallelism() < params.getLshNumFamilies()) {
             throw new RuntimeException("parallelism must be >= lshNumFamilies");
         }
         PartitionFunction partitioner = getPartitioner();

@@ -1,8 +1,7 @@
 package cn.edu.zju.daily.data.source.rate;
 
 import cn.edu.zju.daily.util.HadoopFileHelper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 public class PollingRateControllerBuilder implements RateControllerBuilder {
 
@@ -31,9 +30,9 @@ public class PollingRateControllerBuilder implements RateControllerBuilder {
                 hdfsAddress, hdfsUser, hdfsPath, pollIntervalMillis, initialDelayNanos);
     }
 
+    @Slf4j
     public static class Controller implements RateController {
 
-        private static final Logger LOG = LoggerFactory.getLogger(Controller.class);
         private final String hdfsPath;
         private final long pollIntervalMillis;
         private final HadoopFileHelper hdfs;
@@ -57,6 +56,7 @@ public class PollingRateControllerBuilder implements RateControllerBuilder {
             this.hdfsPath = hdfsPath;
             this.pollIntervalMillis = pollIntervalMillis;
             this.delayNanos = initialDelayNanos;
+            LOG.info("Initial delay: {} ns", delayNanos);
         }
 
         @Override

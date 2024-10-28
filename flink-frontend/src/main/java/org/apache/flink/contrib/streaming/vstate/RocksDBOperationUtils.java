@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import javax.annotation.Nullable;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.configuration.ConfigConstants;
 import org.apache.flink.contrib.streaming.vstate.ttl.RocksDbTtlCompactFiltersManager;
 import org.apache.flink.runtime.execution.Environment;
@@ -38,11 +39,10 @@ import org.apache.flink.util.OperatingSystem;
 import org.apache.flink.util.Preconditions;
 import org.rocksdb.*;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /** Utils for RocksDB Operations. */
+@Slf4j
 public class RocksDBOperationUtils {
-    private static final Logger LOG = LoggerFactory.getLogger(RocksDBOperationUtils.class);
 
     public static RocksDB openDB(
             String path,

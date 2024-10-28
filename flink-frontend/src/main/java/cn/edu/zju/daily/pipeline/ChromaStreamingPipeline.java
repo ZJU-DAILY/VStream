@@ -11,14 +11,10 @@ import cn.edu.zju.daily.util.Parameters;
 import java.util.Random;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class ChromaStreamingPipeline {
     private final Parameters params;
     MilvusUtil milvusUtil = new MilvusUtil();
-
-    Logger LOG = LoggerFactory.getLogger(MilvusStreamingPipeline.class);
 
     public ChromaStreamingPipeline(Parameters params) throws InterruptedException {
         this.params = params;
@@ -40,7 +36,8 @@ public class ChromaStreamingPipeline {
             SingleOutputStreamOperator<VectorData> vectors,
             SingleOutputStreamOperator<VectorData> queries) {
 
-        if (params.getParallelism() < params.getLshNumFamilies()) {
+        if (params.getPartitioner().startsWith("lsh")
+                && params.getParallelism() < params.getLshNumFamilies()) {
             throw new RuntimeException("parallelism must be >= lshNumFamilies");
         }
         PartitionFunction partitioner = getPartitioner();

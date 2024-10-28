@@ -15,6 +15,7 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.state.ValueState;
@@ -25,14 +26,11 @@ import org.apache.flink.runtime.state.FunctionSnapshotContext;
 import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
 import org.apache.flink.util.Collector;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+@Slf4j
 public class ChromaDBKeyedProcessFunction
         extends KeyedProcessFunction<Integer, PartitionedElement, SearchResult>
         implements CheckpointedFunction {
-
-    private static final Logger LOG = LoggerFactory.getLogger(ChromaDBKeyedProcessFunction.class);
 
     private ChromaCollection collection;
     private ListState<VectorData> state;

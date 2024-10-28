@@ -28,6 +28,7 @@ import java.util.Map;
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.state.MapState;
 import org.apache.flink.api.common.state.State;
 import org.apache.flink.api.common.state.StateDescriptor;
@@ -48,8 +49,6 @@ import org.apache.flink.util.StateMigrationException;
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * {@link MapState} implementation that stores state in RocksDB.
@@ -59,10 +58,9 @@ import org.slf4j.LoggerFactory;
  * @param <UK> The type of the keys in the map state.
  * @param <UV> The type of the values in the map state.
  */
+@Slf4j
 class RocksDBMapState<K, N, UK, UV> extends AbstractRocksDBState<K, N, Map<UK, UV>>
         implements InternalMapState<K, N, UK, UV> {
-
-    private static final Logger LOG = LoggerFactory.getLogger(RocksDBMapState.class);
 
     /** Serializer for the keys and values. */
     private TypeSerializer<UK> userKeySerializer;

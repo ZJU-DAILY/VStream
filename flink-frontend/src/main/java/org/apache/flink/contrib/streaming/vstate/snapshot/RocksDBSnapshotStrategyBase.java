@@ -33,6 +33,7 @@ import java.util.stream.Collectors;
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.state.CheckpointListener;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.contrib.streaming.vstate.RocksDBKeyedStateBackend.RocksDbKvStateInfo;
@@ -64,14 +65,13 @@ import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.ResourceGuard;
 import org.rocksdb.Checkpoint;
 import org.rocksdb.RocksDB;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Abstract base class for {@link SnapshotStrategy} implementations for RocksDB state backend.
  *
  * @param <K> type of the backend keys.
  */
+@Slf4j
 public abstract class RocksDBSnapshotStrategyBase<K, R extends SnapshotResources>
         implements CheckpointListener,
                 SnapshotStrategy<
@@ -80,7 +80,6 @@ public abstract class RocksDBSnapshotStrategyBase<K, R extends SnapshotResources
                 AutoCloseable {
 
     private static final long DISABLE_FLUSH = -1L;
-    private static final Logger LOG = LoggerFactory.getLogger(RocksDBSnapshotStrategyBase.class);
 
     @Nonnull private final String description;
 

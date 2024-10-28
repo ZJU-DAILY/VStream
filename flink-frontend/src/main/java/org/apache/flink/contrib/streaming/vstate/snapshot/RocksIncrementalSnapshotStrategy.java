@@ -34,6 +34,7 @@ import java.util.TreeMap;
 import java.util.UUID;
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.contrib.streaming.vstate.RocksDBKeyedStateBackend.RocksDbKvStateInfo;
 import org.apache.flink.contrib.streaming.vstate.RocksDBStateUploader;
@@ -55,8 +56,6 @@ import org.apache.flink.runtime.state.metainfo.StateMetaInfoSnapshot;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.ResourceGuard;
 import org.rocksdb.RocksDB;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Snapshot strategy for {@link org.apache.flink.contrib.streaming.vstate.RocksDBKeyedStateBackend}
@@ -64,12 +63,10 @@ import org.slf4j.LoggerFactory;
  *
  * @param <K> type of the backend keys.
  */
+@Slf4j
 public class RocksIncrementalSnapshotStrategy<K>
         extends RocksDBSnapshotStrategyBase<
                 K, RocksDBSnapshotStrategyBase.NativeRocksDBSnapshotResources> {
-
-    private static final Logger LOG =
-            LoggerFactory.getLogger(RocksIncrementalSnapshotStrategy.class);
 
     private static final String DESCRIPTION = "Asynchronous incremental RocksDB snapshot";
 

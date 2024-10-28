@@ -8,19 +8,17 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * This one assumes that the job is running in STREAMING mode, meaning all tasks are scheduled in
  * advance.
  */
+@Slf4j
 public class JobInfo implements Serializable {
-
-    public static final Logger LOG = LoggerFactory.getLogger(JobInfo.class);
 
     private static final Tuple2<String, String> DEFAULT_TUPLE = new Tuple2<>(null, null);
 

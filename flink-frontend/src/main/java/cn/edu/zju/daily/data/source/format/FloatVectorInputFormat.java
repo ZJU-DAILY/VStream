@@ -5,17 +5,16 @@ import cn.edu.zju.daily.data.vector.VectorData;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.connector.file.src.reader.SimpleStreamFormat;
 import org.apache.flink.connector.file.src.reader.StreamFormat;
 import org.apache.flink.core.fs.FSDataInputStream;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+@Slf4j
 public class FloatVectorInputFormat extends SimpleStreamFormat<VectorData> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(FloatVectorInputFormat.class);
     public static final String DEFAULT_CHARSET_NAME = "UTF-8";
     private final String charsetName;
     private final long maxTTL;

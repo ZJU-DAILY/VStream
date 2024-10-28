@@ -6,13 +6,11 @@ import cn.edu.zju.daily.function.partitioner.curve.SpaceFillingCurve;
 import java.io.Serializable;
 import java.math.BigInteger;
 import java.util.*;
+import lombok.extern.slf4j.Slf4j;
 import org.davidmoten.hilbert.HilbertCurve;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+@Slf4j
 public class L2HilbertPartitioner implements Serializable {
-
-    private static final Logger LOG = LoggerFactory.getLogger(L2HilbertPartitioner.class);
 
     private class HashFamilyRange {
         final int[] minValues;

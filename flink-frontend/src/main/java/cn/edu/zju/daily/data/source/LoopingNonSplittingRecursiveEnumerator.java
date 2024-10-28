@@ -3,17 +3,15 @@ package cn.edu.zju.daily.data.source;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.connector.file.src.FileSourceSplit;
 import org.apache.flink.connector.file.src.enumerate.FileEnumerator;
 import org.apache.flink.connector.file.src.enumerate.NonSplittingRecursiveEnumerator;
 import org.apache.flink.core.fs.Path;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+@Slf4j
 public class LoopingNonSplittingRecursiveEnumerator extends NonSplittingRecursiveEnumerator {
 
-    private static final Logger LOG =
-            LoggerFactory.getLogger(LoopingNonSplittingRecursiveEnumerator.class);
     private final int numLoops;
 
     public LoopingNonSplittingRecursiveEnumerator(int numLoops) {

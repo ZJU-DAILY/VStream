@@ -40,8 +40,9 @@ public class RocksDBStreamingPipeline {
             SingleOutputStreamOperator<VectorData> vectors,
             SingleOutputStreamOperator<VectorData> queries) {
 
-        if (params.getParallelism() < params.getLshNumFamilies()) {
-            throw new RuntimeException("parallelism must be >= numCopies");
+        if (params.getPartitioner().startsWith("lsh")
+                && params.getParallelism() < params.getLshNumFamilies()) {
+            throw new RuntimeException("parallelism must be >= lshNumFamilies");
         }
         PartitionFunction partitioner = getPartitioner();
         return applyToPartitionedData(

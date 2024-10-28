@@ -1,8 +1,7 @@
 package cn.edu.zju.daily.data.source.rate;
 
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 public class StagedRateControllerBuilder implements RateControllerBuilder {
 
@@ -19,9 +18,9 @@ public class StagedRateControllerBuilder implements RateControllerBuilder {
         return new Controller(stages, delays);
     }
 
+    @Slf4j
     public static class Controller implements RateController {
 
-        private static final Logger LOG = LoggerFactory.getLogger(Controller.class);
         private final List<Long> stages;
         private final List<Long> delays; // in nanoseconds
         private int index = 0;

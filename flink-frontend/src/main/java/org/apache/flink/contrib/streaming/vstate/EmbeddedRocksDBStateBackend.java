@@ -40,6 +40,7 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.ExecutionConfig;
@@ -79,8 +80,6 @@ import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.TernaryBoolean;
 import org.rocksdb.NativeLibraryLoader;
 import org.rocksdb.RocksDB;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * A {@link org.apache.flink.runtime.state.StateBackend} that stores its state in an embedded {@code
@@ -94,12 +93,11 @@ import org.slf4j.LoggerFactory;
  * #setRocksDBOptions(RocksDBOptionsFactory)}.
  */
 @PublicEvolving
+@Slf4j
 public class EmbeddedRocksDBStateBackend extends AbstractManagedMemoryStateBackend
         implements ConfigurableStateBackend {
 
     private static final long serialVersionUID = 1L;
-
-    private static final Logger LOG = LoggerFactory.getLogger(EmbeddedRocksDBStateBackend.class);
 
     /** The number of (re)tries for loading the RocksDB JNI library. */
     private static final int ROCKSDB_LIB_LOADING_ATTEMPTS = 3;
@@ -176,6 +174,7 @@ public class EmbeddedRocksDBStateBackend extends AbstractManagedMemoryStateBacke
 
     /** Factory for Write Buffer Manager and Block Cache. */
     private RocksDBMemoryFactory rocksDBMemoryFactory;
+
     // ------------------------------------------------------------------------
 
     /** Creates a new {@code EmbeddedRocksDBStateBackend} for storing local state. */

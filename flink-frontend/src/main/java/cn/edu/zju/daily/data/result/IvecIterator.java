@@ -6,17 +6,15 @@ import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Iterator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * This class reads an integer vector file in SIFT format.
  *
  * @see <a href="ttp://corpus-texmex.irisa.fr">Datasets for approximate nearest neighbor search</a>
  */
+@Slf4j
 public class IvecIterator implements Iterator<int[]> {
-
-    private static final Logger logger = LoggerFactory.getLogger(IvecIterator.class);
 
     private final RandomAccessFile file;
     private final long length; // file length in bytes
@@ -52,7 +50,7 @@ public class IvecIterator implements Iterator<int[]> {
         try {
             return !isEOF();
         } catch (IOException e) {
-            logger.error("Failed to get file pointer.");
+            LOG.error("Failed to get file pointer.");
             throw new RuntimeException(e);
         }
     }
@@ -67,7 +65,7 @@ public class IvecIterator implements Iterator<int[]> {
             buffer.order(ByteOrder.LITTLE_ENDIAN).asIntBuffer().get(vector, 0, dimension);
             return vector;
         } catch (IOException e) {
-            logger.error("Failed to read file.");
+            LOG.error("Failed to read file.");
             throw new RuntimeException(e);
         }
     }

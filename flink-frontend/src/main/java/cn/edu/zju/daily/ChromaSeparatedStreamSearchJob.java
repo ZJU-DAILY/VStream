@@ -43,6 +43,6 @@ public class ChromaSeparatedStreamSearchJob {
                         .build();
         results.sinkTo(sink);
 
-        env.executeAsync();
+        env.executeAsync("ChromaSeparatedStreamSearchJob");
     }
 }

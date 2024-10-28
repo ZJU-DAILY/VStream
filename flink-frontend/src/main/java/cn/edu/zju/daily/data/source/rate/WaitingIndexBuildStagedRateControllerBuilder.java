@@ -3,8 +3,7 @@ package cn.edu.zju.daily.data.source.rate;
 import cn.edu.zju.daily.util.MilvusUtil;
 import io.milvus.grpc.IndexDescription;
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 public class WaitingIndexBuildStagedRateControllerBuilder implements RateControllerBuilder {
 
@@ -45,13 +44,11 @@ public class WaitingIndexBuildStagedRateControllerBuilder implements RateControl
                 milvusIndexName);
     }
 
+    @Slf4j
     public static class Controller implements RateController {
 
         private static final long SLEEP_INTERVAL = 10000;
 
-        private static final Logger LOG =
-                LoggerFactory.getLogger(
-                        WaitingIndexBuildStagedRateControllerBuilder.Controller.class);
         private final List<Long> stages;
         private final List<Long> delays; // in nanoseconds
         private final List<Float> waitRatios;

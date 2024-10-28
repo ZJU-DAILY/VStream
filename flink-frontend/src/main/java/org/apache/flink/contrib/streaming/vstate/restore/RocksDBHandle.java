@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.contrib.streaming.vstate.RocksDBKeyedStateBackend.RocksDbKvStateInfo;
 import org.apache.flink.contrib.streaming.vstate.RocksDBNativeMetricMonitor;
 import org.apache.flink.contrib.streaming.vstate.RocksDBNativeMetricOptions;
@@ -43,16 +44,13 @@ import org.apache.flink.runtime.state.metainfo.StateMetaInfoSnapshot;
 import org.apache.flink.util.FileUtils;
 import org.apache.flink.util.IOUtils;
 import org.rocksdb.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Utility for creating a RocksDB instance either from scratch or from restored local state. This
  * will also register {@link RocksDbKvStateInfo} when using {@link #openDB(List, List, Path)}.
  */
+@Slf4j
 class RocksDBHandle implements AutoCloseable {
-
-    protected final Logger logger = LoggerFactory.getLogger(getClass());
 
     private final Function<String, ColumnFamilyOptions> columnFamilyOptionsFactory;
     private final Function<String, VectorColumnFamilyOptions> vectorCFOptionsFactory;
@@ -284,7 +282,7 @@ class RocksDBHandle implements AutoCloseable {
 
         if (!new File(dbPath).mkdirs()) {
             String errMsg = "Could not create RocksDB data directory: " + dbPath;
-            logger.error(errMsg);
+            LOG.error(errMsg);
             throw new IOException(errMsg);
         }
 
@@ -303,10 +301,10 @@ class RocksDBHandle implements AutoCloseable {
                                             + "increase the recovery time. In order to avoid this, configure "
                                             + "RocksDB's working directory and the local state directory to be on the same volume.",
                                     fileName);
-                    if (logger.isDebugEnabled()) {
-                        logger.debug(logMessage, ioe);
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug(logMessage, ioe);
                     } else {
-                        logger.info(logMessage);
+                        LOG.info(logMessage);
                     }
                 }
             }

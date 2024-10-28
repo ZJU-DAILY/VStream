@@ -24,6 +24,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import javax.annotation.Nullable;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.Configuration;
@@ -32,8 +33,6 @@ import org.apache.flink.runtime.memory.OpaqueMemoryResource;
 import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.Preconditions;
 import org.rocksdb.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * The container for RocksDB resources, including predefined options, option factory and shared
@@ -42,8 +41,8 @@ import org.slf4j.LoggerFactory;
  * <p>This should be the only entrance for {@link EmbeddedRocksDBStateBackend} to get RocksDB
  * options, and should be properly (and necessarily) closed to prevent resource leak.
  */
+@Slf4j
 public final class RocksDBResourceContainer implements AutoCloseable {
-    private static final Logger LOG = LoggerFactory.getLogger(RocksDBResourceContainer.class);
 
     // the filename length limit is 255 on most operating systems
     private static final int INSTANCE_PATH_LENGTH_LIMIT = 255 - "_LOG".length();

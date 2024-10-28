@@ -1,11 +1,9 @@
 package cn.edu.zju.daily.data.source.rate;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class BindingRateControllerBuilder implements RateControllerBuilder {
-
-    private static final Logger LOG = LoggerFactory.getLogger(BindingRateControllerBuilder.class);
 
     private final String hdfsUser;
     private final String hdfsAddress;
@@ -46,6 +44,7 @@ public class BindingRateControllerBuilder implements RateControllerBuilder {
         return new Controller(newDelayNanos, callbackCount, builder.build(), pusher);
     }
 
+    @Slf4j
     public static class Controller implements RateController {
 
         private final long newDelayNanos;
