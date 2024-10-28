@@ -2097,6 +2097,22 @@ JNIEXPORT jboolean JNICALL Java_org_rocksdb_Options_atomicFlush
 
 /*
  * Class:     org_rocksdb_Options
+ * Method:    setFlushVerifyMemtableCount
+ * Signature: (JZ)V
+ */
+JNIEXPORT void JNICALL Java_org_rocksdb_Options_setFlushVerifyMemtableCount
+  (JNIEnv *, jobject, jlong, jboolean);
+
+/*
+ * Class:     org_rocksdb_Options
+ * Method:    flushVerifyMemtableCount
+ * Signature: (J)Z
+ */
+JNIEXPORT jboolean JNICALL Java_org_rocksdb_Options_flushVerifyMemtableCount
+  (JNIEnv *, jobject, jlong);
+
+/*
+ * Class:     org_rocksdb_Options
  * Method:    setSstPartitionerFactory
  * Signature: (JJ)V
  */

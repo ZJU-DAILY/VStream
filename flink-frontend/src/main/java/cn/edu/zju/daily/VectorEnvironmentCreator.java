@@ -32,6 +32,7 @@ public class VectorEnvironmentCreator implements Serializable {
                 currentOptions.setMaxBackgroundJobs(params.getRocksDBMaxBackgroundJobs());
                 currentOptions.setAvoidFlushDuringRecovery(true);
                 currentOptions.setAvoidFlushDuringShutdown(true);
+                currentOptions.setFlushVerifyMemtableCount(false);
                 return currentOptions;
             }
 

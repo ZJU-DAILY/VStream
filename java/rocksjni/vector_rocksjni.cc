@@ -410,7 +410,13 @@ jbyteArray rocksdb_vectorSearch_helper(
   if (vcf_handle != nullptr && cf_handle != nullptr) {
     std::string value_str;
     ROCKSDB_NAMESPACE::ReadOptions read_options;
+    std::chrono::time_point start = std::chrono::high_resolution_clock::now();
     s = db->Get(vectorSearchOptions, vcf_handle, key_slice, &value_str);
+    std::chrono::time_point end = std::chrono::high_resolution_clock::now();
+    long elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                       end - start).count();
+    ROCKS_LOG_DEBUG(db->GetDBOptions().info_log,
+                    "vectorSearchHelper: Get vector CF took %ld ms", elapsed);
     if (s.ok()) {
       const char *data = value_str.data();
       uint16_t result_size;
@@ -441,12 +447,19 @@ jbyteArray rocksdb_vectorSearch_helper(
         memcpy(&seqno, data, sizeof(ROCKSDB_NAMESPACE::SequenceNumber));
         data += sizeof(ROCKSDB_NAMESPACE::SequenceNumber);
         data += sizeof(uint64_t);
+        start = std::chrono::high_resolution_clock::now();
         s = db->Get(
             read_options, cf_handle,
             ROCKSDB_NAMESPACE::Slice(
                 reinterpret_cast<char *>(&label),
                 sizeof(ROCKSDB_NAMESPACE::VECTORBACKEND_NAMESPACE::labeltype)),
             &stored_version_str);
+        end = std::chrono::high_resolution_clock::now();
+        elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                      end - start).count();
+        ROCKS_LOG_DEBUG(db->GetDBOptions().info_log,
+                        "vectorSearchHelper: Get version for result %d took %ld "
+                        "ms", i, elapsed);
         if (s.ok()) {
           memcpy(&stored_version, stored_version_str.data(), sizeof(uint64_t));
           ROCKSDB_NAMESPACE::UnPackSequenceAndType(stored_version, &stored_seq,

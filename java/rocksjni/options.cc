@@ -2428,6 +2428,28 @@ jboolean Java_org_rocksdb_Options_atomicFlush(JNIEnv*, jobject, jlong jhandle) {
 }
 
 /*
+ * Class:     org_rocksdb_Options
+ * Method:    setFlushVerifyMemtableCount
+ * Signature: (JZ)V
+ */
+void Java_org_rocksdb_Options_setFlushVerifyMemtableCount
+    (JNIEnv *, jobject, jlong jhandle, jboolean jvalue) {
+  auto* opt = reinterpret_cast<ROCKSDB_NAMESPACE::Options*>(jhandle);
+  opt->flush_verify_memtable_count = jvalue == JNI_TRUE;
+}
+
+/*
+ * Class:     org_rocksdb_Options
+ * Method:    flushVerifyMemtableCount
+ * Signature: (J)Z
+ */
+jboolean Java_org_rocksdb_Options_flushVerifyMemtableCount
+    (JNIEnv *, jobject, jlong jhandle) {
+  auto* opt = reinterpret_cast<ROCKSDB_NAMESPACE::Options*>(jhandle);
+  return static_cast<jboolean>(opt->flush_verify_memtable_count);
+}
+
+/*
  * Method:    tableFactoryName
  * Signature: (J)Ljava/lang/String
  */
@@ -7683,6 +7705,29 @@ jboolean Java_org_rocksdb_DBOptions_atomicFlush(JNIEnv*, jobject,
   auto* opt = reinterpret_cast<ROCKSDB_NAMESPACE::DBOptions*>(jhandle);
   return static_cast<jboolean>(opt->atomic_flush);
 }
+
+/*
+ * Class:     org_rocksdb_DBOptions
+ * Method:    setFlushVerifyMemtableCount
+ * Signature: (JZ)V
+ */
+void Java_org_rocksdb_DBOptions_setFlushVerifyMemtableCount
+    (JNIEnv *, jobject, jlong jhandle, jboolean jvalue) {
+  auto* opt = reinterpret_cast<ROCKSDB_NAMESPACE::DBOptions*>(jhandle);
+  opt->flush_verify_memtable_count = jvalue == JNI_TRUE;
+}
+
+/*
+ * Class:     org_rocksdb_DBOptions
+ * Method:    flushVerifyMemtableCount
+ * Signature: (J)Z
+ */
+jboolean Java_org_rocksdb_DBOptions_flushVerifyMemtableCount
+    (JNIEnv *, jobject, jlong jhandle) {
+  auto* opt = reinterpret_cast<ROCKSDB_NAMESPACE::DBOptions*>(jhandle);
+  return static_cast<jboolean>(opt->flush_verify_memtable_count);
+}
+
 
 /*
  * Class:     org_rocksdb_DBOptions

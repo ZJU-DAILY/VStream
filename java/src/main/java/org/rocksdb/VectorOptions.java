@@ -1903,6 +1903,18 @@ public class VectorOptions extends RocksObject implements DBOptionsInterface<Vec
         return atomicFlush(nativeHandle_);
     }
 
+
+    @Override
+    public VectorOptions setFlushVerifyMemtableCount(final boolean value) {
+        setFlushVerifyMemtableCount(nativeHandle_, value);
+        return this;
+    }
+
+    @Override
+    public boolean flushVerifyMemtableCount() {
+        return flushVerifyMemtableCount(nativeHandle_);
+    }
+
     @Override
     public VectorOptions setAvoidUnnecessaryBlockingIO(final boolean avoidUnnecessaryBlockingIO) {
         setAvoidUnnecessaryBlockingIO(nativeHandle_, avoidUnnecessaryBlockingIO);
@@ -2618,6 +2630,10 @@ public class VectorOptions extends RocksObject implements DBOptionsInterface<Vec
     private native void setAtomicFlush(final long handle, final boolean atomicFlush);
 
     private native boolean atomicFlush(final long handle);
+
+    private native void setFlushVerifyMemtableCount(final long handle, final boolean value);
+
+    private native boolean flushVerifyMemtableCount(final long handle);
 
     private native void setSstPartitionerFactory(long nativeHandle_, long newFactoryHandle);
 
