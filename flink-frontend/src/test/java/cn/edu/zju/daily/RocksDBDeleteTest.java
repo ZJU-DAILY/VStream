@@ -29,11 +29,11 @@ import org.rocksdb.*;
 @Slf4j
 public class RocksDBDeleteTest {
 
-    private static final long MAX_TTL = 1000;
+    private static final long MAX_TTL = 10000;
     private static final String DATA_PATH =
-            "/mnt/sda1/work/vector-search/dataset/siftsmall/siftsmall_base.fvecs";
+            "/mnt/sda1/work/vector-search/dataset/sift/sift_base.fvecs";
     private static final String QUERY_PATH =
-            "/mnt/sda1/work/vector-search/dataset/siftsmall/siftsmall_query.fvecs";
+            "/mnt/sda1/work/vector-search/dataset/sift/sift_query.fvecs";
     private static final int DIM = 128;
     private static final double DELETE_RATIO = 0.1;
 
@@ -42,7 +42,7 @@ public class RocksDBDeleteTest {
     static int efSearch = 16;
     static int efConstruction = 128;
     static int k = 10;
-    static long maxElements = 1000L;
+    static long maxElements = 2000L;
     static long ssTableSize = 4096L * (1 << 21); // 4 G
     static long blockSize = 4 << 10; // 4 KB
     static long blockCacheSize = 26214400L; // 25 MB
@@ -52,7 +52,7 @@ public class RocksDBDeleteTest {
     static float terminationThreshold = 0f;
     static float terminationLowerBound = 0.0f;
     static int sortInterval = 10000;
-    static int flushThreshold = 12;
+    static int flushThreshold = 6;
     static int maxWriteBufferNumber = 15;
     static int blockRestartInterval = 4;
 
@@ -76,7 +76,7 @@ public class RocksDBDeleteTest {
                                     Collection<AutoCloseable> handlesToClose) {
                                 currentOptions.setUseDirectIoForFlushAndCompaction(true);
                                 currentOptions.setAvoidUnnecessaryBlockingIO(true);
-                                currentOptions.setInfoLogLevel(InfoLogLevel.INFO_LEVEL);
+                                currentOptions.setInfoLogLevel(InfoLogLevel.DEBUG_LEVEL);
                                 currentOptions.setFlushVerifyMemtableCount(false);
                                 return currentOptions;
                             }
@@ -124,8 +124,9 @@ public class RocksDBDeleteTest {
                                     ColumnFamilyOptions currentOptions,
                                     Collection<AutoCloseable> handlesToClose) {
                                 System.out.println("createVectorVersionColumnOptions");
-                                currentOptions.setWriteBufferSize(12345678);
-                                currentOptions.setMaxWriteBufferNumber(3);
+                                currentOptions.setWriteBufferSize(100000);
+                                currentOptions.setMaxWriteBufferNumber(7);
+                                currentOptions.setFlushThreshold(5);
                                 return currentOptions;
                             }
 
@@ -136,7 +137,7 @@ public class RocksDBDeleteTest {
                                 currentOptions.setK(k);
                                 currentOptions.setAsyncIO(true);
                                 currentOptions.setTerminationFactor(terminationFactor);
-                                currentOptions.setSearchSST(true);
+                                currentOptions.setSearchSST(false);
                                 currentOptions.setEvict(false);
                                 return currentOptions;
                             }
@@ -235,7 +236,6 @@ public class RocksDBDeleteTest {
 
             vectorSearchOptions.setTriggerSort(true);
             vectorSearchOptions.setTs(Math.max(0, query.getEventTime() - query.getTTL()));
-            vectorSearchOptions.setSearchSST(true);
             try {
                 long start = System.currentTimeMillis();
                 resultBytes = db.vectorSearch(vectorCFHandle, vectorSearchOptions, queryVec);
@@ -247,7 +247,6 @@ public class RocksDBDeleteTest {
             vectorSearchOptions.setTriggerSort(false);
         } else {
             vectorSearchOptions.setTs(Math.max(0, query.getEventTime() - query.getTTL()));
-            vectorSearchOptions.setSearchSST(true);
             try {
                 long start = System.currentTimeMillis();
                 resultBytes = db.vectorSearch(vectorCFHandle, vectorSearchOptions, queryVec);
@@ -267,7 +266,7 @@ public class RocksDBDeleteTest {
     void test() throws IOException, RocksDBException {
 
         String dir =
-                "./tmp/rocksdb-standalone-"
+                "/mnt/sda1/work/vector-search/tmp/rocksdb-standalone-"
                         + LocalDateTime.now().toString().split("\\.")[0].replace(":", "-");
 
         openDB(dir, true);

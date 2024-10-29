@@ -84,13 +84,19 @@ public class VectorEnvironmentCreator implements Serializable {
             @Override
             public ColumnFamilyOptions createVectorVersionColumnOptions(
                     ColumnFamilyOptions currentOptions, Collection<AutoCloseable> handlesToClose) {
-                long writeBufferSize =
+                int oneFifthInsertsPerTable =
+                        (int)
+                                Math.ceil(
+                                        (double) params.getRocksDBMaxElementsPerHnswTable()
+                                                / (1 - params.getDeleteRatio())
+                                                / 5);
+                long retainSize =
                         ESTIMATED_VERSION_RECORD_BYTES
-                                * params.getRocksDBMaxElementsPerHnswTable()
+                                * oneFifthInsertsPerTable
                                 * params.getRocksDBFlushThreshold();
-                currentOptions.setWriteBufferSize(
-                        Math.max(writeBufferSize, DEFAULT_WRITE_BUFFER_SIZE));
-                currentOptions.setMaxWriteBufferNumber(2);
+                currentOptions.setWriteBufferSize(Math.max(retainSize, DEFAULT_WRITE_BUFFER_SIZE));
+                currentOptions.setFlushThreshold(6);
+                currentOptions.setMaxWriteBufferNumber(9);
                 return currentOptions;
             }
 
