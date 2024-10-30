@@ -5,6 +5,7 @@ import static java.util.stream.Collectors.toList;
 import cn.edu.zju.daily.data.PartitionedElement;
 import cn.edu.zju.daily.data.vector.VectorData;
 import cn.edu.zju.daily.function.partitioner.curve.HilbertCurve;
+import cn.edu.zju.daily.function.partitioner.curve.ZOrderCurve;
 import cn.edu.zju.daily.util.Parameters;
 import java.util.HashMap;
 import java.util.List;
@@ -33,7 +34,7 @@ public interface PartitionFunction
     }
 
     /**
-     * Augments a data vector or a deletion marker with a partition ID.
+     * Augments a data vector or a deletion marker with a partition ID. Emits a PartitionedData.
      *
      * @param value The data vector or deletion marker
      * @param out The collector to emit resulting elements to
@@ -42,7 +43,7 @@ public interface PartitionFunction
     void flatMap1(VectorData value, Collector<PartitionedElement> out) throws Exception;
 
     /**
-     * Augments a query vector with a partition ID.
+     * Augments a query vector with a partition ID. Emits a PartitionedQuery.
      *
      * @param value The query vector
      * @param out The collector to emit resulting elements to
@@ -68,6 +69,7 @@ public interface PartitionFunction
         }
     }
 
+    /** Used for *SeparatedSearchJob */
     static FlatMapFunction<VectorData, PartitionedElement> getUnaryPartitionFunction(
             Parameters params, Random random, boolean isQuery) {
         switch (params.getPartitioner()) {
@@ -93,8 +95,11 @@ public interface PartitionFunction
         }
     }
 
+    /** Used for VStreamSearchJob */
     static PartitionFunction getPartitionFunction(Parameters params, Random random) {
-        switch (params.getPartitioner()) {
+        List<Long> observedInsertIntervals = ratesToIntervals(params.getObservedInsertRates());
+
+        switch (params.getPartitioner().toLowerCase()) {
             case "lsh":
                 return new LSHPartitionFunction(
                         random,
@@ -121,9 +126,7 @@ public interface PartitionFunction
                         params.getLshBucketWidth(),
                         params.getProximity());
             case "lsh+hilbert":
-                List<Long> observedInsertIntervals =
-                        ratesToIntervals(params.getObservedInsertRates());
-                return new LSHHilbertPartitionFunction(
+                return new LSHWithSpaceFillingPartitionFunction(
                         random,
                         params.getVectorDim(),
                         params.getLshNumFamilies(),
@@ -137,6 +140,30 @@ public interface PartitionFunction
                         params.getInsertThrottleThresholds(),
                         params.getParallelism(),
                         new HilbertCurve.Builder());
+            case "lsh+zorder":
+                return new LSHWithSpaceFillingPartitionFunction(
+                        random,
+                        params.getVectorDim(),
+                        params.getLshNumFamilies(),
+                        params.getLshNumHashes(),
+                        params.getLshBucketWidth(),
+                        params.getLshNumHilbertBits(),
+                        params.getLshPartitionUpdateInterval(),
+                        params.getLshHilbertMaxRetainedElements(),
+                        params.getMaxTTL(),
+                        observedInsertIntervals,
+                        params.getInsertThrottleThresholds(),
+                        params.getParallelism(),
+                        new ZOrderCurve.Builder());
+            case "odyssey":
+                return new OdysseyPartitionFunction(
+                        params.getParallelism(),
+                        params.getOdysseyReplicationFactor(),
+                        params.getOdysseySaxPaaSize(),
+                        params.getOdysseySaxWidth(),
+                        params.getOdysseyLambda(),
+                        params.getOdysseySkewFactor(),
+                        params.getOdysseyWindowSize());
             case "simple":
                 return new SimplePartitionFunction(params.getParallelism());
             default:

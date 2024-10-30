@@ -58,7 +58,7 @@ public class MultiplexLSHHilbertPartitionFunction
         //        }
 
         LOG.info(
-                "Initializing LSHHilbertPartitionFunction with dim: {}, numHashFamilies: {}, numHashFunctions: {}, "
+                "Initializing LSHWithSpaceFillingPartitionFunction with dim: {}, numHashFamilies: {}, numHashFunctions: {}, "
                         + "hashWidth: {}, numHilbertBits: {}, updateInterval: {}, maxRetainedElements: {}, maxTTL: {}, numPartitions: {}",
                 dim,
                 numHashFamilies,

@@ -16,6 +16,7 @@
     <grpc.version>1.59.1</grpc.version>
     <guava.version>32.1.3-jre</guava.version>
     <spotless.version>2.30.0</spotless.version>
+    <black.path>/home/auroflow/.local/bin/black</black.path>
   </properties>
   <!-- https://mvnrepository.com/artifact/org.apache.hadoop/hadoop-common -->
   <dependencies>
@@ -210,6 +211,12 @@
       <version>1.18.34</version>
       <scope>provided</scope>
     </dependency>
+    <!-- https://mvnrepository.com/artifact/net.seninp/jmotif-sax -->
+    <dependency>
+      <groupId>net.seninp</groupId>
+      <artifactId>jmotif-sax</artifactId>
+      <version>1.2.0</version>
+    </dependency>
   </dependencies>
   <build>
     <directory>${pom.basedir}/../build/flink-frontend/</directory>
@@ -273,7 +280,7 @@
               <filters>
                 <filter>
                   <!-- Do not copy the signatures in the META-INF folder.
-                                    Otherwise, this might cause SecurityExceptions when using the JAR. -->
+                                                      Otherwise, this might cause SecurityExceptions when using the JAR. -->
                   <artifact>*:*</artifact>
                   <excludes>
                     <exclude>META-INF/*.module-info</exclude>
@@ -332,6 +339,7 @@
             </includes>
             <black>
               <version>24.8.0</version>
+              <pathToExe>${black.path}</pathToExe>
             </black>
           </python>
           <yaml>

@@ -23,14 +23,14 @@ FLINK_FRONTEND_JAR="/home/auroflow/code/vector-search/VStream/build/flink-fronte
 
 # Display config
 echo "About to execute:"
-ssh $SSH_CONFIG $RUN_HOST "cat $FLINK_FRONTEND_DIR/src/main/resources/params.yaml"
+cat "$param_file"
 
 # confirm correct
 if [ "$force" != "true" ]; then
   echo "Are the params correct?"
   read -r iscorrect
   if [ "$iscorrect" != "y" ]; then
-    echo "vi $FLINK_FRONTEND_DIR/src/main/resources/params.yaml"
+    echo "vi $param_file"
     exit
   fi
 fi

@@ -32,7 +32,7 @@ import org.apache.flink.util.Collector;
  * 等于分区 ID。getNodeIdMap 函数旨在寻找一组 key，这组 key 可以通过 murmurHash(key) 映射为各 个分区 ID。
  */
 @Slf4j
-public class LSHHilbertPartitionFunction
+public class LSHWithSpaceFillingPartitionFunction
         extends RichCoFlatMapFunction<VectorData, VectorData, PartitionedElement>
         implements PartitionFunction {
 
@@ -47,7 +47,7 @@ public class LSHHilbertPartitionFunction
 
     private final int numPartitions;
 
-    public LSHHilbertPartitionFunction(
+    public LSHWithSpaceFillingPartitionFunction(
             Random random,
             int dim,
             int numHashFamilies,
@@ -98,7 +98,7 @@ public class LSHHilbertPartitionFunction
      * @param observedInsertIntervals 希望分区器观测到的插入向量时间戳间隔 (ns)
      * @param numPartitions 分区数量
      */
-    public LSHHilbertPartitionFunction(
+    public LSHWithSpaceFillingPartitionFunction(
             Random random,
             int dim,
             int numHashFamilies,
@@ -148,7 +148,7 @@ public class LSHHilbertPartitionFunction
         super.open(parameters);
         observedTsNano = 0;
         LOG.info(
-                "LSHHilbertPartitionFunction initialized with insert interval {} ns.",
+                "LSHWithSpaceFillingPartitionFunction initialized with insert interval {} ns.",
                 observedInsertIntervals.get(0));
         counter = new int[numPartitions];
     }

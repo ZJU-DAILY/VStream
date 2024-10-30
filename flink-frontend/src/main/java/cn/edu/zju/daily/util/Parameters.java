@@ -3,8 +3,8 @@ package cn.edu.zju.daily.util;
 import cn.edu.zju.daily.data.source.format.FloatVectorBinaryInputFormat;
 import cn.edu.zju.daily.data.source.format.FloatVectorBinaryInputFormatAdaptor;
 import cn.edu.zju.daily.data.source.rate.StagedRateControllerBuilder;
-import cn.edu.zju.daily.function.partitioner.LSHHilbertPartitionFunction;
 import cn.edu.zju.daily.function.partitioner.LSHProximityPartitionFunction;
+import cn.edu.zju.daily.function.partitioner.LSHWithSpaceFillingPartitionFunction;
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Files;
@@ -85,7 +85,10 @@ public @Data class Parameters implements Serializable {
     /** Insert rates for each insert period. Used in {@link StagedRateControllerBuilder}. */
     private List<Long> insertRates;
 
-    /** The insert rates for each insert period observed by {@link LSHHilbertPartitionFunction}. */
+    /**
+     * The insert rates for each insert period observed by {@link
+     * LSHWithSpaceFillingPartitionFunction}.
+     */
     private List<Long> observedInsertRates;
 
     /**
@@ -183,6 +186,36 @@ public @Data class Parameters implements Serializable {
 
     /** LSH proximity for {@link LSHProximityPartitionFunction}. */
     private int proximity;
+
+    // -------
+    // Odyssey
+    // -------
+    /** Number of elements in the SAX representation. */
+    private int odysseySaxPaaSize;
+
+    /** The bit width of each element in the SAX representation. */
+    private int odysseySaxWidth;
+
+    /** Window size. */
+    private long odysseyWindowSize;
+
+    /**
+     * Maximum allowed skew factor. Replication groups whose workload exceed this factor will have
+     * their new data randomly assigned to other groups.
+     */
+    private float odysseySkewFactor;
+
+    /**
+     * Number of largest SAX bins which are divided across the replication groups. The rest are sent
+     * to one replication group, if that group is not skewed.
+     */
+    private int odysseyLambda;
+
+    /**
+     * Number of parallelisms in each replication group. Each parallelism in the same group receives
+     * the same data.
+     */
+    private int odysseyReplicationFactor;
 
     // ====================
     // Indexing
