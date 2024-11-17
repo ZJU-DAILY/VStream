@@ -5,7 +5,7 @@ import static java.util.stream.Collectors.groupingBy;
 
 import cn.edu.zju.daily.data.source.HDFSVectorSourceBuilder;
 import cn.edu.zju.daily.data.vector.VectorData;
-import cn.edu.zju.daily.function.partitioner.LSHPartitionFunction;
+import cn.edu.zju.daily.partitioner.LSHPartitionFunction;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;

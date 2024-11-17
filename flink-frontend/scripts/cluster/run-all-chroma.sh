@@ -20,6 +20,12 @@ for file in $(find "$FLINK_FRONTEND_DIR/params" -name "*.yaml" | sort -n); do
   if [[ $file == *"chroma"* ]]; then
     echo "Running chroma job: $file"
 
+    # Restart milvus cluster
+    bash -c "cd $SCRIPT_DIR/../chroma && ./stop-chroma-cluster.sh prod"
+    echo "Chroma cluster stopped."
+    bash -c "cd $SCRIPT_DIR/../chroma && ./start-chroma-cluster.sh prod"
+    echo "Chroma cluster started."
+
     "$SCRIPT_DIR/start-chroma.sh" -p "$file" -f true
     syslog_dir=$(cat ./.syslog_dir)
     syslog_dirname=$(basename "$syslog_dir")
@@ -44,9 +50,7 @@ for file in $(find "$FLINK_FRONTEND_DIR/params" -name "*.yaml" | sort -n); do
       echo "done $base" >> "$COMPLETED_LOG"
     fi
   else
-    echo "Skip non-chroma job."
-    echo "skip $base" >> "$COMPLETED_LOG"
+    echo "Skip non-chroma job $base."
     continue
   fi
 done
-

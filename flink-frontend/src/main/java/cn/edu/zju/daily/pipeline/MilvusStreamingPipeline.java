@@ -3,10 +3,11 @@ package cn.edu.zju.daily.pipeline;
 import cn.edu.zju.daily.data.PartitionedElement;
 import cn.edu.zju.daily.data.result.SearchResult;
 import cn.edu.zju.daily.data.vector.VectorData;
-import cn.edu.zju.daily.function.MilvusKeyedProcessFunction;
 import cn.edu.zju.daily.function.PartialResultProcessFunction;
-import cn.edu.zju.daily.function.partitioner.PartitionFunction;
-import cn.edu.zju.daily.util.MilvusUtil;
+import cn.edu.zju.daily.function.milvus.MilvusProcessFunction;
+import cn.edu.zju.daily.function.milvus.MilvusUtil;
+import cn.edu.zju.daily.partitioner.PartitionFunction;
+import cn.edu.zju.daily.partitioner.PartitionToKeyMapper;
 import cn.edu.zju.daily.util.Parameters;
 import java.util.Map;
 import java.util.Random;
@@ -40,7 +41,7 @@ public class MilvusStreamingPipeline {
                 params.getVectorDim(),
                 params.getMilvusNumShards());
         int numPartitions = params.getParallelism();
-        Map<Integer, Integer> map = PartitionFunction.getNodeIdMap(numPartitions);
+        Map<Integer, Integer> map = PartitionToKeyMapper.getPartitionToKeyMap(numPartitions);
         for (int i = 0; i < numPartitions; i++) {
             String partitionName = Integer.toString(map.get(i));
             milvusUtil.createPartition(collectionName, partitionName);
@@ -105,7 +106,7 @@ public class MilvusStreamingPipeline {
             SingleOutputStreamOperator<PartitionedElement> data) {
 
         KeyedProcessFunction<Integer, PartitionedElement, SearchResult> processFunction =
-                new MilvusKeyedProcessFunction(params);
+                new MilvusProcessFunction(params);
 
         return data.keyBy(PartitionedElement::getPartitionId)
                 .process(processFunction)

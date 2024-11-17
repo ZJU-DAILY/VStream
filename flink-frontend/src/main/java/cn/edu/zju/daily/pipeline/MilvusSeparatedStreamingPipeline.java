@@ -3,12 +3,12 @@ package cn.edu.zju.daily.pipeline;
 import cn.edu.zju.daily.data.PartitionedElement;
 import cn.edu.zju.daily.data.result.SearchResult;
 import cn.edu.zju.daily.data.vector.VectorData;
-import cn.edu.zju.daily.function.MilvusKeyedDataProcessFunction;
-import cn.edu.zju.daily.function.MilvusKeyedQueryProcessFunction;
 import cn.edu.zju.daily.function.PartialResultProcessFunction;
 import cn.edu.zju.daily.function.PartitionedDataSplitFunction;
-import cn.edu.zju.daily.function.partitioner.PartitionFunction;
-import cn.edu.zju.daily.util.MilvusUtil;
+import cn.edu.zju.daily.function.milvus.MilvusDataProcessFunction;
+import cn.edu.zju.daily.function.milvus.MilvusQueryProcessFunction;
+import cn.edu.zju.daily.function.milvus.MilvusUtil;
+import cn.edu.zju.daily.partitioner.PartitionFunction;
 import cn.edu.zju.daily.util.Parameters;
 import java.util.Random;
 import lombok.extern.slf4j.Slf4j;
@@ -127,7 +127,7 @@ public class MilvusSeparatedStreamingPipeline {
 
     private void applyToDataStream(DataStream<PartitionedElement> data) {
         data.keyBy(PartitionedElement::getPartitionId)
-                .process(new MilvusKeyedDataProcessFunction(params))
+                .process(new MilvusDataProcessFunction(params))
                 .setParallelism(params.getParallelism())
                 .setMaxParallelism(params.getParallelism())
                 .name("data process")
@@ -138,7 +138,7 @@ public class MilvusSeparatedStreamingPipeline {
             DataStream<PartitionedElement> data) {
         SingleOutputStreamOperator<SearchResult> rawResults =
                 data.keyBy(PartitionedElement::getPartitionId)
-                        .process(new MilvusKeyedQueryProcessFunction(params))
+                        .process(new MilvusQueryProcessFunction(params))
                         .setParallelism(params.getParallelism())
                         .setMaxParallelism(params.getParallelism())
                         .name("query process")

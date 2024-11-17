@@ -4,8 +4,8 @@ import cn.edu.zju.daily.data.result.GroundTruthResultIterator;
 import cn.edu.zju.daily.data.result.SearchResult;
 import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.data.vector.FloatVectorIterator;
-import cn.edu.zju.daily.function.partitioner.curve.HilbertCurve;
-import cn.edu.zju.daily.lsh.L2HilbertPartitioner;
+import cn.edu.zju.daily.partitioner.curve.HilbertCurve;
+import cn.edu.zju.daily.partitioner.lsh.LSHashSpaceFillingPartitioner;
 import cn.edu.zju.daily.util.Parameters;
 import com.github.jelmerk.knn.DistanceFunctions;
 import com.github.jelmerk.knn.Index;
@@ -50,19 +50,19 @@ public class PartitionTest {
     }
 
     private List<Index<Long, float[], FloatVector, Float>> indexes = new ArrayList<>();
-    private List<L2HilbertPartitioner> partitioners = new ArrayList<>();
+    private List<LSHashSpaceFillingPartitioner> partitioners = new ArrayList<>();
 
     private void initPartitioners(Parameters params) throws IOException {
         int dim = params.getVectorDim();
         int lshNumFamilies = params.getLshNumFamilies();
         int numPartitions = params.getParallelism();
         float lshBucketWidth = params.getLshBucketWidth();
-        int hilbertBits = params.getLshNumHilbertBits();
+        int hilbertBits = params.getLshNumSpaceFillingBits();
 
         Random random = new Random(38324);
         for (int i = 0; i < numPartitions; i++) {
-            L2HilbertPartitioner partitioner =
-                    new L2HilbertPartitioner(
+            LSHashSpaceFillingPartitioner partitioner =
+                    new LSHashSpaceFillingPartitioner(
                             dim,
                             lshNumFamilies,
                             lshBucketWidth,
@@ -110,7 +110,7 @@ public class PartitionTest {
             i++;
             FloatVector vector = vectors.next();
             Set<Integer> partitions = new HashSet<>();
-            for (L2HilbertPartitioner partitioner : partitioners) {
+            for (LSHashSpaceFillingPartitioner partitioner : partitioners) {
                 partitions.add(partitioner.getDataPartition(vector));
             }
             for (int partition : partitions) {
@@ -134,7 +134,7 @@ public class PartitionTest {
             FloatVector query = queries.next();
             SearchResult gtResult = gt.next();
             Set<Integer> partitions = new HashSet<>();
-            for (L2HilbertPartitioner partitioner : partitioners) {
+            for (LSHashSpaceFillingPartitioner partitioner : partitioners) {
                 List<Integer> partition = partitioner.getQueryPartition(query);
                 if (partition.size() != 1) {
                     throw new RuntimeException("Query should be in one partition.");

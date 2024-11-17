@@ -16,14 +16,14 @@ workers=$(tail -n +2 workers)
 
 # Copy the project to the master, excluding anything from the build directory
 echo "Copying project to $master"
-rsync -az --delete --exclude "/flink-frontend/nohup.out" --exclude ".idea" --exclude "/build/" --exclude "/cmake-build-*" --exclude "/examples/" --exclude "/flink-frontend/tmp" --exclude "/flink-frontend/params/completed" --exclude ".git" $PROJECT_DIR/ $master:$PROJECT_DIR
+rsync -a --delete --exclude "/flink-frontend/nohup.out" --exclude ".idea" --exclude "/build/" --exclude "/cmake-build-*" --exclude "/examples/" --exclude "/flink-frontend/tmp" --exclude "/flink-frontend/params/completed" --exclude ".git" $PROJECT_DIR/ $master:$PROJECT_DIR
 if [ $1 != "scripts" ]; then
   ssh -p $SSH_PORT $master "cd $PROJECT_DIR && ./build.sh $BUILD_FLAGS" &
 fi
 for worker in $workers; do
   echo "Copying project to $worker"
   # Copy the project to the worker, excluding anything from the build directory
-  rsync -az --delete --exclude "/flink-frontend/nohup.out" --exclude ".idea" --exclude "/build/" --exclude "/cmake-build-*" --exclude "/examples/" --exclude "/flink-frontend/tmp" --exclude "/flink-frontend/params/completed" --exclude ".git" $PROJECT_DIR/ $worker:$PROJECT_DIR
+  rsync -a --delete --exclude "/flink-frontend/nohup.out" --exclude ".idea" --exclude "/build/" --exclude "/cmake-build-*" --exclude "/examples/" --exclude "/flink-frontend/tmp" --exclude "/flink-frontend/params/completed" --exclude ".git" $PROJECT_DIR/ $worker:$PROJECT_DIR
   if [ $1 != "scripts" ]; then
     ssh -p $SSH_PORT $worker "cd $PROJECT_DIR && ./build.sh $BUILD_FLAGS" &
   fi

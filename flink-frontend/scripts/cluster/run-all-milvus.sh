@@ -28,6 +28,16 @@ for file in $(find "$FLINK_FRONTEND_DIR/params" -name "*.yaml" | sort -n); do
     echo "Milvus cluster stopped."
     ssh $SSH_CONFIG root@$MILVUS_ROOT "rm -rf /home/auroflow/milvus/milvus-cluster-deploy-script/volumes"
     echo "Milvus data removed."
+
+    # Change milvus parallelism if needed.
+    if [[ $file == *"parallelism"* ]]; then
+      # parallelism is the after the last hyphenf
+      parallelism=$(basename "$file" .yaml | grep -oP '(?<=-)[0-9]+$')
+      # Change cpus: 'x' to cpus: '$parallelism' in querynode.yml
+      ssh $SSH_CONFIG $MILVUS_ROOT "sed -i 's/cpus: '\''[0-9]*'\''/cpus: '\''$parallelism'\''/g' /home/auroflow/milvus/milvus-cluster-deploy-script/querynode.yml"
+      echo "Query node cpu changed to $parallelism"
+    fi
+
     ssh $SSH_CONFIG $MILVUS_ROOT "cd /home/auroflow/milvus/milvus-cluster-deploy-script/ && ./run-cluster.sh"
     echo "Milvus cluster started."
 
@@ -55,8 +65,7 @@ for file in $(find "$FLINK_FRONTEND_DIR/params" -name "*.yaml" | sort -n); do
       echo "done $base" >> "$COMPLETED_LOG"
     fi
   else
-    echo "Skip non-chroma job."
-    echo "skip $base" >> "$COMPLETED_LOG"
+    echo "Skip non-milvus job $base."
     continue
   fi
 done

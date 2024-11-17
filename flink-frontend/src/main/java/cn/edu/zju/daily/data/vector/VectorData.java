@@ -7,6 +7,18 @@ public interface VectorData {
 
     float[] getValue();
 
+    default double[] getDoubleValue() {
+        if (!hasValue()) {
+            return null;
+        }
+        float[] value = getValue();
+        double[] array = new double[value.length];
+        for (int i = 0; i < value.length; i++) {
+            array[i] = value[i];
+        }
+        return array;
+    }
+
     long getEventTime();
 
     long getTTL();

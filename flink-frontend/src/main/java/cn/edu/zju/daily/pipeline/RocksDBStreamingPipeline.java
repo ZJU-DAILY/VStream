@@ -4,7 +4,7 @@ import cn.edu.zju.daily.data.PartitionedElement;
 import cn.edu.zju.daily.data.result.SearchResult;
 import cn.edu.zju.daily.data.vector.VectorData;
 import cn.edu.zju.daily.function.*;
-import cn.edu.zju.daily.function.partitioner.PartitionFunction;
+import cn.edu.zju.daily.partitioner.PartitionFunction;
 import cn.edu.zju.daily.util.Parameters;
 import java.util.Random;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;

@@ -10,7 +10,7 @@ do
 done
 
 SCRIPT_DIR=$(dirname -- "${BASH_SOURCE}")
-CLUSTER="node10 node11 node12 node13 node14 node15 node21 node22 node23 node182 node193"
+CLUSTER="node10 node11 node12 node13 node14 node15 node21 node22 node23 node182"
 RUN_HOST="node182"
 FLINK_MASTER="node11"
 FLINK_MASTER_PORT="4978"
@@ -64,6 +64,7 @@ for node in $CLUSTER; do
 done
 
 python3 "$(dirname -- ${BASH_SOURCE})"/adjust_parallelism.py "$param_file"
+python3 "$(dirname -- ${BASH_SOURCE})"/adjust_milvus_parallelism.py "$param_file"
 
 # Restart flink cluster
 ssh $SSH_CONFIG $FLINK_MASTER "\$FLINK_HOME/bin/start-cluster.sh"

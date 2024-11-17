@@ -1,6 +1,7 @@
 package cn.edu.zju.daily.lsh;
 
 import cn.edu.zju.daily.data.vector.FloatVector;
+import cn.edu.zju.daily.partitioner.lsh.L2HashFamily;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;

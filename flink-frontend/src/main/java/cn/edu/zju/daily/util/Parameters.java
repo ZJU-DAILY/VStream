@@ -3,8 +3,8 @@ package cn.edu.zju.daily.util;
 import cn.edu.zju.daily.data.source.format.FloatVectorBinaryInputFormat;
 import cn.edu.zju.daily.data.source.format.FloatVectorBinaryInputFormatAdaptor;
 import cn.edu.zju.daily.data.source.rate.StagedRateControllerBuilder;
-import cn.edu.zju.daily.function.partitioner.LSHProximityPartitionFunction;
-import cn.edu.zju.daily.function.partitioner.LSHWithSpaceFillingPartitionFunction;
+import cn.edu.zju.daily.partitioner.LSHProximityPartitionFunction;
+import cn.edu.zju.daily.partitioner.LSHWithSpaceFillingPartitionFunction;
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Files;
@@ -92,6 +92,18 @@ public @Data class Parameters implements Serializable {
     private List<Long> observedInsertRates;
 
     /**
+     * Whether wait for index to build before switching to the next insert rate. Supports "none",
+     * "milvus" and "qdrant".
+     */
+    private String waitingIndexStrategy;
+
+    /**
+     * If {@link Parameters#waitingIndexStrategy} is not "none", the ratios to wait for. Should be
+     * of the same length as {@link Parameters#insertRates}.
+     */
+    private List<Float> indexWaitRatios;
+
+    /**
      * Deletion ratio in the insert stream. Should be between [0, 1). Used in {@link
      * FloatVectorBinaryInputFormat}.
      */
@@ -165,7 +177,7 @@ public @Data class Parameters implements Serializable {
     // LSH
     // ---
     /** Number of bits to represent each dimension of the LSH space. */
-    private int lshNumHilbertBits; // for lsh+hilbert
+    private int lshNumSpaceFillingBits; // for lsh+hilbert and lsh+zorder
 
     /** Interval to update the grid for LSH partitioning. */
     private long lshPartitionUpdateInterval; // for lsh+hilbert
@@ -196,7 +208,7 @@ public @Data class Parameters implements Serializable {
     /** The bit width of each element in the SAX representation. */
     private int odysseySaxWidth;
 
-    /** Window size. */
+    /** Window size in milliseconds. */
     private long odysseyWindowSize;
 
     /**
@@ -216,6 +228,20 @@ public @Data class Parameters implements Serializable {
      * the same data.
      */
     private int odysseyReplicationFactor;
+
+    // ------
+    // KMeans
+    // ------
+    /** KMeans window size in milliseconds. */
+    private int kmeansWindowSize;
+
+    /** KMeans replication factor (number of partitions each data and query is sent to). */
+    private int kmeansReplicationFactor;
+
+    /** KMeans max number of samples to keep for calculating the new centroids. */
+    private int kmeansMaxHistorySize;
+
+    private int kmeansMaxIter;
 
     // ====================
     // Indexing
@@ -306,15 +332,6 @@ public @Data class Parameters implements Serializable {
     private int milvusInsertBufferCapacity;
     private int milvusQueryBufferCapacity;
 
-    /**
-     * Whether to wait for Milvus index build to reach a certain ratio before starting each insert
-     * period.
-     */
-    private boolean milvusWaitForIndexBuild;
-
-    /** If {@link Parameters#milvusWaitForIndexBuild} is true, the ratios to wait for. */
-    private List<Float> milvusIndexWaitRatios;
-
     // --------
     // ChromaDB
     // --------
@@ -348,6 +365,16 @@ public @Data class Parameters implements Serializable {
 
     /** Whether to remove the ChromaDB data before starting the job. */
     private boolean chromaClearData;
+
+    // ------
+    // Qdrant
+    // ------
+    private String qdrantHost;
+    private int qdrantPort;
+    private String qdrantCollectionName;
+
+    private int qdrantInsertBatchSize;
+    private int qdrantQueryBatchSize;
 
     // ===============================
     // CONSTRUCTORS WITH VALIDATIONS

@@ -2,10 +2,13 @@ package cn.edu.zju.daily.data;
 
 import cn.edu.zju.daily.data.vector.VectorData;
 import java.io.Serializable;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * This class represents a partitioned data object, which can be a data vector or a query vector.
  */
+@Getter
 public class PartitionedElement implements Serializable {
 
     public PartitionedElement(DataType dataType, int partitionId) {
@@ -24,30 +27,14 @@ public class PartitionedElement implements Serializable {
 
     private final DataType dataType;
     private final int partitionId;
-    private long partitionedAt;
-
-    public void setPartitionedAt(long partitionedAt) {
-        this.partitionedAt = partitionedAt;
-    }
-
-    public long getPartitionedAt() {
-        return partitionedAt;
-    }
-
-    public DataType getDataType() {
-        return dataType;
-    }
-
-    public int getPartitionId() {
-        return partitionId;
-    }
+    @Setter private long partitionedAt;
 
     public int getNumPartitionsSent() {
-        throw new UnsupportedOperationException("Not implemented yet.");
+        throw new UnsupportedOperationException("Not implemented");
     }
 
     public VectorData getData() {
-        throw new UnsupportedOperationException("Not implemented yet.");
+        throw new UnsupportedOperationException("Not implemented");
     }
 
     @Override

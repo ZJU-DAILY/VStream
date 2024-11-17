@@ -1,10 +1,12 @@
 package cn.edu.zju.daily.util.chromadb;
 
-import static cn.edu.zju.daily.util.chromadb.ChromaUtil.readAddressGroups;
+import static cn.edu.zju.daily.function.chroma.util.ChromaUtil.readAddressGroups;
 import static java.util.stream.Collectors.toList;
 
 import cn.edu.zju.daily.data.vector.FloatVector;
 import cn.edu.zju.daily.data.vector.FloatVectorIterator;
+import cn.edu.zju.daily.function.chroma.util.ChromaClient;
+import cn.edu.zju.daily.function.chroma.util.ChromaCollection;
 import com.google.gson.internal.LinkedTreeMap;
 import java.io.IOException;
 import java.util.*;

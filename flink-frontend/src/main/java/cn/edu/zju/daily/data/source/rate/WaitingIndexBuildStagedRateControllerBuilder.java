@@ -1,7 +1,5 @@
 package cn.edu.zju.daily.data.source.rate;
 
-import cn.edu.zju.daily.util.MilvusUtil;
-import io.milvus.grpc.IndexDescription;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
@@ -10,77 +8,52 @@ public class WaitingIndexBuildStagedRateControllerBuilder implements RateControl
     private final List<Long> stages;
     private final List<Long> delays; // in nanoseconds
     private final List<Float> waitRatios;
-    private final String milvusHost;
-    private final int milvusPort;
-    private final String milvusCollectionName;
-    private final String milvusIndexName;
+    private final WaitingIndexBuildStrategy strategy;
 
     public WaitingIndexBuildStagedRateControllerBuilder(
             List<Long> stages,
             List<Long> delays,
             List<Float> waitRatios,
-            String milvusHost,
-            int milvusPort,
-            String milvusCollectionName,
-            String milvusIndexName) {
+            WaitingIndexBuildStrategy strategy) {
+        if (stages.size() != delays.size()) {
+            throw new IllegalArgumentException("stages.size() != delays.size()");
+        }
+        for (int i = 1; i < stages.size(); i++) {
+            if (stages.get(i - 1) >= stages.get(i)) {
+                throw new IllegalArgumentException("stages must be monotonically increasing.");
+            }
+        }
         this.stages = stages;
         this.delays = delays;
         this.waitRatios = waitRatios;
-        this.milvusHost = milvusHost;
-        this.milvusPort = milvusPort;
-        this.milvusCollectionName = milvusCollectionName;
-        this.milvusIndexName = milvusIndexName;
+        this.strategy = strategy;
     }
 
     @Override
     public WaitingIndexBuildStagedRateControllerBuilder.Controller build() {
         return new WaitingIndexBuildStagedRateControllerBuilder.Controller(
-                stages,
-                delays,
-                waitRatios,
-                milvusHost,
-                milvusPort,
-                milvusCollectionName,
-                milvusIndexName);
+                stages, delays, waitRatios, strategy);
     }
 
     @Slf4j
     public static class Controller implements RateController {
 
-        private static final long SLEEP_INTERVAL = 10000;
-
         private final List<Long> stages;
         private final List<Long> delays; // in nanoseconds
         private final List<Float> waitRatios;
-        private final String milvusCollectionName;
-        private final String milvusIndexName;
+        private final WaitingIndexBuildStrategy strategy;
         private int index = 0;
         private long maxCount = -1;
-        private final MilvusUtil util;
 
         private Controller(
                 List<Long> stages,
                 List<Long> delays,
                 List<Float> waitRatios,
-                String milvusHost,
-                int milvusPort,
-                String milvusCollectionName,
-                String milvusIndexName) {
-            if (stages.size() != delays.size()) {
-                throw new IllegalArgumentException("stages.size() != delays.size()");
-            }
-            for (int i = 1; i < stages.size(); i++) {
-                if (stages.get(i - 1) >= stages.get(i)) {
-                    throw new IllegalArgumentException("stages must be monotonically increasing.");
-                }
-            }
+                WaitingIndexBuildStrategy strategy) {
             this.stages = stages;
             this.delays = delays;
             this.waitRatios = waitRatios;
-            this.milvusCollectionName = milvusCollectionName;
-            this.milvusIndexName = milvusIndexName;
-            this.util = new MilvusUtil();
-            util.connect(milvusHost, milvusPort);
+            this.strategy = strategy;
         }
 
         @Override
@@ -100,44 +73,7 @@ public class WaitingIndexBuildStagedRateControllerBuilder implements RateControl
         }
 
         private void waitIndexBuild(float waitRatio) {
-            while (true) {
-                IndexDescription desc;
-                try {
-                    desc = util.getIndexDescription(milvusCollectionName, milvusIndexName);
-                } catch (Exception e) {
-                    LOG.error("Failed to get index description. Index waiting is SKIPPED!", e);
-                    return;
-                }
-                float ratio;
-                if (desc.getTotalRows() == 0) {
-                    ratio = 1;
-                } else {
-                    ratio = (float) desc.getIndexedRows() / desc.getTotalRows();
-                }
-                if (ratio >= waitRatio) {
-                    LOG.info(
-                            "Total rows: {}, indexed rows: {}, pending index rows: {}, ratio ({}) above required {}",
-                            desc.getTotalRows(),
-                            desc.getIndexedRows(),
-                            desc.getPendingIndexRows(),
-                            ratio,
-                            waitRatio);
-                    break;
-                } else {
-                    LOG.info(
-                            "Total rows: {}, indexed rows: {}, pending index rows: {}, ratio ({}) still below required {}",
-                            desc.getTotalRows(),
-                            desc.getIndexedRows(),
-                            desc.getPendingIndexRows(),
-                            ratio,
-                            waitRatio);
-                }
-                try {
-                    Thread.sleep(SLEEP_INTERVAL);
-                } catch (InterruptedException e) {
-                    LOG.error("Interrupted while waiting for index build", e);
-                }
-            }
+            strategy.waitIndexBuild(waitRatio);
         }
     }
 }

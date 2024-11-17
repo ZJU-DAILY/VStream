@@ -3,10 +3,10 @@ package cn.edu.zju.daily.pipeline;
 import cn.edu.zju.daily.data.PartitionedElement;
 import cn.edu.zju.daily.data.result.SearchResult;
 import cn.edu.zju.daily.data.vector.VectorData;
-import cn.edu.zju.daily.function.ChromaDBKeyedProcessFunction;
 import cn.edu.zju.daily.function.PartialResultProcessFunction;
-import cn.edu.zju.daily.function.partitioner.PartitionFunction;
-import cn.edu.zju.daily.util.MilvusUtil;
+import cn.edu.zju.daily.function.chroma.ChromaDBProcessFunction;
+import cn.edu.zju.daily.function.milvus.MilvusUtil;
+import cn.edu.zju.daily.partitioner.PartitionFunction;
 import cn.edu.zju.daily.util.Parameters;
 import java.util.Random;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
@@ -60,7 +60,7 @@ public class ChromaStreamingPipeline {
             SingleOutputStreamOperator<PartitionedElement> data) {
 
         KeyedProcessFunction<Integer, PartitionedElement, SearchResult> processFunction =
-                new ChromaDBKeyedProcessFunction(params);
+                new ChromaDBProcessFunction(params);
 
         return data.keyBy(PartitionedElement::getPartitionId)
                 .process(processFunction)

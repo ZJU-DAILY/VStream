@@ -10,7 +10,7 @@ do
 done
 
 SCRIPT_DIR=$(dirname -- "${BASH_SOURCE}")
-CLUSTER="node10 node11 node12 node13 node14 node15 node21 node22 node23 node182 node193"
+CLUSTER="node10 node11 node12 node13 node14 node15 node21 node22 node23 node182"
 FLINK_MASTER="node11"
 MILVUS_DATA_PATH="/home/auroflow/milvus/milvus-cluster-deploy-script/volumes"
 FLINK_MASTER_PORT="4978"

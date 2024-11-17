@@ -1,6 +1,7 @@
 package cn.edu.zju.daily.data;
 
 import cn.edu.zju.daily.data.vector.FloatVector;
+import lombok.Getter;
 
 /** A query {@link FloatVector} which has been assigned to a partition. */
 public class PartitionedQuery extends PartitionedElement {
@@ -13,14 +14,10 @@ public class PartitionedQuery extends PartitionedElement {
     }
 
     private final FloatVector vector;
-    private final int numPartitionsSent;
+    @Getter private final int numPartitionsSent;
 
     public FloatVector getData() {
         return vector;
-    }
-
-    public int getNumPartitionsSent() {
-        return numPartitionsSent;
     }
 
     @Override

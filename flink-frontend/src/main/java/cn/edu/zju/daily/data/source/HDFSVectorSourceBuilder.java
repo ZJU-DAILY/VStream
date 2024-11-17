@@ -3,14 +3,14 @@ package cn.edu.zju.daily.data.source;
 import static java.util.stream.Collectors.toList;
 
 import cn.edu.zju.daily.data.PartitionedElement;
+import cn.edu.zju.daily.data.rate.VectorDataThrottler;
 import cn.edu.zju.daily.data.source.format.FloatVectorBinaryInputFormat;
 import cn.edu.zju.daily.data.source.format.FloatVectorBinaryInputFormatAdaptor;
 import cn.edu.zju.daily.data.source.format.FloatVectorInputFormat;
 import cn.edu.zju.daily.data.source.rate.*;
 import cn.edu.zju.daily.data.vector.HDFSVectorParser;
 import cn.edu.zju.daily.data.vector.VectorData;
-import cn.edu.zju.daily.function.partitioner.PartitionFunction;
-import cn.edu.zju.daily.rate.VectorDataThrottler;
+import cn.edu.zju.daily.partitioner.PartitionFunction;
 import cn.edu.zju.daily.util.Parameters;
 import java.util.*;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
@@ -26,7 +26,7 @@ import org.apache.flink.util.Collector;
 public class HDFSVectorSourceBuilder {
 
     private static final long QUERY_POLLING_INTERVAL_MILLIS = 10000L;
-    private static final String DEFAULT_INDEX_NAME = "embedding";
+    private static final String DEFAULT_MILVUS_INDEX_NAME = "embedding";
 
     private final StreamExecutionEnvironment env;
     private final Parameters params;
@@ -46,7 +46,8 @@ public class HDFSVectorSourceBuilder {
             if ("bind-insert".equals(params.getQueryThrottleMode())) {
                 throw new RuntimeException("Text source does not support binding rate.");
             }
-            if (params.isMilvusWaitForIndexBuild()) {
+            if (Objects.nonNull(params.getWaitingIndexStrategy())
+                    && !"none".equalsIgnoreCase(params.getWaitingIndexStrategy())) {
                 throw new RuntimeException("Text source does not support waiting for index build.");
             }
             if (params.getDeleteRatio() != 0D) {
@@ -63,17 +64,37 @@ public class HDFSVectorSourceBuilder {
         } else if (params.getSourcePath().endsWith(".fvecs")
                 || params.getSourcePath().endsWith(".bvecs")) {
 
-            RateControllerBuilder rateControllerBuilder =
-                    params.isMilvusWaitForIndexBuild()
-                            ? new WaitingIndexBuildStagedRateControllerBuilder(
-                                    thresholds,
-                                    ratesToIntervals(rates),
-                                    params.getMilvusIndexWaitRatios(),
-                                    params.getMilvusHost(),
-                                    params.getMilvusPort(),
-                                    params.getMilvusCollectionName(),
-                                    DEFAULT_INDEX_NAME)
-                            : new StagedRateControllerBuilder(thresholds, ratesToIntervals(rates));
+            String waitingIndexStrategy = params.getWaitingIndexStrategy();
+
+            RateControllerBuilder rateControllerBuilder;
+            if (Objects.isNull(waitingIndexStrategy)
+                    || "none".equalsIgnoreCase(waitingIndexStrategy)) {
+                rateControllerBuilder =
+                        new StagedRateControllerBuilder(thresholds, ratesToIntervals(rates));
+            } else if ("milvus".equalsIgnoreCase(waitingIndexStrategy)) {
+                rateControllerBuilder =
+                        new WaitingIndexBuildStagedRateControllerBuilder(
+                                thresholds,
+                                ratesToIntervals(rates),
+                                params.getIndexWaitRatios(),
+                                new MilvusWaitingIndexBuildStrategy(
+                                        params.getMilvusHost(),
+                                        params.getMilvusPort(),
+                                        params.getMilvusCollectionName(),
+                                        DEFAULT_MILVUS_INDEX_NAME));
+            } else if ("qdrant".equalsIgnoreCase(waitingIndexStrategy)) {
+                rateControllerBuilder =
+                        new WaitingIndexBuildStagedRateControllerBuilder(
+                                thresholds,
+                                ratesToIntervals(rates),
+                                params.getIndexWaitRatios(),
+                                new QdrantWaitingIndexBuildStrategy(
+                                        params.getQdrantHost(),
+                                        params.getQdrantPort(),
+                                        params.getQdrantCollectionName()));
+            } else {
+                throw new RuntimeException("Unknown waiting index strategy.");
+            }
 
             if ("bind-insert".equals(params.getQueryThrottleMode())) {
                 rateControllerBuilder =

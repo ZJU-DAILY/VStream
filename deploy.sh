@@ -15,7 +15,7 @@ master=$(head -n 1 workers)
 workers=$(tail -n +2 workers)
 
 # Copy the project to the master, excluding anything from the build directory
-rsync -avz --delete --exclude "/flink-frontend/nohup.out" --exclude ".idea" --exclude "/build/" --exclude "/cmake-build-*" --exclude "/examples/" --exclude "/flink-frontend/tmp" --exclude "/flink-frontend/params/completed" --exclude ".git" $PROJECT_DIR/ $master:$PROJECT_DIR
+rsync -a --delete --exclude "/flink-frontend/nohup.out" --exclude ".idea" --exclude "/build/" --exclude "/cmake-build-*" --exclude "/examples/" --exclude "/flink-frontend/tmp" --exclude "/flink-frontend/params/completed" --exclude ".git" $PROJECT_DIR/ $master:$PROJECT_DIR
 
 if [ "$BUILD_FLAGS" == "scripts" ]; then
   echo "Scripts copied to master. Done."
@@ -35,7 +35,7 @@ for worker in $workers; do
   # Copy the build directory to the worker
   ssh $master -p $SSH_PORT "rsync -az -e \"ssh -p $SSH_PORT\" --exclude CMakeFiles/ $PROJECT_DIR/build '$worker':$PROJECT_DIR"
   ssh $worker -p $SSH_PORT "cd $PROJECT_DIR && mkdir -p flink-frontend"
-  rsync -az -e "ssh -p $SSH_PORT" --exclude completed $PROJECT_DIR/flink-frontend/params "$worker":$PROJECT_DIR/flink-frontend
+  rsync -a -e "ssh -p $SSH_PORT" --exclude completed $PROJECT_DIR/flink-frontend/params "$worker":$PROJECT_DIR/flink-frontend
   # Copy rocksdbjni_classes.jar to $FLINK_HOME/lib
   ssh $worker -p $SSH_PORT "\
     if [ -d \"\$FLINK_HOME/lib\" ]; then \

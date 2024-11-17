@@ -19,7 +19,7 @@ CPU_LIMIT="1.4"  # unused
 while IFS=: read -r host port_low port_high; do
   # SSH into the host and start the chroma server
   for port in $(seq "$port_low" "$port_high"); do
-    echo "Starting chroma server on $host:$port"
+    echo "Clearing chroma data and starting chroma server on $host:$port"
     ssh -p $SSH_PORT -n $ROOT@"$host" "rm -rf $CHROMA_PERSISTENT_PATH/chroma_""$host"_"$port"
     docker -H ssh://"$USER"@"$host":$SSH_PORT run -d --rm --name chromadb_"$host"_"$port" -p "$port":8000 -v "$CHROMA_PERSISTENT_PATH"/chroma_"$host"_"$port":/chroma/chroma -e IS_PERSISTENT=TRUE -e ANONYMIZED_TELEMETRY=FALSE chromadb/chroma:0.5.12
   done

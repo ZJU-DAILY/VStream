@@ -4,7 +4,9 @@ import cn.edu.zju.daily.data.PartitionedElement;
 import cn.edu.zju.daily.data.result.SearchResult;
 import cn.edu.zju.daily.data.vector.VectorData;
 import cn.edu.zju.daily.function.*;
-import cn.edu.zju.daily.function.partitioner.PartitionFunction;
+import cn.edu.zju.daily.function.chroma.ChromaDBDataProcessFunction;
+import cn.edu.zju.daily.function.chroma.ChromaDBQueryProcessFunction;
+import cn.edu.zju.daily.partitioner.PartitionFunction;
 import cn.edu.zju.daily.util.Parameters;
 import java.util.Random;
 import org.apache.flink.api.common.functions.FlatMapFunction;
@@ -79,7 +81,7 @@ public class ChromaSeparatedStreamingPipeline {
 
     private void applyToDataStream(DataStream<PartitionedElement> data) {
         data.keyBy(PartitionedElement::getPartitionId)
-                .process(new ChromaDBKeyedDataProcessFunction(params))
+                .process(new ChromaDBDataProcessFunction(params))
                 .setParallelism(params.getParallelism())
                 .setMaxParallelism(params.getParallelism())
                 .name("data process")
@@ -90,7 +92,7 @@ public class ChromaSeparatedStreamingPipeline {
             DataStream<PartitionedElement> data) {
         SingleOutputStreamOperator<SearchResult> rawResults =
                 data.keyBy(PartitionedElement::getPartitionId)
-                        .process(new ChromaDBKeyedQueryProcessFunction(params))
+                        .process(new ChromaDBQueryProcessFunction(params))
                         .setParallelism(params.getParallelism())
                         .setMaxParallelism(params.getParallelism())
                         .name("query process")

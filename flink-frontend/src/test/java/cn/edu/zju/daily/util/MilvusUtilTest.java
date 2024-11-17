@@ -1,5 +1,6 @@
 package cn.edu.zju.daily.util;
 
+import cn.edu.zju.daily.function.milvus.MilvusUtil;
 import io.milvus.grpc.IndexDescription;
 import org.junit.jupiter.api.Test;
 

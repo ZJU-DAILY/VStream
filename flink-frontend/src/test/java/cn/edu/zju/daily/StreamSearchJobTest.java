@@ -8,7 +8,7 @@ import cn.edu.zju.daily.data.vector.FloatVectorIterator;
 import cn.edu.zju.daily.data.vector.VectorData;
 import cn.edu.zju.daily.function.PartialResultProcessFunction;
 import cn.edu.zju.daily.function.RocksDBKeyedProcessFunction;
-import cn.edu.zju.daily.function.partitioner.LSHPartitionFunction;
+import cn.edu.zju.daily.partitioner.LSHPartitionFunction;
 import cn.edu.zju.daily.util.Parameters;
 import java.util.ArrayList;
 import java.util.Comparator;
