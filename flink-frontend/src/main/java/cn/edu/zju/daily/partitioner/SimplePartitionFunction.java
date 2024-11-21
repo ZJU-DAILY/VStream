@@ -39,6 +39,7 @@ public class SimplePartitionFunction extends RichPartitionFunction {
         }
 
         if (!data.hasValue()) {
+            // This is a deletion without a vector value. Apply to all partitions.
             for (int nodeId = 0; nodeId < numPartitions; nodeId++) {
                 collector.collect(new PartitionedData(mapper.getKey(nodeId), data));
             }

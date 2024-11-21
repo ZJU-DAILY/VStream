@@ -155,6 +155,16 @@ public interface PartitionFunction
                         params.getKmeansReplicationFactor(),
                         params.getKmeansMaxHistorySize(),
                         params.getKmeansMaxIter());
+            case "hilbert":
+                return new SpaceFillingPartitionFunction(
+                        params.getVectorDim(),
+                        params.getSfMinVectorValue(),
+                        params.getSfMaxVectorValue(),
+                        params.getSfNumBits(),
+                        params.getParallelism(),
+                        params.getSfReplicationFactor(),
+                        params.getSfWindowSize(),
+                        new HilbertCurve.Builder());
             case "simple":
                 return new SimplePartitionFunction(params.getParallelism());
             default:

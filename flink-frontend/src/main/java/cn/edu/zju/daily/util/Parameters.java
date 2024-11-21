@@ -243,6 +243,24 @@ public @Data class Parameters implements Serializable {
 
     private int kmeansMaxIter;
 
+    // -------
+    // Hilbert
+    // -------
+    /** Min possible value in any dimension. */
+    private float sfMinVectorValue;
+
+    /** Max possible value in any dimension. */
+    private float sfMaxVectorValue;
+
+    /** Number of bits to represent each dimension of the Hilbert space. */
+    private int sfNumBits;
+
+    /** Replication factor for Hilbert partitioner. */
+    private int sfReplicationFactor;
+
+    /** Number of vectors in each window. Partition heads are updated every window. */
+    private int sfWindowSize;
+
     // ====================
     // Indexing
     // ====================

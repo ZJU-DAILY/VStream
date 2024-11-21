@@ -1,12 +1,11 @@
 package cn.edu.zju.daily.partitioner.kmeans;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.PriorityQueue;
+import java.util.*;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
 import smile.clustering.KMeans;
 
+@Slf4j
 public class NKMeans extends KMeans {
 
     public NKMeans(KMeans kmeans) {
@@ -36,5 +35,16 @@ public class NKMeans extends KMeans {
     public static NKMeans fit(double[][] data, int k, int maxIter) {
         KMeans kmeans = KMeans.fit(data, k, maxIter, 1E5);
         return new NKMeans(kmeans);
+    }
+
+    @Override
+    protected double distance(double[] x, double[] y) {
+        double sum = 0.0;
+        for (int i = 0; i < Math.min(10, x.length); i++) {
+            double d = x[i] - y[i];
+            sum += d * d;
+        }
+
+        return sum;
     }
 }

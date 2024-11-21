@@ -9,6 +9,9 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.util.Collector;
@@ -25,11 +28,12 @@ public class KMeansPartitionFunction extends RichPartitionFunction {
     private final int maxHistorySize;
     private final int maxIter;
 
-    private NKMeans nkMeans;
+    private AtomicReference<NKMeans> nkMeansRef;
     private long lastUpdateTS;
     private Deque<double[]> history;
     private Random random;
     private PartitionToKeyMapper mapper;
+    private ExecutorService es;
 
     public KMeansPartitionFunction(
             long windowSize,
@@ -42,16 +46,19 @@ public class KMeansPartitionFunction extends RichPartitionFunction {
         this.replicationFactor = replicationFactor;
         this.maxHistorySize = maxHistorySize;
         this.maxIter = maxIter;
+        this.nkMeansRef = null;
+        this.es = null;
     }
 
     @Override
     public void open(Configuration parameters) throws Exception {
         super.open(parameters);
-        nkMeans = null;
+        nkMeansRef = new AtomicReference<>();
         history = new ArrayDeque<>(maxHistorySize);
         random = new Random(38324);
         lastUpdateTS = UNINITIALIZED;
         mapper = new PartitionToKeyMapper(numClusters);
+        es = Executors.newSingleThreadExecutor();
     }
 
     @Override
@@ -63,6 +70,7 @@ public class KMeansPartitionFunction extends RichPartitionFunction {
         if (history.size() > maxHistorySize) {
             history.pollFirst();
         }
+        NKMeans nkMeans = nkMeansRef.get();
         if (nkMeans != null) {
             List<Integer> nearest = nkMeans.nearest(value.getDoubleValue(), replicationFactor);
             for (int i : nearest) {
@@ -76,6 +84,7 @@ public class KMeansPartitionFunction extends RichPartitionFunction {
 
     @Override
     public void flatMap2(VectorData value, Collector<PartitionedElement> out) throws Exception {
+        NKMeans nkMeans = nkMeansRef.get();
         if (nkMeans != null) {
             List<Integer> nearest = nkMeans.nearest(value.getDoubleValue(), replicationFactor);
             for (int i : nearest) {
@@ -94,16 +103,23 @@ public class KMeansPartitionFunction extends RichPartitionFunction {
             lastUpdateTS = now;
         }
         if (now - lastUpdateTS > windowSize) {
-            long start = System.currentTimeMillis();
-            try {
-                nkMeans = NKMeans.fit(history.toArray(new double[0][]), numClusters, maxIter);
-            } catch (Exception e) {
-                LOG.warn("Failed to fit kMeans, centroids not updated", e);
-            } finally {
-                LOG.info("Fitting kMeans took {} ms", System.currentTimeMillis() - start);
-            }
+            double[][] data = history.toArray(new double[0][]);
+            fitAsync(data);
             lastUpdateTS = now;
             history.clear();
         }
+    }
+
+    synchronized void fitAsync(double[][] data) {
+        es.submit(
+                () -> {
+                    try {
+                        long start = System.currentTimeMillis();
+                        nkMeansRef.set(NKMeans.fit(data, numClusters, maxIter));
+                        LOG.info("Fitting kMeans took {} ms", System.currentTimeMillis() - start);
+                    } catch (Exception e) {
+                        LOG.warn("Failed to fit kMeans, centroids not updated", e);
+                    }
+                });
     }
 }

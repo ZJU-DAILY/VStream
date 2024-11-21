@@ -11,7 +11,6 @@ import java.time.Duration;
 import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.streaming.api.functions.co.RichCoFlatMapFunction;
 import org.apache.flink.util.Collector;
 
 /**
@@ -32,9 +31,7 @@ import org.apache.flink.util.Collector;
  * 等于分区 ID。getNodeIdMap 函数旨在寻找一组 key，这组 key 可以通过 murmurHash(key) 映射为各 个分区 ID。
  */
 @Slf4j
-public class LSHWithSpaceFillingPartitionFunction
-        extends RichCoFlatMapFunction<VectorData, VectorData, PartitionedElement>
-        implements PartitionFunction {
+public class LSHWithSpaceFillingPartitionFunction extends RichPartitionFunction {
 
     private final List<LSHashSpaceFillingPartitioner> partitioners;
 
@@ -83,6 +80,13 @@ public class LSHWithSpaceFillingPartitionFunction
     private int currentObservedInsertIntervalIndex = 0;
 
     private long observedTsNano;
+
+    /** For testing only. */
+    public void initialize(List<FloatVector> vectors) {
+        for (LSHashSpaceFillingPartitioner partitioner : partitioners) {
+            partitioner.initializeWith(vectors.iterator(), 0);
+        }
+    }
 
     /**
      * Constructor.
