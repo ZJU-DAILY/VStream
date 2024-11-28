@@ -274,7 +274,10 @@ HnswReader::searchBaseLayerST(tableint ep_id, const void* data_point, size_t ef,
   return top_candidates;
 }
 
-HnswReader::~HnswReader() { delete visited_list_pool_; }
+HnswReader::~HnswReader() {
+  delete visited_list_pool_;
+  delete linkLists_;
+}
 
 KnnResult HnswReader::searchKnn(const void* query_data, size_t k, uint64_t ts,
                                 const SequenceNumber* snapshot,

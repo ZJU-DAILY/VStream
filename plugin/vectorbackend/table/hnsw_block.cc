@@ -235,6 +235,8 @@ bool GorillaCompressedDataBlockIter::ParseNextKey() {
   float *vector;
   // Decode next entry
   uint32_t idx_of_restart_interval = cur_entry_idx_ % block_restart_interval_;
+
+#ifndef NCOMPRESS
   if (idx_of_restart_interval == 0) {
     cur_offset_ = p;
     stored_internal_id_ = *reinterpret_cast<const uint32_t *>(p);
@@ -257,6 +259,15 @@ bool GorillaCompressedDataBlockIter::ParseNextKey() {
           decompressor_->ReadNextVector(p + offsetData_, vector));
      }
   }
+#else
+  cur_offset_ = p;
+  stored_internal_id_ = *reinterpret_cast<const uint32_t *>(p);
+  p += 4;
+  data = new char[offsetData_];
+  memcpy(data, p, offsetData_);
+  next_offset_ = reinterpret_cast<const char *>(
+      decompressor_->ReadFirstVector(p + offsetData_, vector));
+#endif
 
   value_ = new Entry(data, vector);
   return true;

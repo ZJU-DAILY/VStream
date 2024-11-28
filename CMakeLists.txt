@@ -70,6 +70,8 @@ if (NOT CMAKE_BUILD_TYPE)
             "Default BUILD_TYPE is ${default_build_type}" FORCE)
 endif ()
 
+# Linker
+# SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -ltcmalloc -lprofiler")
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0")
 elseif (CMAKE_BUILD_TYPE STREQUAL "Release")
@@ -82,6 +84,10 @@ if (CCACHE_FOUND)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
 endif (CCACHE_FOUND)
 
+option(WITH_COMPRESSION "build with vector compression" ON)
+if (NOT WITH_COMPRESSION)
+    add_definitions(-DNCOMPRESS)
+endif ()
 option(WITH_JEMALLOC "build with JeMalloc" OFF)
 option(WITH_LIBURING "build with liburing" ON)
 option(WITH_SNAPPY "build with SNAPPY" OFF)
@@ -637,7 +643,7 @@ if (USE_FOLLY)
     set(FOLLY_LIBS Folly::folly)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--copy-dt-needed-entries")
 endif ()
-find_package(Threads REQUIRED)
+# find_package(Threads REQUIRED)
 
 # Main library source code
 
