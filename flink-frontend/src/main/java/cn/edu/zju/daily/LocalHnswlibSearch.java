@@ -62,7 +62,7 @@ public class LocalHnswlibSearch {
         SpaceFillingCurve.Builder builder = new HilbertCurve.Builder();
 
         // read partition type from args
-        String partitionType = args[0];
+        String partitionType = args.length > 0 ? args[0] : "lsh";
         RichPartitionFunction partitioner = null;
         if (partitionType.equals("lsh")) {
             System.out.println("Using LSH partitioner");

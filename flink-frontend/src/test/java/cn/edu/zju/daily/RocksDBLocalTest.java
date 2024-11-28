@@ -14,6 +14,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import me.tongfei.progressbar.ProgressBar;
+import me.tongfei.progressbar.ProgressBarBuilder;
 import org.apache.flink.contrib.streaming.vstate.*;
 import org.junit.jupiter.api.Test;
 import org.rocksdb.*;
@@ -65,7 +67,7 @@ public class RocksDBLocalTest {
                                 currentOptions.setUseDirectIoForFlushAndCompaction(true);
                                 currentOptions.setAvoidUnnecessaryBlockingIO(true);
                                 currentOptions.setInfoLogLevel(InfoLogLevel.INFO_LEVEL);
-
+                                // currentOptions.setMaxOpenFiles(1);
                                 return currentOptions;
                             }
 
@@ -255,13 +257,16 @@ public class RocksDBLocalTest {
 
         FloatVectorIterator vectors =
                 FloatVectorIterator.fromFile(
-                        "/home/auroflow/code/vector-search/data/sift/sift_base.fvecs", 1, 10000);
+                        "/home/auroflow/code/vector-search/data/sift/sift_base.fvecs", 1, 1000000);
         FloatVectorIterator queries =
                 FloatVectorIterator.fromFile(
-                        "/home/auroflow/code/vector-search/data/sift/sift_query.fvecs");
+                        "/home/auroflow/code/vector-search/data/sift/sift_query.fvecs", 100);
         PrintWriter writer = new PrintWriter("./results.txt", "UTF-8");
         int index = 0;
-        for (FloatVector vector : vectors) {
+        for (FloatVector vector :
+                ProgressBar.wrap(
+                        (Iterable<FloatVector>) vectors,
+                        new ProgressBarBuilder().setTaskName("Insert").setInitialMax(1000000))) {
             vector.setEventTime(index);
             insert(vector);
             index++;
@@ -279,9 +284,6 @@ public class RocksDBLocalTest {
                                 + " ms: "
                                 + result);
                 writer.println(result);
-            }
-            if (index >= 1_000_000) {
-                break;
             }
         }
 

@@ -82,7 +82,7 @@ public class LSHWithSpaceFillingPartitionFunction extends RichPartitionFunction 
     private long observedTsNano;
 
     /** For testing only. */
-    public void initialize(List<FloatVector> vectors) {
+    public void initialize(List<? extends VectorData> vectors) {
         for (LSHashSpaceFillingPartitioner partitioner : partitioners) {
             partitioner.initializeWith(vectors.iterator(), 0);
         }

@@ -245,7 +245,7 @@ public class LSHashSpaceFillingPartitioner implements Serializable {
         this.maxTTL = maxTTL;
     }
 
-    public void initializeWith(Iterator<FloatVector> vectors, long ts) {
+    public void initializeWith(Iterator<? extends VectorData> vectors, long ts) {
         if (hashFamily.isInitialized()) {
             throw new IllegalStateException("Partitioner already initialized");
         }
@@ -254,7 +254,7 @@ public class LSHashSpaceFillingPartitioner implements Serializable {
         nextUpdateTime = updateTime + updateInterval;
 
         while (vectors.hasNext()) {
-            FloatVector vector = vectors.next();
+            VectorData vector = vectors.next();
             // this will update the first range
             int[] hash = hashFamily.hash(vector);
             hashFamily.ranges.getLast().update(hash);

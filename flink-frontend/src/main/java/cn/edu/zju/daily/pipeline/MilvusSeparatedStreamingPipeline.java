@@ -68,7 +68,7 @@ public class MilvusSeparatedStreamingPipeline {
         System.out.println("Prepared.");
     }
 
-    private PartitionFunction getPartitioner() {
+    public PartitionFunction getPartitioner() {
         Random random = new Random(2345678L);
         return PartitionFunction.getPartitionFunction(params, random);
     }
@@ -87,19 +87,11 @@ public class MilvusSeparatedStreamingPipeline {
         // schemes. However, this
         // reduces pressure on partitioners.
         SingleOutputStreamOperator<PartitionedElement> partitionedData =
-                data.flatMap(getUnaryPartitioner(false))
-                        .name("data partition")
-                        .setParallelism(1)
-                        .setMaxParallelism(1);
-
+                partition(data, false, "data partition");
         applyToDataStream(partitionedData);
 
         SingleOutputStreamOperator<PartitionedElement> partitionedQuery =
-                query.flatMap(getUnaryPartitioner(true))
-                        .name("query partition")
-                        .setParallelism(1)
-                        .setMaxParallelism(1);
-
+                partition(query, true, "query partition");
         return applyToQueryStream(partitionedQuery);
     }
 
@@ -125,8 +117,17 @@ public class MilvusSeparatedStreamingPipeline {
         return applyToQueryStream(partitionedQuery);
     }
 
-    private void applyToDataStream(DataStream<PartitionedElement> data) {
-        data.keyBy(PartitionedElement::getPartitionId)
+    public SingleOutputStreamOperator<PartitionedElement> partition(
+            DataStream<VectorData> data, boolean isQuery, String name) {
+        return data.flatMap(getUnaryPartitioner(isQuery))
+                .name(name)
+                .setParallelism(1)
+                .setMaxParallelism(1);
+    }
+
+    public SingleOutputStreamOperator<Object> applyToDataStream(
+            DataStream<PartitionedElement> data) {
+        return data.keyBy(PartitionedElement::getPartitionId)
                 .process(new MilvusDataProcessFunction(params))
                 .setParallelism(params.getParallelism())
                 .setMaxParallelism(params.getParallelism())
@@ -134,7 +135,7 @@ public class MilvusSeparatedStreamingPipeline {
                 .slotSharingGroup("process");
     }
 
-    private SingleOutputStreamOperator<SearchResult> applyToQueryStream(
+    public SingleOutputStreamOperator<SearchResult> applyToQueryStream(
             DataStream<PartitionedElement> data) {
         SingleOutputStreamOperator<SearchResult> rawResults =
                 data.keyBy(PartitionedElement::getPartitionId)
