@@ -59,11 +59,11 @@ This repo contains the baseline solution using Milvus, Qdrant and Chroma.
 
 ### Milvus
 
-\1. Start a Milvus 2.3 cluster.
+1. Start a Milvus 2.3 cluster.
 
-\2. Fill the Milvus root information in the configuration file.
+2. Fill the Milvus root information in the configuration file.
 
-\3. Run:
+3. Run:
 
 ```bash
 flink run -c cn.edu.zju.daily.MilvusSeparatedStreamSearchJob ./build/flink-frontend/vstream-1.1.jar <params.yaml>
@@ -71,11 +71,11 @@ flink run -c cn.edu.zju.daily.MilvusSeparatedStreamSearchJob ./build/flink-front
 
 ### Qdrant
 
-\1. Start a Qdrant 1.12.1 cluster.
+1. Start a Qdrant 1.12.1 cluster.
 
-\2. Fill the Qdrant-related parameters in the configuration file.
+2. Fill the Qdrant-related parameters in the configuration file.
 
-\3. Run:
+3. Run:
 
 ```bash
 flink run -c cn.edu.zju.daily.QdrantSeparatedStreamSearchJob ./build/flink-frontend/vstream-1.1.jar <params.yaml>
@@ -83,15 +83,15 @@ flink run -c cn.edu.zju.daily.QdrantSeparatedStreamSearchJob ./build/flink-front
 
 ### Chroma
 
-\1. Start a Chroma instance (version 0.5.12) for each Flink parallelism on the local machine. You can use this script:
+1. Start a Chroma instance (version 0.5.12) for each Flink parallelism on the local machine. You can use this script:
 
 ```
 flink-frontend/scripts/chroma/start-chroma-cluster.sh
 ```
 
-\2. Fill the Chroma-related parameters in the configuration file.
+2. Fill the Chroma-related parameters in the configuration file.
 
-\3. Run:
+3. Run:
 
 ```bash
 flink run -c cn.edu.zju.daily.ChromaSeparatedStreamSearchJob ./build/flink-frontend/vstream-1.1.jar <params.yaml>
