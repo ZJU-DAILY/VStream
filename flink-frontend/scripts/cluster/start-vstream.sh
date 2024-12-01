@@ -1,14 +1,20 @@
 #!/bin/bash
 
-while getopts p:n:f: flag
+while getopts p:n:f:b: flag
 do
   case "${flag}" in
     p) param_file=${OPTARG};;
     n) noexec=${OPTARG};;
     f) force=${OPTARG};;
+    b) build=${OPTARG};;
     *) echo "Invalid flag: ${flag}";;
   esac
 done
+
+# build is by default "build"
+if [ -z "$build" ]; then
+  build="build"
+fi
 
 CLUSTER="node10 node11 node12 node13 node14 node15 node21 node22 node23 node182"
 FLINK_MASTER="node11"
@@ -19,7 +25,7 @@ SSH_CONFIG="-p 4399"
 SYSLOG_DIR="/home/auroflow/storage/syslogs"
 STORAGE_DIR="/home/auroflow/storage/rocksdb"
 FLINK_FRONTEND_DIR="/home/auroflow/code/vector-search/VStream/flink-frontend"
-FLINK_FRONTEND_JAR="/home/auroflow/code/vector-search/VStream/build/flink-frontend/vstream-1.1.jar"
+FLINK_FRONTEND_JAR="/home/auroflow/code/vector-search/VStream/$build/flink-frontend/vstream-1.1.jar"
 
 # Display config
 echo "About to execute:"

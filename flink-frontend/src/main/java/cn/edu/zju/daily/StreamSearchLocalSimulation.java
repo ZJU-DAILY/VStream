@@ -57,6 +57,7 @@ public class StreamSearchLocalSimulation {
                                 currentOptions.setUseDirectIoForFlushAndCompaction(true);
                                 currentOptions.setAvoidUnnecessaryBlockingIO(true);
                                 currentOptions.setInfoLogLevel(InfoLogLevel.INFO_LEVEL);
+                                currentOptions.setFlushVerifyMemtableCount(false);
                                 return currentOptions;
                             }
 

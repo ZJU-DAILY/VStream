@@ -19,20 +19,22 @@ for file in $(find "$FLINK_FRONTEND_DIR/params" -maxdepth 1 -name "*.yaml" | sor
     fi
   done < "$COMPLETED_LOG"
   
-   # if there is 'no-compress' in the filename, we should change the ROCKSDB_PATH in ~/.bashrc on all machines
-   if [[ $file == *"no-compress"* ]]; then
-     echo "no-compress found in filename. Changing ROCKSDB_PATH to /build-no-compress on all machines..."
+   # if there is 'ncompress' in the filename, we should change the ROCKSDB_PATH in ~/.bashrc on all machines
+   if [[ $file == *"ncompress"* ]]; then
+     echo "no-compress found in filename. Changing ROCKSDB_PATH to /build-ncompress on all machines..."
      for node in $nodes; do
        # change "VectorBackend-RocksDB/build\n" to "VectorBackend-RocksDB/build-no-compress\n" in ~/.bashrc
-       ssh $node "sed -i 's/VStream\/build$/VStream\/build-no-compress/g' /home/auroflow/.bashrc"
+       ssh $node "sed -i 's/VStream\/build$/VStream\/build-ncompress/g' /home/auroflow/.bashrc"
      done
+     build="build-ncompress"
    else
-     echo "no-compress not found in filename. Changing ROCKSDB_PATH to /build on all machines..."
+     echo "ncompress not found in filename. Changing ROCKSDB_PATH to /build on all machines..."
      for node in $nodes; do
        # change "VectorBackend-RocksDB/build-no-compress\n" to "VectorBackend-RocksDB/build\n" in ~/.bashrc
        # if it is already the case, do not change
-       ssh $node "sed -i 's/VStream\/build-no-compress$/VStream\/build/g' /home/auroflow/.bashrc"
+       ssh $node "sed -i 's/VStream\/build-ncompress$/VStream\/build/g' /home/auroflow/.bashrc"
      done
+     build="build"
    fi
   if [[ $file == *"vstream"* ]]; then
     echo "Running vstream job: $file"
@@ -53,7 +55,7 @@ for file in $(find "$FLINK_FRONTEND_DIR/params" -maxdepth 1 -name "*.yaml" | sor
     
     python3 "$SCRIPT_DIR/wait-flink-job.py" "$syslog_dirname"
     status=$?
-    "$SCRIPT_DIR/stop-vstream.sh" -f "$syslog_dirname" -a y
+    "$SCRIPT_DIR/stop-vstream.sh" -f "$syslog_dirname" -a y -b "$build"
     rm -f ./.syslog_dir
     if [ $status -ne 0 ]; then
       echo "fail $base" >> "$COMPLETED_LOG"
