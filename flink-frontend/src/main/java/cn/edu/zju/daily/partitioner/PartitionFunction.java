@@ -4,10 +4,7 @@ import static java.util.stream.Collectors.toList;
 
 import cn.edu.zju.daily.data.PartitionedElement;
 import cn.edu.zju.daily.data.vector.VectorData;
-import cn.edu.zju.daily.partitioner.curve.GrayCurve;
-import cn.edu.zju.daily.partitioner.curve.HilbertCurve;
-import cn.edu.zju.daily.partitioner.curve.PeanoCurve;
-import cn.edu.zju.daily.partitioner.curve.ZOrderCurve;
+import cn.edu.zju.daily.partitioner.curve.*;
 import cn.edu.zju.daily.util.Parameters;
 import java.util.List;
 import java.util.Random;
@@ -171,6 +168,21 @@ public interface PartitionFunction
                         params.getInsertThrottleThresholds(),
                         params.getParallelism(),
                         new GrayCurve.Builder());
+            case "lsh+sierpinski":
+                return new LSHWithSpaceFillingPartitionFunction(
+                        random,
+                        params.getVectorDim(),
+                        params.getLshNumFamilies(),
+                        params.getLshNumHashes(),
+                        params.getLshBucketWidth(),
+                        params.getLshNumSpaceFillingBits(),
+                        params.getLshPartitionUpdateInterval(),
+                        params.getLshHilbertMaxRetainedElements(),
+                        params.getMaxTTL(),
+                        observedInsertIntervals,
+                        params.getInsertThrottleThresholds(),
+                        params.getParallelism(),
+                        new SierpinskiCurve.Builder());
             case "odyssey":
                 return new OdysseyPartitionFunction(
                         params.getParallelism(),
