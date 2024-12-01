@@ -37,7 +37,7 @@ else
 fi
 
 cd ../flink-frontend || exit 1
-mvn clean package -DskipTests
+mvn clean package -DskipTests -Dbuild.keyword=build
 
 # success?
 if [ "$?" -ne 0 ]; then

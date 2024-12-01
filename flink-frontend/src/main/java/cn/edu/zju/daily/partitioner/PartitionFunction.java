@@ -4,7 +4,9 @@ import static java.util.stream.Collectors.toList;
 
 import cn.edu.zju.daily.data.PartitionedElement;
 import cn.edu.zju.daily.data.vector.VectorData;
+import cn.edu.zju.daily.partitioner.curve.GrayCurve;
 import cn.edu.zju.daily.partitioner.curve.HilbertCurve;
+import cn.edu.zju.daily.partitioner.curve.PeanoCurve;
 import cn.edu.zju.daily.partitioner.curve.ZOrderCurve;
 import cn.edu.zju.daily.util.Parameters;
 import java.util.List;
@@ -139,6 +141,36 @@ public interface PartitionFunction
                         params.getInsertThrottleThresholds(),
                         params.getParallelism(),
                         new ZOrderCurve.Builder());
+            case "lsh+peano":
+                return new LSHWithSpaceFillingPartitionFunction(
+                        random,
+                        params.getVectorDim(),
+                        params.getLshNumFamilies(),
+                        params.getLshNumHashes(),
+                        params.getLshBucketWidth(),
+                        params.getLshNumSpaceFillingBits(),
+                        params.getLshPartitionUpdateInterval(),
+                        params.getLshHilbertMaxRetainedElements(),
+                        params.getMaxTTL(),
+                        observedInsertIntervals,
+                        params.getInsertThrottleThresholds(),
+                        params.getParallelism(),
+                        new PeanoCurve.Builder());
+            case "lsh+gray":
+                return new LSHWithSpaceFillingPartitionFunction(
+                        random,
+                        params.getVectorDim(),
+                        params.getLshNumFamilies(),
+                        params.getLshNumHashes(),
+                        params.getLshBucketWidth(),
+                        params.getLshNumSpaceFillingBits(),
+                        params.getLshPartitionUpdateInterval(),
+                        params.getLshHilbertMaxRetainedElements(),
+                        params.getMaxTTL(),
+                        observedInsertIntervals,
+                        params.getInsertThrottleThresholds(),
+                        params.getParallelism(),
+                        new GrayCurve.Builder());
             case "odyssey":
                 return new OdysseyPartitionFunction(
                         params.getParallelism(),

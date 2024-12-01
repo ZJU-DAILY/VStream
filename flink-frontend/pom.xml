@@ -17,6 +17,8 @@
     <guava.version>32.1.3-jre</guava.version>
     <spotless.version>2.30.0</spotless.version>
     <black.path>/home/auroflow/.local/bin/black</black.path>
+    <build.keyword>build</build.keyword>
+    <build.path>${pom.basedir}/../${build.keyword}</build.path>
   </properties>
   <!-- https://mvnrepository.com/artifact/org.apache.hadoop/hadoop-common -->
   <dependencies>
@@ -25,7 +27,7 @@
       <artifactId>rocksdbjni</artifactId>
       <version>8.3.2</version>
       <scope>system</scope>
-      <systemPath>${pom.basedir}/../build/java/rocksdbjni_classes.jar</systemPath>
+      <systemPath>${build.path}/java/rocksdbjni_classes.jar</systemPath>
     </dependency>
     <dependency>
       <groupId>io.grpc</groupId>
@@ -258,7 +260,7 @@
     </dependency>
   </dependencies>
   <build>
-    <directory>${pom.basedir}/../build/flink-frontend/</directory>
+    <directory>${build.path}/flink-frontend/</directory>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

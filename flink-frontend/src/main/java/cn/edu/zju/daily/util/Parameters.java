@@ -5,6 +5,7 @@ import cn.edu.zju.daily.data.source.format.FloatVectorBinaryInputFormatAdaptor;
 import cn.edu.zju.daily.data.source.rate.StagedRateControllerBuilder;
 import cn.edu.zju.daily.partitioner.LSHProximityPartitionFunction;
 import cn.edu.zju.daily.partitioner.LSHWithSpaceFillingPartitionFunction;
+import cn.edu.zju.daily.partitioner.PartitionFunction;
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Files;
@@ -170,7 +171,7 @@ public @Data class Parameters implements Serializable {
     // Partitioners
     // =================
 
-    /** Partitioner name. */
+    /** Partitioner name. See {@link PartitionFunction}. */
     private String partitioner;
 
     // ---
