@@ -2590,7 +2590,8 @@ void Version::Get(const ReadOptions& read_options, const LookupKey& k,
         time_log.append(std::to_string(f->lastest_key_time) + " ");
         if (f->lastest_key_time < ts) {
           if (vector_search_options->is_evict) {
-            sst_delete_candidates.emplace_back(f, cfd_->ioptions()->cf_paths[f->fd.GetPathId()].path);
+            sst_delete_candidates.emplace_back(
+                f, cfd_->ioptions()->cf_paths[f->fd.GetPathId()].path);
           }
           f = fp.GetNextFile();
           continue;
@@ -2648,8 +2649,10 @@ void Version::Get(const ReadOptions& read_options, const LookupKey& k,
         }
         f = fp.GetNextFile();
       }
-      ROCKS_LOG_INFO(info_log_, "Searched  %" ROCKSDB_PRIszt " SSTables: ts = %" PRIu64 ", latest = %s",
-                       searched_sst_num, ts, time_log.c_str());
+      ROCKS_LOG_INFO(info_log_,
+                     "Searched  %" ROCKSDB_PRIszt " SSTables: ts = %" PRIu64
+                     ", latest = %s",
+                     searched_sst_num, ts, time_log.c_str());
 
       if (LIKELY(searched_sst_num > 0)) {
         // update hit count
@@ -2693,27 +2696,33 @@ void Version::Get(const ReadOptions& read_options, const LookupKey& k,
         termination_threshold.store(new_termination_threshold,
                                     std::memory_order_relaxed);
       }
-      if ((vector_search_options->is_evict) && !LIKELY(sst_delete_candidates.empty())) {
+      if ((vector_search_options->is_evict) &&
+          !LIKELY(sst_delete_candidates.empty())) {
         RemoveLiveFiles(sst_delete_candidates, blob_delete_candidates);
         for (auto& f : sst_delete_candidates) {
-          std::string cf_path = cfd_->ioptions()->cf_paths[f.metadata->fd.GetPathId()].path + "/";
+          std::string cf_path =
+              cfd_->ioptions()->cf_paths[f.metadata->fd.GetPathId()].path + "/";
 
-          size_t path_len = cf_path.length() + 6 + 4 + 1; // 路径长度+"/"+六位数字宽度+".sst"+结束符
-          char* filename = (char*) malloc(path_len * sizeof(char));
+          size_t path_len = cf_path.length() + 6 + 4 +
+                            1;  // 路径长度+"/"+六位数字宽度+".sst"+结束符
+          char* filename = (char*)malloc(path_len * sizeof(char));
 
           if (filename != nullptr) {
             // 拼接路径
             strcpy(filename, cf_path.c_str());
 
             // 格式化并添加文件编号
-            snprintf(filename + strlen(filename), 7, "%06d", f.metadata->fd.GetNumber()); // 使用%06d保证前面补零，总宽度为6
+            snprintf(
+                filename + strlen(filename), 7, "%06d",
+                f.metadata->fd.GetNumber());  // 使用%06d保证前面补零，总宽度为6
 
             // 添加文件扩展名
             strcat(filename, ".sst");
           }
           std::remove(filename);
           storage_info_.file_locations_.erase(f.metadata->fd.GetNumber());
-          auto newEnd = std::remove(storage_info_.files_[0].begin(), storage_info_.files_[0].end(), f.metadata);
+          auto newEnd = std::remove(storage_info_.files_[0].begin(),
+                                    storage_info_.files_[0].end(), f.metadata);
           storage_info_.files_[0].erase(newEnd, storage_info_.files_[0].end());
           --storage_info_.level_files_brief_[0].num_files;
           ROCKS_LOG_HEADER(info_log_, "SST %s evicted.", filename);
@@ -2763,7 +2772,11 @@ void Version::Get(const ReadOptions& read_options, const LookupKey& k,
     if (key_exists != nullptr) {
       *key_exists = false;
     }
-    *status = Status::NotFound();  // Use an empty error message for speed
+    if (read_options.GetType() == ReadOptions::kVectorSearch) {
+      *status = Status::OK();
+    } else {
+      *status = Status::NotFound(); // Use an empty error message for speed
+    }
   }
 }
 

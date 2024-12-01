@@ -18,6 +18,15 @@
 
 package org.apache.flink.contrib.streaming.vstate;
 
+import static cn.edu.zju.daily.data.DataSerializer.*;
+import static org.apache.flink.util.Preconditions.checkArgument;
+
+import java.io.IOException;
+import java.util.*;
+import javax.annotation.Nonnegative;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.state.MapState;
 import org.apache.flink.api.common.state.State;
@@ -36,29 +45,17 @@ import org.apache.flink.runtime.state.internal.InternalMapState;
 import org.apache.flink.util.FlinkRuntimeException;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.StateMigrationException;
-import static cn.edu.zju.daily.data.DataSerializer.*;
-
 import org.rocksdb.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.annotation.Nonnegative;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
-import java.io.IOException;
-import java.util.*;
-
-import static org.apache.flink.util.Preconditions.checkArgument;
 
 /**
  * {@link MapState} implementation that stores state in RocksDB vector backend.
  *
- * @param <K>  The type of the key.
- * @param <N>  The type of the namespace.
+ * @param <K> The type of the key.
+ * @param <N> The type of the namespace.
  */
+@Slf4j
 public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, Map<byte[], byte[]>>
-    implements InternalMapState<K, N, byte[], byte[]> {
+        implements InternalMapState<K, N, byte[], byte[]> {
 
     @VisibleForTesting
     public class MockRocksDB {
@@ -69,8 +66,8 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
 
         MockRocksDB() throws RocksDBException {
             this.map = new HashMap<>();
-//            this.dim = (int) vectorColumnFamily.getDescriptor().getOptions().dim();
-//            this.k = (int) searchOptions.k();
+            //            this.dim = (int) vectorColumnFamily.getDescriptor().getOptions().dim();
+            //            this.k = (int) searchOptions.k();
             this.dim = 128;
             this.k = 10;
         }
@@ -84,20 +81,28 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
         }
 
         void put(
-            VectorColumnFamilyHandle vectorColumnFamily, WriteOptions writeOptions, byte[] rawKeyBytes,
-            byte[] rawValueBytes) throws RocksDBException {
+                VectorColumnFamilyHandle vectorColumnFamily,
+                WriteOptions writeOptions,
+                byte[] rawKeyBytes,
+                byte[] rawValueBytes)
+                throws RocksDBException {
             map.put(deserializeLong(rawKeyBytes), rawValueBytes);
         }
 
         byte[] vectorSearch(
-            VectorColumnFamilyHandle vectorColumnFamily, VectorSearchOptions searchOptions, byte[] rawKeyBytes)
-            throws RocksDBException {
+                VectorColumnFamilyHandle vectorColumnFamily,
+                VectorSearchOptions searchOptions,
+                byte[] rawKeyBytes)
+                throws RocksDBException {
 
             float[] vector = new float[dim];
             deserializeFloatArray(rawKeyBytes, vector);
 
-            PriorityQueue<Tuple2<Long, Float>> queue = new PriorityQueue<>(k,
-                Comparator.<Tuple2<Long, Float>, Float>comparing(tuple -> tuple.f1).reversed());
+            PriorityQueue<Tuple2<Long, Float>> queue =
+                    new PriorityQueue<>(
+                            k,
+                            Comparator.<Tuple2<Long, Float>, Float>comparing(tuple -> tuple.f1)
+                                    .reversed());
 
             for (Map.Entry<Long, byte[]> entry : map.entrySet()) {
                 long id = entry.getKey();
@@ -132,11 +137,7 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
         }
     }
 
-    private static final Logger LOG = LoggerFactory.getLogger(RocksDBMockVectorMapState.class);
-
-    /**
-     * Serializer for the keys and values.
-     */
+    /** Serializer for the keys and values. */
     private TypeSerializer<byte[]> userKeySerializer;
 
     private TypeSerializer<byte[]> userValueSerializer;
@@ -147,31 +148,31 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
 
     private final MockRocksDB mdb;
 
-
-
     /**
      * Creates a new {@code RocksDBMockVectorMapState}.
      *
-     * @param vectorColumnFamily        The RocksDB column family that this state is associated to.
+     * @param vectorColumnFamily The RocksDB column family that this state is associated to.
      * @param namespaceSerializer The serializer for the namespace.
-     * @param valueSerializer     The serializer for the state.
-     * @param defaultValue        The default value for the state.
-     * @param backend             The backend for which this state is bind to.
+     * @param valueSerializer The serializer for the state.
+     * @param defaultValue The default value for the state.
+     * @param backend The backend for which this state is bind to.
      */
     private RocksDBMockVectorMapState(
-        VectorColumnFamilyHandle vectorColumnFamily,
-        TypeSerializer<N> namespaceSerializer,
-        TypeSerializer<Map<byte[], byte[]>> valueSerializer,
-        Map<byte[], byte[]> defaultValue,
-        RocksDBKeyedStateBackend<K> backend) throws RocksDBException {
+            VectorColumnFamilyHandle vectorColumnFamily,
+            TypeSerializer<N> namespaceSerializer,
+            TypeSerializer<Map<byte[], byte[]>> valueSerializer,
+            Map<byte[], byte[]> defaultValue,
+            RocksDBKeyedStateBackend<K> backend)
+            throws RocksDBException {
 
         super(null, namespaceSerializer, valueSerializer, defaultValue, backend);
 
         Preconditions.checkState(
-            valueSerializer instanceof MapSerializer, "Unexpected serializer type.");
+                valueSerializer instanceof MapSerializer, "Unexpected serializer type.");
 
         this.vectorColumnFamily = vectorColumnFamily;
-        MapSerializer<byte[], byte[]> castedMapSerializer = (MapSerializer<byte[], byte[]>) valueSerializer;
+        MapSerializer<byte[], byte[]> castedMapSerializer =
+                (MapSerializer<byte[], byte[]>) valueSerializer;
         this.userKeySerializer = castedMapSerializer.getKeySerializer();
         this.userValueSerializer = castedMapSerializer.getValueSerializer();
         this.searchOptions = backend.getVectorSearchOptions();
@@ -221,7 +222,7 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
     /**
      * Performs vector insert.
      *
-     * @param userKey   The byte array of the vector ID (long type) to insert.
+     * @param userKey The byte array of the vector ID (long type) to insert.
      * @param userValue The byte array of the vector to insert.
      * @throws IOException
      * @throws RocksDBException
@@ -238,14 +239,14 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
         }
 
         try (RocksDBWriteBatchWrapper writeBatchWrapper =
-                 new RocksDBWriteBatchWrapper(
-                     backend.db, writeOptions, backend.getWriteBatchSize())) {
+                new RocksDBWriteBatchWrapper(
+                        backend.db, writeOptions, backend.getWriteBatchSize())) {
             for (Map.Entry<byte[], byte[]> entry : map.entrySet()) {
                 byte[] rawKeyBytes =
-                    serializeCurrentKeyWithGroupAndNamespacePlusUserKey(
-                        entry.getKey(), userKeySerializer);
+                        serializeCurrentKeyWithGroupAndNamespacePlusUserKey(
+                                entry.getKey(), userKeySerializer);
                 byte[] rawValueBytes =
-                    serializeValueNullSensitive(entry.getValue(), userValueSerializer);
+                        serializeValueNullSensitive(entry.getValue(), userValueSerializer);
                 writeBatchWrapper.put(columnFamily, rawKeyBytes, rawValueBytes);
             }
         }
@@ -254,7 +255,7 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
     @Override
     public void remove(byte[] userKey) throws IOException, RocksDBException {
         byte[] rawKeyBytes =
-            serializeCurrentKeyWithGroupAndNamespacePlusUserKey(userKey, userKeySerializer);
+                serializeCurrentKeyWithGroupAndNamespacePlusUserKey(userKey, userKeySerializer);
 
         backend.db.delete(columnFamily, writeOptions, rawKeyBytes);
     }
@@ -262,7 +263,7 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
     @Override
     public boolean contains(byte[] userKey) throws IOException, RocksDBException {
         byte[] rawKeyBytes =
-            serializeCurrentKeyWithGroupAndNamespacePlusUserKey(userKey, userKeySerializer);
+                serializeCurrentKeyWithGroupAndNamespacePlusUserKey(userKey, userKeySerializer);
         byte[] rawValueBytes = backend.db.get(columnFamily, rawKeyBytes);
 
         return (rawValueBytes != null);
@@ -278,19 +279,19 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
         final byte[] prefixBytes = serializeCurrentKeyWithGroupAndNamespace();
 
         return () ->
-            new RocksDBMapIterator<byte[]>(
-                backend.db,
-                prefixBytes,
-                userKeySerializer,
-                userValueSerializer,
-                dataInputView) {
-                @Nullable
-                @Override
-                public byte[] next() {
-                    RocksDBMapEntry entry = nextEntry();
-                    return (entry == null ? null : entry.getKey());
-                }
-            };
+                new RocksDBMapIterator<byte[]>(
+                        backend.db,
+                        prefixBytes,
+                        userKeySerializer,
+                        userValueSerializer,
+                        dataInputView) {
+                    @Nullable
+                    @Override
+                    public byte[] next() {
+                        RocksDBMapEntry entry = nextEntry();
+                        return (entry == null ? null : entry.getKey());
+                    }
+                };
     }
 
     @Override
@@ -298,35 +299,35 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
         final byte[] prefixBytes = serializeCurrentKeyWithGroupAndNamespace();
 
         return () ->
-            new RocksDBMapIterator<byte[]>(
-                backend.db,
-                prefixBytes,
-                userKeySerializer,
-                userValueSerializer,
-                dataInputView) {
-                @Override
-                public byte[] next() {
-                    RocksDBMapEntry entry = nextEntry();
-                    return (entry == null ? null : entry.getValue());
-                }
-            };
+                new RocksDBMapIterator<byte[]>(
+                        backend.db,
+                        prefixBytes,
+                        userKeySerializer,
+                        userValueSerializer,
+                        dataInputView) {
+                    @Override
+                    public byte[] next() {
+                        RocksDBMapEntry entry = nextEntry();
+                        return (entry == null ? null : entry.getValue());
+                    }
+                };
     }
 
     @Override
     public void migrateSerializedValue(
-        DataInputDeserializer serializedOldValueInput,
-        DataOutputSerializer serializedMigratedValueOutput,
-        TypeSerializer<Map<byte[], byte[]>> priorSerializer,
-        TypeSerializer<Map<byte[], byte[]>> newSerializer)
-        throws StateMigrationException {
+            DataInputDeserializer serializedOldValueInput,
+            DataOutputSerializer serializedMigratedValueOutput,
+            TypeSerializer<Map<byte[], byte[]>> priorSerializer,
+            TypeSerializer<Map<byte[], byte[]>> newSerializer)
+            throws StateMigrationException {
 
         checkArgument(priorSerializer instanceof MapSerializer);
         checkArgument(newSerializer instanceof MapSerializer);
 
         TypeSerializer<byte[]> priorMapValueSerializer =
-            ((MapSerializer<byte[], byte[]>) priorSerializer).getValueSerializer();
+                ((MapSerializer<byte[], byte[]>) priorSerializer).getValueSerializer();
         TypeSerializer<byte[]> newMapValueSerializer =
-            ((MapSerializer<byte[], byte[]>) newSerializer).getValueSerializer();
+                ((MapSerializer<byte[], byte[]>) newSerializer).getValueSerializer();
 
         try {
             boolean isNull = serializedOldValueInput.readBoolean();
@@ -338,7 +339,7 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
             newMapValueSerializer.serialize(mapUserValue, serializedMigratedValueOutput);
         } catch (Exception e) {
             throw new StateMigrationException(
-                "Error while trying to migrate RocksDB map state.", e);
+                    "Error while trying to migrate RocksDB map state.", e);
         }
     }
 
@@ -347,7 +348,7 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
         final byte[] prefixBytes = serializeCurrentKeyWithGroupAndNamespace();
 
         return new RocksDBMapIterator<Map.Entry<byte[], byte[]>>(
-            backend.db, prefixBytes, userKeySerializer, userValueSerializer, dataInputView) {
+                backend.db, prefixBytes, userKeySerializer, userValueSerializer, dataInputView) {
             @Override
             public Map.Entry<byte[], byte[]> next() {
                 return nextEntry();
@@ -360,8 +361,8 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
         final byte[] prefixBytes = serializeCurrentKeyWithGroupAndNamespace();
 
         try (RocksIteratorWrapper iterator =
-                 RocksDBOperationUtils.getRocksIterator(
-                     backend.db, columnFamily, backend.getReadOptions())) {
+                RocksDBOperationUtils.getRocksIterator(
+                        backend.db, columnFamily, backend.getReadOptions())) {
 
             iterator.seek(prefixBytes);
 
@@ -372,13 +373,13 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
     @Override
     public void clear() {
         try (RocksIteratorWrapper iterator =
-                 RocksDBOperationUtils.getRocksIterator(
-                     backend.db, columnFamily, backend.getReadOptions());
-             RocksDBWriteBatchWrapper rocksDBWriteBatchWrapper =
-                 new RocksDBWriteBatchWrapper(
-                     backend.db,
-                     backend.getWriteOptions(),
-                     backend.getWriteBatchSize())) {
+                        RocksDBOperationUtils.getRocksIterator(
+                                backend.db, columnFamily, backend.getReadOptions());
+                RocksDBWriteBatchWrapper rocksDBWriteBatchWrapper =
+                        new RocksDBWriteBatchWrapper(
+                                backend.db,
+                                backend.getWriteOptions(),
+                                backend.getWriteBatchSize())) {
 
             final byte[] keyPrefixBytes = serializeCurrentKeyWithGroupAndNamespace();
             iterator.seek(keyPrefixBytes);
@@ -399,9 +400,10 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
 
     @Override
     protected RocksDBMockVectorMapState<K, N> setValueSerializer(
-        TypeSerializer<Map<byte[], byte[]>> valueSerializer) {
+            TypeSerializer<Map<byte[], byte[]>> valueSerializer) {
         super.setValueSerializer(valueSerializer);
-        MapSerializer<byte[], byte[]> castedMapSerializer = (MapSerializer<byte[], byte[]>) valueSerializer;
+        MapSerializer<byte[], byte[]> castedMapSerializer =
+                (MapSerializer<byte[], byte[]>) valueSerializer;
         this.userKeySerializer = castedMapSerializer.getKeySerializer();
         this.userValueSerializer = castedMapSerializer.getValueSerializer();
         return this;
@@ -409,11 +411,11 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
 
     @Override
     public byte[] getSerializedValue(
-        final byte[] serializedKeyAndNamespace,
-        final TypeSerializer<K> safeKeySerializer,
-        final TypeSerializer<N> safeNamespaceSerializer,
-        final TypeSerializer<Map<byte[], byte[]>> safeValueSerializer)
-        throws Exception {
+            final byte[] serializedKeyAndNamespace,
+            final TypeSerializer<K> safeKeySerializer,
+            final TypeSerializer<N> safeNamespaceSerializer,
+            final TypeSerializer<Map<byte[], byte[]>> safeValueSerializer)
+            throws Exception {
 
         Preconditions.checkNotNull(serializedKeyAndNamespace);
         Preconditions.checkNotNull(safeKeySerializer);
@@ -423,41 +425,42 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
         // TODO make KvStateSerializer key-group aware to save this round trip and key-group
         // computation
         Tuple2<K, N> keyAndNamespace =
-            KvStateSerializer.deserializeKeyAndNamespace(
-                serializedKeyAndNamespace, safeKeySerializer, safeNamespaceSerializer);
+                KvStateSerializer.deserializeKeyAndNamespace(
+                        serializedKeyAndNamespace, safeKeySerializer, safeNamespaceSerializer);
 
         int keyGroup =
-            KeyGroupRangeAssignment.assignToKeyGroup(
-                keyAndNamespace.f0, backend.getNumberOfKeyGroups());
+                KeyGroupRangeAssignment.assignToKeyGroup(
+                        keyAndNamespace.f0, backend.getNumberOfKeyGroups());
 
         SerializedCompositeKeyBuilder<K> keyBuilder =
-            new SerializedCompositeKeyBuilder<>(
-                safeKeySerializer, backend.getKeyGroupPrefixBytes(), 32);
+                new SerializedCompositeKeyBuilder<>(
+                        safeKeySerializer, backend.getKeyGroupPrefixBytes(), 32);
 
         keyBuilder.setKeyAndKeyGroup(keyAndNamespace.f0, keyGroup);
 
         final byte[] keyPrefixBytes =
-            keyBuilder.buildCompositeKeyNamespace(keyAndNamespace.f1, namespaceSerializer);
+                keyBuilder.buildCompositeKeyNamespace(keyAndNamespace.f1, namespaceSerializer);
 
-        final MapSerializer<byte[], byte[]> serializer = (MapSerializer<byte[], byte[]>) safeValueSerializer;
+        final MapSerializer<byte[], byte[]> serializer =
+                (MapSerializer<byte[], byte[]>) safeValueSerializer;
 
         final TypeSerializer<byte[]> dupUserKeySerializer = serializer.getKeySerializer();
         final TypeSerializer<byte[]> dupUserValueSerializer = serializer.getValueSerializer();
         final DataInputDeserializer inputView = new DataInputDeserializer();
 
         final Iterator<Map.Entry<byte[], byte[]>> iterator =
-            new RocksDBMapIterator<Map.Entry<byte[], byte[]>>(
-                backend.db,
-                keyPrefixBytes,
-                dupUserKeySerializer,
-                dupUserValueSerializer,
-                inputView) {
+                new RocksDBMapIterator<Map.Entry<byte[], byte[]>>(
+                        backend.db,
+                        keyPrefixBytes,
+                        dupUserKeySerializer,
+                        dupUserValueSerializer,
+                        inputView) {
 
-                @Override
-                public Map.Entry<byte[], byte[]> next() {
-                    return nextEntry();
-                }
-            };
+                    @Override
+                    public Map.Entry<byte[], byte[]> next() {
+                        return nextEntry();
+                    }
+                };
 
         // Return null to make the behavior consistent with other backends
         if (!iterator.hasNext()) {
@@ -465,29 +468,28 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
         }
 
         return KvStateSerializer.serializeMap(
-            () -> iterator, dupUserKeySerializer, dupUserValueSerializer);
+                () -> iterator, dupUserKeySerializer, dupUserValueSerializer);
     }
 
     // ------------------------------------------------------------------------
     //  Serialization Methods
     // ------------------------------------------------------------------------
 
-
     private static byte[] deserializeUserKey(
-        DataInputDeserializer dataInputView,
-        int userKeyOffset,
-        byte[] rawKeyBytes,
-        TypeSerializer<byte[]> keySerializer)
-        throws IOException {
+            DataInputDeserializer dataInputView,
+            int userKeyOffset,
+            byte[] rawKeyBytes,
+            TypeSerializer<byte[]> keySerializer)
+            throws IOException {
         dataInputView.setBuffer(rawKeyBytes, userKeyOffset, rawKeyBytes.length - userKeyOffset);
         return keySerializer.deserialize(dataInputView);
     }
 
     private static byte[] deserializeUserValue(
-        DataInputDeserializer dataInputView,
-        byte[] rawValueBytes,
-        TypeSerializer<byte[]> valueSerializer)
-        throws IOException {
+            DataInputDeserializer dataInputView,
+            byte[] rawValueBytes,
+            TypeSerializer<byte[]> valueSerializer)
+            throws IOException {
 
         dataInputView.setBuffer(rawValueBytes);
 
@@ -514,9 +516,7 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
     //  Internal Classes
     // ------------------------------------------------------------------------
 
-    /**
-     * A map entry in RocksDBMockVectorMapState.
-     */
+    /** A map entry in RocksDBMockVectorMapState. */
     private class RocksDBMapEntry implements Map.Entry<byte[], byte[]> {
         private final RocksDB db;
 
@@ -526,14 +526,10 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
          */
         private final byte[] rawKeyBytes;
 
-        /**
-         * The raw bytes of the value stored in RocksDB.
-         */
+        /** The raw bytes of the value stored in RocksDB. */
         private byte[] rawValueBytes;
 
-        /**
-         * True if the entry has been deleted.
-         */
+        /** True if the entry has been deleted. */
         private boolean deleted;
 
         /**
@@ -544,9 +540,7 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
 
         private byte[] userValue;
 
-        /**
-         * The offset of User Key offset in raw key bytes.
-         */
+        /** The offset of User Key offset in raw key bytes. */
         private final int userKeyOffset;
 
         private final TypeSerializer<byte[]> keySerializer;
@@ -556,13 +550,13 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
         private final DataInputDeserializer dataInputView;
 
         RocksDBMapEntry(
-            @Nonnull final RocksDB db,
-            @Nonnegative final int userKeyOffset,
-            @Nonnull final byte[] rawKeyBytes,
-            @Nonnull final byte[] rawValueBytes,
-            @Nonnull final TypeSerializer<byte[]> keySerializer,
-            @Nonnull final TypeSerializer<byte[]> valueSerializer,
-            @Nonnull DataInputDeserializer dataInputView) {
+                @Nonnull final RocksDB db,
+                @Nonnegative final int userKeyOffset,
+                @Nonnull final byte[] rawKeyBytes,
+                @Nonnull final byte[] rawValueBytes,
+                @Nonnull final TypeSerializer<byte[]> keySerializer,
+                @Nonnull final TypeSerializer<byte[]> valueSerializer,
+                @Nonnull DataInputDeserializer dataInputView) {
             this.db = db;
 
             this.userKeyOffset = userKeyOffset;
@@ -591,8 +585,8 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
             if (userKey == null) {
                 try {
                     userKey =
-                        deserializeUserKey(
-                            dataInputView, userKeyOffset, rawKeyBytes, keySerializer);
+                            deserializeUserKey(
+                                    dataInputView, userKeyOffset, rawKeyBytes, keySerializer);
                 } catch (IOException e) {
                     throw new FlinkRuntimeException("Error while deserializing the user key.", e);
                 }
@@ -609,10 +603,10 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
                 if (userValue == null) {
                     try {
                         userValue =
-                            deserializeUserValue(dataInputView, rawValueBytes, valueSerializer);
+                                deserializeUserValue(dataInputView, rawValueBytes, valueSerializer);
                     } catch (IOException e) {
                         throw new FlinkRuntimeException(
-                            "Error while deserializing the user value.", e);
+                                "Error while deserializing the user value.", e);
                     }
                 }
 
@@ -641,24 +635,19 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
         }
     }
 
-    /**
-     * An auxiliary utility to scan all entries under the given key.
-     */
+    /** An auxiliary utility to scan all entries under the given key. */
     private abstract class RocksDBMapIterator<T> implements Iterator<T> {
 
         private static final int CACHE_SIZE_LIMIT = 128;
 
-        /**
-         * The db where data resides.
-         */
+        /** The db where data resides. */
         private final RocksDB db;
 
         /**
          * The prefix bytes of the key being accessed. All entries under the same key have the same
          * prefix, hence we can stop iterating once coming across an entry with a different prefix.
          */
-        @Nonnull
-        private final byte[] keyPrefixBytes;
+        @Nonnull private final byte[] keyPrefixBytes;
 
         /**
          * True if all entries have been accessed or the iterator has come across an entry with a
@@ -666,9 +655,7 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
          */
         private boolean expired = false;
 
-        /**
-         * A in-memory cache for the entries in the rocksdb.
-         */
+        /** A in-memory cache for the entries in the rocksdb. */
         private ArrayList<RocksDBMapEntry> cacheEntries = new ArrayList<>();
 
         /**
@@ -684,11 +671,11 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
         private final DataInputDeserializer dataInputView;
 
         RocksDBMapIterator(
-            final RocksDB db,
-            final byte[] keyPrefixBytes,
-            final TypeSerializer<byte[]> keySerializer,
-            final TypeSerializer<byte[]> valueSerializer,
-            DataInputDeserializer dataInputView) {
+                final RocksDB db,
+                final byte[] keyPrefixBytes,
+                final TypeSerializer<byte[]> keySerializer,
+                final TypeSerializer<byte[]> valueSerializer,
+                DataInputDeserializer dataInputView) {
 
             this.db = db;
             this.keyPrefixBytes = keyPrefixBytes;
@@ -708,7 +695,7 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
         public void remove() {
             if (currentEntry == null || currentEntry.deleted) {
                 throw new IllegalStateException(
-                    "The remove operation must be called after a valid next operation.");
+                        "The remove operation must be called after a valid next operation.");
             }
 
             currentEntry.remove();
@@ -745,8 +732,8 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
             // exception
             // occurred in the below code block.
             try (RocksIteratorWrapper iterator =
-                     RocksDBOperationUtils.getRocksIterator(
-                         db, columnFamily, backend.getReadOptions())) {
+                    RocksDBOperationUtils.getRocksIterator(
+                            db, columnFamily, backend.getReadOptions())) {
 
                 /*
                  * The iteration starts from the prefix bytes at the first loading. After #nextEntry() is called,
@@ -754,7 +741,7 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
                  * the iterating from currentEntry if reloading cache is needed.
                  */
                 byte[] startBytes =
-                    (currentEntry == null ? keyPrefixBytes : currentEntry.rawKeyBytes);
+                        (currentEntry == null ? keyPrefixBytes : currentEntry.rawKeyBytes);
 
                 cacheEntries.clear();
                 cacheIndex = 0;
@@ -771,7 +758,7 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
 
                 while (true) {
                     if (!iterator.isValid()
-                        || !startWithKeyPrefix(keyPrefixBytes, iterator.key())) {
+                            || !startWithKeyPrefix(keyPrefixBytes, iterator.key())) {
                         expired = true;
                         break;
                     }
@@ -781,14 +768,14 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
                     }
 
                     RocksDBMapEntry entry =
-                        new RocksDBMapEntry(
-                            db,
-                            keyPrefixBytes.length,
-                            iterator.key(),
-                            iterator.value(),
-                            keySerializer,
-                            valueSerializer,
-                            dataInputView);
+                            new RocksDBMapEntry(
+                                    db,
+                                    keyPrefixBytes.length,
+                                    iterator.key(),
+                                    iterator.value(),
+                                    keySerializer,
+                                    valueSerializer,
+                                    dataInputView);
 
                     cacheEntries.add(entry);
 
@@ -800,32 +787,34 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
 
     @SuppressWarnings("unchecked")
     static <K, N, SV, S extends State, IS extends S> IS create(
-        StateDescriptor<S, SV> stateDesc,
-        Tuple2<VectorColumnFamilyHandle, RegisteredKeyValueStateBackendMetaInfo<N, SV>>
-            registerResult,
-        RocksDBKeyedStateBackend<K> backend) throws RocksDBException {
+            StateDescriptor<S, SV> stateDesc,
+            Tuple2<VectorColumnFamilyHandle, RegisteredKeyValueStateBackendMetaInfo<N, SV>>
+                    registerResult,
+            RocksDBKeyedStateBackend<K> backend)
+            throws RocksDBException {
         return (IS)
-            new RocksDBMockVectorMapState<>(
-                registerResult.f0,
-                registerResult.f1.getNamespaceSerializer(),
-                (TypeSerializer<Map<byte[], byte[]>>) registerResult.f1.getStateSerializer(),
-                (Map<byte[], byte[]>) stateDesc.getDefaultValue(),
-                backend);
+                new RocksDBMockVectorMapState<>(
+                        registerResult.f0,
+                        registerResult.f1.getNamespaceSerializer(),
+                        (TypeSerializer<Map<byte[], byte[]>>)
+                                registerResult.f1.getStateSerializer(),
+                        (Map<byte[], byte[]>) stateDesc.getDefaultValue(),
+                        backend);
     }
 
     @SuppressWarnings("unchecked")
     static <K, N, SV, S extends State, IS extends S> IS update(
-        StateDescriptor<S, SV> stateDesc,
-        Tuple2<VectorColumnFamilyHandle, RegisteredKeyValueStateBackendMetaInfo<N, SV>>
-            registerResult,
-        IS existingState) {
+            StateDescriptor<S, SV> stateDesc,
+            Tuple2<VectorColumnFamilyHandle, RegisteredKeyValueStateBackendMetaInfo<N, SV>>
+                    registerResult,
+            IS existingState) {
         return (IS)
-            ((RocksDBMockVectorMapState<K, N>) existingState)
-                .setNamespaceSerializer(registerResult.f1.getNamespaceSerializer())
-                .setValueSerializer(
-                    (TypeSerializer<Map<byte[], byte[]>>)
-                        registerResult.f1.getStateSerializer())
-                .setDefaultValue((Map<byte[], byte[]>) stateDesc.getDefaultValue());
+                ((RocksDBMockVectorMapState<K, N>) existingState)
+                        .setNamespaceSerializer(registerResult.f1.getNamespaceSerializer())
+                        .setValueSerializer(
+                                (TypeSerializer<Map<byte[], byte[]>>)
+                                        registerResult.f1.getStateSerializer())
+                        .setDefaultValue((Map<byte[], byte[]>) stateDesc.getDefaultValue());
     }
 
     /**
@@ -848,7 +837,7 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
                 NON_NULL_VALUE_PREFIX = dov.getSharedBuffer()[0];
             } catch (IOException e) {
                 throw new FlinkRuntimeException(
-                    "Failed to serialize boolean flag of map user null value", e);
+                        "Failed to serialize boolean flag of map user null value", e);
             }
         }
 
@@ -888,7 +877,7 @@ public class RocksDBMockVectorMapState<K, N> extends AbstractRocksDBState<K, N, 
                 return div.readBoolean();
             } catch (IOException e) {
                 throw new FlinkRuntimeException(
-                    "Failed to deserialize boolean flag of map user null value", e);
+                        "Failed to deserialize boolean flag of map user null value", e);
             }
         }
 

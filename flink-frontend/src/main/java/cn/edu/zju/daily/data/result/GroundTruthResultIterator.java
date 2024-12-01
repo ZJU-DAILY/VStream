@@ -4,6 +4,11 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+/**
+ * This class reads a ground truth file in SIFT format.
+ *
+ * @see <a href="ttp://corpus-texmex.irisa.fr">Datasets for approximate nearest neighbor search</a>
+ */
 public class GroundTruthResultIterator implements Iterator<SearchResult> {
 
     private final int k;

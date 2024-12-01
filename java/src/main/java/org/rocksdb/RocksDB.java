@@ -321,6 +321,62 @@ public class RocksDB extends RocksObject {
     return db;
   }
 
+  public static RocksDB open(final DBOptions options, final String path,
+      final List<ColumnFamilyDescriptor> columnFamilyDescriptors,
+      final List<ColumnFamilyHandle> columnFamilyHandles,
+      final List<VectorCFDescriptor> vectorCFDescriptors,
+      final List<VectorColumnFamilyHandle> vectorColumnFamilyHandles)
+      throws RocksDBException {
+
+      final byte[][] cfNames = new byte[columnFamilyDescriptors.size() + vectorCFDescriptors.size()][];
+      final long[] cfOptionHandles = new long[columnFamilyDescriptors.size() + vectorCFDescriptors.size()];
+      final byte[][] vcfNames = new byte[vectorCFDescriptors.size()][];
+      final long[] vcfOptionHandles = new long[vectorCFDescriptors.size()];
+      final int cfnum = columnFamilyDescriptors.size();
+      final int vcfnum = vectorCFDescriptors.size();
+      for (int i = 0; i < columnFamilyDescriptors.size(); i++) {
+          final ColumnFamilyDescriptor cfDescriptor = columnFamilyDescriptors
+                  .get(i);
+          cfNames[i] = cfDescriptor.getName();
+          cfOptionHandles[i] = cfDescriptor.getOptions().nativeHandle_;
+      }
+      for (int i = 0; i < vcfnum; i++) {
+        final VectorCFDescriptor vectorCFDescriptor = vectorCFDescriptors.get(i);
+        byte[] cfName = new byte[vectorCFDescriptor.getName().length + vectorCFExtension.length()];
+        System.arraycopy(vectorCFDescriptor.getName(), 0, cfName,0, vectorCFDescriptor.getName().length);
+        System.arraycopy(vectorCFExtension.getBytes(), 0, cfName, vectorCFDescriptor.getName().length, vectorCFExtension.length());
+        cfNames[cfnum + i] = cfName;
+        cfOptionHandles[cfnum + i] = vectorCFDescriptor.getVersionOptions().nativeHandle_;
+        vcfNames[i] = vectorCFDescriptor.getName();
+        vcfOptionHandles[i] = vectorCFDescriptor.getOptions().nativeHandle_;
+      }
+
+      final long[] handles = open(options.nativeHandle_, path, cfNames,
+              cfOptionHandles, vcfNames, vcfOptionHandles);
+      final RocksDB db = new RocksDB(handles[0]);
+      db.storeOptionsInstance(options);
+
+      for (int i = 1; i <= cfnum; i++) {
+          assert(i < handles.length);
+          final ColumnFamilyHandle columnFamilyHandle = new ColumnFamilyHandle(db, handles[i]);
+          columnFamilyHandles.add(columnFamilyHandle);
+      }
+
+      db.ownedColumnFamilyHandles.addAll(columnFamilyHandles);
+
+      for (int i = cfnum + 1; i <= cfnum + vcfnum; i++) {
+        assert(i + vcfnum < handles.length);
+        final VectorColumnFamilyHandle vectorColumnFamilyHandle = new VectorColumnFamilyHandle(db, handles[i + vcfnum]);
+        final ColumnFamilyHandle exColumnFamilyHandle = new ColumnFamilyHandle(db, handles[i]);
+        vectorColumnFamilyHandles.add(vectorColumnFamilyHandle);
+        db.exColumnFamilyHandles.put(vectorColumnFamilyHandle, exColumnFamilyHandle);
+      }
+
+      db.ownedVectorColumnFamilyHandles.addAll(vectorColumnFamilyHandles);
+
+      return db;
+  }
+
   /**
    * The factory constructor of RocksDB that opens a RocksDB instance in
    * Read-Only mode given the path to the database using the default
@@ -5010,6 +5066,10 @@ public class RocksDB extends RocksObject {
    */
   private static native long[] open(final long optionsHandle, final String path,
       final byte[][] columnFamilyNames, final long[] columnFamilyOptions) throws RocksDBException;
+
+  private static native long[] open(final long optionsHandle, final String path,
+      final byte[][] columnFamilyNames, final long[] columnFamilyOptions, final byte[][] vectorColumnFamilyNames,
+      final long[] vectorColumnFamilyOptions) throws RocksDBException;
 
   private static native long openROnly(final long optionsHandle, final String path,
       final boolean errorIfWalFileExists) throws RocksDBException;

@@ -25,6 +25,7 @@ with open(log_file) as f:
         if "SSTables" in line:
             sst_counts.append(int(line.split(" ")[-2]))
 
-for i, (duration, accuracy, sst_count) in enumerate(zip(durations, accuracies, sst_counts)):
+for i, (duration, accuracy, sst_count) in enumerate(
+    zip(durations, accuracies, sst_counts)
+):
     print(i, duration, accuracy, sst_count)
-

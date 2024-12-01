@@ -18,6 +18,25 @@
 
 package org.apache.flink.contrib.streaming.vstate.restore;
 
+import static org.apache.flink.runtime.state.StateUtil.unexpectedStateHandleException;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.SortedMap;
+import java.util.TreeMap;
+import java.util.UUID;
+import java.util.function.Function;
+import javax.annotation.Nonnegative;
+import javax.annotation.Nonnull;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerSchemaCompatibility;
 import org.apache.flink.contrib.streaming.vstate.RocksDBIncrementalCheckpointUtils;
@@ -53,42 +72,11 @@ import org.apache.flink.util.FileUtils;
 import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.StateMigrationException;
-
-import org.rocksdb.ColumnFamilyDescriptor;
-import org.rocksdb.ColumnFamilyHandle;
-import org.rocksdb.ColumnFamilyOptions;
-import org.rocksdb.DBOptions;
-import org.rocksdb.ReadOptions;
-import org.rocksdb.RocksDB;
-import org.rocksdb.RocksDBException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.annotation.Nonnegative;
-import javax.annotation.Nonnull;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.SortedMap;
-import java.util.TreeMap;
-import java.util.UUID;
-import java.util.function.Function;
-
-import static org.apache.flink.runtime.state.StateUtil.unexpectedStateHandleException;
+import org.rocksdb.*;
 
 /** Encapsulates the process of restoring a RocksDB instance from an incremental snapshot. */
+@Slf4j
 public class RocksDBIncrementalRestoreOperation<K> implements RocksDBRestoreOperation {
-
-    private static final Logger logger =
-            LoggerFactory.getLogger(RocksDBIncrementalRestoreOperation.class);
 
     private final String operatorIdentifier;
     private final SortedMap<Long, Collection<HandleAndLocalPath>> restoredSstFiles;
@@ -121,6 +109,8 @@ public class RocksDBIncrementalRestoreOperation<K> implements RocksDBRestoreOper
             File instanceRocksDBPath,
             DBOptions dbOptions,
             Function<String, ColumnFamilyOptions> columnFamilyOptionsFactory,
+            Function<String, VectorColumnFamilyOptions> vectorCFOptionsFactory,
+            Function<String, ColumnFamilyOptions> vectorVersionCFOptionsFactory,
             RocksDBNativeMetricOptions nativeMetricOptions,
             MetricGroup metricGroup,
             @Nonnull Collection<KeyedStateHandle> restoreStateHandles,
@@ -134,6 +124,8 @@ public class RocksDBIncrementalRestoreOperation<K> implements RocksDBRestoreOper
                         instanceRocksDBPath,
                         dbOptions,
                         columnFamilyOptionsFactory,
+                        vectorCFOptionsFactory,
+                        vectorVersionCFOptionsFactory,
                         nativeMetricOptions,
                         metricGroup,
                         ttlCompactFiltersManager,
@@ -185,8 +177,7 @@ public class RocksDBIncrementalRestoreOperation<K> implements RocksDBRestoreOper
     /** Recovery from a single remote incremental state without rescaling. */
     @SuppressWarnings("unchecked")
     private void restoreWithoutRescaling(KeyedStateHandle keyedStateHandle) throws Exception {
-        logger.info(
-                "Starting to restore from state handle: {} without rescaling.", keyedStateHandle);
+        LOG.info("Starting to restore from state handle: {} without rescaling.", keyedStateHandle);
         if (keyedStateHandle instanceof IncrementalRemoteKeyedStateHandle) {
             IncrementalRemoteKeyedStateHandle incrementalRemoteKeyedStateHandle =
                     (IncrementalRemoteKeyedStateHandle) keyedStateHandle;
@@ -205,8 +196,7 @@ public class RocksDBIncrementalRestoreOperation<K> implements RocksDBRestoreOper
                     },
                     keyedStateHandle.getClass());
         }
-        logger.info(
-                "Finished restoring from state handle: {} without rescaling.", keyedStateHandle);
+        LOG.info("Finished restoring from state handle: {} without rescaling.", keyedStateHandle);
     }
 
     private void restorePreviousIncrementalFilesStatus(
@@ -266,13 +256,14 @@ public class RocksDBIncrementalRestoreOperation<K> implements RocksDBRestoreOper
 
         Path restoreSourcePath = localKeyedStateHandle.getDirectoryStateHandle().getDirectory();
 
-        logger.debug(
+        LOG.debug(
                 "Restoring keyed backend uid in operator {} from incremental snapshot to {}.",
                 operatorIdentifier,
                 backendUID);
 
-        this.rocksHandle.openDB(
+        this.rocksHandle.reopenDB(
                 createColumnFamilyDescriptors(stateMetaInfoSnapshots, true),
+                createVectorCFDescriptors(stateMetaInfoSnapshots),
                 stateMetaInfoSnapshots,
                 restoreSourcePath);
     }
@@ -290,7 +281,7 @@ public class RocksDBIncrementalRestoreOperation<K> implements RocksDBRestoreOper
         try {
             FileUtils.deleteDirectory(path.toFile());
         } catch (IOException ex) {
-            logger.warn("Failed to clean up path " + path, ex);
+            LOG.warn("Failed to clean up path " + path, ex);
         }
     }
 
@@ -346,7 +337,7 @@ public class RocksDBIncrementalRestoreOperation<K> implements RocksDBRestoreOper
 
         // Insert all remaining state through creating temporary RocksDB instances
         for (StateHandleDownloadSpec downloadRequest : allDownloadSpecs.values()) {
-            logger.info(
+            LOG.info(
                     "Starting to restore from state handle: {} with rescaling.",
                     downloadRequest.getStateHandle());
 
@@ -397,7 +388,7 @@ public class RocksDBIncrementalRestoreOperation<K> implements RocksDBRestoreOper
                         }
                     } // releases native iterator resources
                 }
-                logger.info(
+                LOG.info(
                         "Finished restoring from state handle: {} with rescaling.",
                         downloadRequest.getStateHandle());
             } finally {
@@ -422,7 +413,7 @@ public class RocksDBIncrementalRestoreOperation<K> implements RocksDBRestoreOper
                     keyGroupPrefixBytes);
         } catch (RocksDBException e) {
             String errMsg = "Failed to clip DB after initialization.";
-            logger.error(errMsg, e);
+            LOG.error(errMsg, e);
             throw new BackendBuildingException(errMsg, e);
         }
     }
@@ -511,6 +502,10 @@ public class RocksDBIncrementalRestoreOperation<K> implements RocksDBRestoreOper
         for (StateMetaInfoSnapshot stateMetaInfoSnapshot : stateMetaInfoSnapshots) {
             RegisteredStateMetaInfoBase metaInfoBase =
                     RegisteredStateMetaInfoBase.fromMetaInfoSnapshot(stateMetaInfoSnapshot);
+            if (metaInfoBase.getName().startsWith("vector-")
+                    && !metaInfoBase.getName().endsWith("Ext")) {
+                continue;
+            }
             ColumnFamilyDescriptor columnFamilyDescriptor =
                     RocksDBOperationUtils.createColumnFamilyDescriptor(
                             metaInfoBase,
@@ -523,6 +518,27 @@ public class RocksDBIncrementalRestoreOperation<K> implements RocksDBRestoreOper
             columnFamilyDescriptors.add(columnFamilyDescriptor);
         }
         return columnFamilyDescriptors;
+    }
+
+    private List<VectorCFDescriptor> createVectorCFDescriptors(
+            List<StateMetaInfoSnapshot> stateMetaInfoSnapshots) {
+        List<VectorCFDescriptor> vectorCFDescriptors = new ArrayList<>();
+        for (StateMetaInfoSnapshot stateMetaInfoSnapshot : stateMetaInfoSnapshots) {
+            RegisteredStateMetaInfoBase metaInfoBase =
+                    RegisteredStateMetaInfoBase.fromMetaInfoSnapshot(stateMetaInfoSnapshot);
+            if (metaInfoBase.getName().startsWith("vector-")
+                    && !metaInfoBase.getName().endsWith("Ext")) {
+                VectorCFDescriptor vectorCFDescriptor =
+                        RocksDBOperationUtils.createVectorCFDescriptor(
+                                metaInfoBase,
+                                this.rocksHandle.getVectorCFOptionsFactory(),
+                                this.rocksHandle.getVectorVersionCFOptionsFactory(),
+                                null,
+                                this.rocksHandle.getWriteBufferManagerCapacity());
+                vectorCFDescriptors.add(vectorCFDescriptor);
+            }
+        }
+        return vectorCFDescriptors;
     }
 
     /** Reads Flink's state meta data file from the state handle. */

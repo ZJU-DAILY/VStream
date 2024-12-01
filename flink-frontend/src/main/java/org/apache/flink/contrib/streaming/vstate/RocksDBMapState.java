@@ -18,6 +18,17 @@
 
 package org.apache.flink.contrib.streaming.vstate;
 
+import static org.apache.flink.util.Preconditions.checkArgument;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.Map;
+import javax.annotation.Nonnegative;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.state.MapState;
 import org.apache.flink.api.common.state.State;
 import org.apache.flink.api.common.state.StateDescriptor;
@@ -35,24 +46,9 @@ import org.apache.flink.runtime.state.internal.InternalMapState;
 import org.apache.flink.util.FlinkRuntimeException;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.StateMigrationException;
-
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.annotation.Nonnegative;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.Map;
-
-import static org.apache.flink.util.Preconditions.checkArgument;
 
 /**
  * {@link MapState} implementation that stores state in RocksDB.
@@ -62,10 +58,9 @@ import static org.apache.flink.util.Preconditions.checkArgument;
  * @param <UK> The type of the keys in the map state.
  * @param <UV> The type of the values in the map state.
  */
+@Slf4j
 class RocksDBMapState<K, N, UK, UV> extends AbstractRocksDBState<K, N, Map<UK, UV>>
         implements InternalMapState<K, N, UK, UV> {
-
-    private static final Logger LOG = LoggerFactory.getLogger(RocksDBMapState.class);
 
     /** Serializer for the keys and values. */
     private TypeSerializer<UK> userKeySerializer;

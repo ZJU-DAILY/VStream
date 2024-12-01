@@ -18,12 +18,11 @@
 
 package org.apache.flink.contrib.streaming.vstate;
 
+import java.io.IOException;
 import org.apache.flink.configuration.CheckpointingOptions;
 import org.apache.flink.configuration.IllegalConfigurationException;
 import org.apache.flink.configuration.ReadableConfig;
 import org.apache.flink.runtime.state.StateBackendFactory;
-
-import java.io.IOException;
 
 /**
  * A factory that creates an {@link org.apache.flink.contrib.streaming.vstate.RocksDBStateBackend}

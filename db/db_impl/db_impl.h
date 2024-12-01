@@ -318,6 +318,7 @@ class DBImpl : public DB {
                       PinnableWideColumns* results, Status* statuses,
                       bool sorted_input) override;
 
+  using DB::CreateColumnFamily;
   virtual Status CreateColumnFamily(const ColumnFamilyOptions& cf_options,
                                     const std::string& column_family,
                                     ColumnFamilyHandle** handle) override;
@@ -621,7 +622,6 @@ class DBImpl : public DB {
   virtual Status GetPropertiesOfTablesInRange(
       ColumnFamilyHandle* column_family, const Range* range, std::size_t n,
       TablePropertiesCollection* props) override;
-
 
   // ---- End of implementations of the DB interface ----
   SystemClock* GetSystemClock() const;
@@ -1052,10 +1052,14 @@ class DBImpl : public DB {
   Status NewDB(std::vector<std::string>* new_filenames);
 
   // This is to be used only by internal rocksdb classes.
-  static Status Open(const DBOptions& db_options, const std::string& name,
-                     const std::vector<ColumnFamilyDescriptor>& column_families,
-                     std::vector<ColumnFamilyHandle*>* handles, DB** dbptr,
-                     const bool seq_per_batch, const bool batch_per_txn);
+  static Status Open(
+      const DBOptions& db_options, const std::string& name,
+      const std::vector<ColumnFamilyDescriptor>& column_families,
+      std::vector<ColumnFamilyHandle*>* handles, DB** dbptr,
+      const bool seq_per_batch, const bool batch_per_txn,
+      const std::vector<VECTORBACKEND_NAMESPACE::VectorCFDescriptor>&
+          vector_column_families = {},
+      std::vector<ColumnFamilyHandle*>* vcf_handles = nullptr);
 
   static IOStatus CreateAndNewDirectory(
       FileSystem* fs, const std::string& dirname,
@@ -2239,6 +2243,11 @@ class DBImpl : public DB {
   static Status ValidateOptions(
       const DBOptions& db_options,
       const std::vector<ColumnFamilyDescriptor>& column_families);
+  // Validate self-consistency of DB options and its consistency with cf options
+  static Status ValidateOptions(
+      const DBOptions& db_options,
+      const std::vector<VECTORBACKEND_NAMESPACE::VectorCFDescriptor>&
+          vector_column_families);
 
   // Utility function to do some debug validation and sort the given vector
   // of MultiGet keys

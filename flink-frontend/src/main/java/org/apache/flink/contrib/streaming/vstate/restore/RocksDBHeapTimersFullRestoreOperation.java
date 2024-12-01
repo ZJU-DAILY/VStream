@@ -18,6 +18,16 @@
 
 package org.apache.flink.contrib.streaming.vstate.restore;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import javax.annotation.Nonnegative;
+import javax.annotation.Nonnull;
 import org.apache.flink.contrib.streaming.vstate.RocksDBKeyedStateBackend.RocksDbKvStateInfo;
 import org.apache.flink.contrib.streaming.vstate.RocksDBNativeMetricOptions;
 import org.apache.flink.contrib.streaming.vstate.RocksDBWriteBatchWrapper;
@@ -44,23 +54,7 @@ import org.apache.flink.runtime.state.restore.KeyGroupEntry;
 import org.apache.flink.runtime.state.restore.SavepointRestoreResult;
 import org.apache.flink.runtime.state.restore.ThrowingIterator;
 import org.apache.flink.util.StateMigrationException;
-
-import org.rocksdb.ColumnFamilyHandle;
-import org.rocksdb.ColumnFamilyOptions;
-import org.rocksdb.DBOptions;
-import org.rocksdb.RocksDBException;
-
-import javax.annotation.Nonnegative;
-import javax.annotation.Nonnull;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
+import org.rocksdb.*;
 
 /** Encapsulates the process of restoring a RocksDB instance from a full snapshot. */
 public class RocksDBHeapTimersFullRestoreOperation<K> implements RocksDBRestoreOperation {
@@ -89,6 +83,8 @@ public class RocksDBHeapTimersFullRestoreOperation<K> implements RocksDBRestoreO
             File instanceRocksDBPath,
             DBOptions dbOptions,
             Function<String, ColumnFamilyOptions> columnFamilyOptionsFactory,
+            Function<String, VectorColumnFamilyOptions> vectorCFOptionsFactory,
+            Function<String, ColumnFamilyOptions> vectorVersionCFOptionsFactory,
             RocksDBNativeMetricOptions nativeMetricOptions,
             MetricGroup metricGroup,
             @Nonnull Collection<KeyedStateHandle> restoreStateHandles,
@@ -102,6 +98,8 @@ public class RocksDBHeapTimersFullRestoreOperation<K> implements RocksDBRestoreO
                         instanceRocksDBPath,
                         dbOptions,
                         columnFamilyOptionsFactory,
+                        vectorCFOptionsFactory,
+                        vectorVersionCFOptionsFactory,
                         nativeMetricOptions,
                         metricGroup,
                         ttlCompactFiltersManager,

@@ -18,20 +18,18 @@
 
 package org.apache.flink.contrib.streaming.vstate.iterator;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.PriorityQueue;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.contrib.streaming.vstate.RocksIteratorWrapper;
 import org.apache.flink.core.fs.CloseableRegistry;
 import org.apache.flink.runtime.state.KeyValueStateIterator;
 import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.Preconditions;
-
 import org.rocksdb.ReadOptions;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.PriorityQueue;
 
 /**
  * Iterator that merges multiple RocksDB iterators to partition all states into contiguous

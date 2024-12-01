@@ -70,9 +70,12 @@ void HnswBlockBuilder::Add(const Slice& key, const Slice& value) {
 #ifndef NDEBUG
   add_with_last_key_called_ = false;  // add_with_first_value_called_
 #endif
+
   assert(!finished_);
   assert(counter_ <= block_restart_interval_);
   size_t buffer_size = buffer_.size();
+
+#ifndef NCOMPRESS
   if (counter_ == 0 || !use_delta_encoding_) {
     restarts_.push_back(static_cast<uint32_t>(buffer_size));
     estimate_ += sizeof(uint32_t);
@@ -91,6 +94,26 @@ void HnswBlockBuilder::Add(const Slice& key, const Slice& value) {
           reinterpret_cast<const float*>(value.data() + offsetData_), buffer_);
      }
   }
+#else
+  if (counter_ == 0 || !use_delta_encoding_) {
+    restarts_.push_back(static_cast<uint32_t>(buffer_size));
+    estimate_ += sizeof(uint32_t);
+    buffer_.append(key.data(), sizeof(uint32_t));
+    buffer_.append(value.data(), offsetData_);
+    compressor->AddFirstVector(
+        reinterpret_cast<const float*>(value.data() + offsetData_), buffer_);
+  } else {
+    buffer_.append(key.data(), sizeof(uint32_t));
+    buffer_.append(value.data(), offsetData_);
+     if (counter_ == 1) {
+       compressor->AddFirstVector(
+           reinterpret_cast<const float*>(value.data() + offsetData_), buffer_);
+     } else {
+      compressor->AddFirstVector(
+          reinterpret_cast<const float*>(value.data() + offsetData_), buffer_);
+     }
+  }
+#endif
 
   counter_ = (++counter_) % block_restart_interval_;
   estimate_ += buffer_.size() - buffer_size;

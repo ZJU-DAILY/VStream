@@ -18,12 +18,7 @@
 
 package org.apache.flink.contrib.streaming.vstate;
 
-import org.apache.flink.configuration.ConfigOption;
-import org.apache.flink.configuration.MemorySize;
-import org.apache.flink.configuration.ReadableConfig;
-import org.apache.flink.util.Preconditions;
-
-import org.rocksdb.*;
+import static org.apache.flink.contrib.streaming.vstate.RocksDBConfigurableOptions.*;
 
 import java.io.File;
 import java.util.Arrays;
@@ -33,8 +28,11 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-
-import static org.apache.flink.contrib.streaming.vstate.RocksDBConfigurableOptions.*;
+import org.apache.flink.configuration.ConfigOption;
+import org.apache.flink.configuration.MemorySize;
+import org.apache.flink.configuration.ReadableConfig;
+import org.apache.flink.util.Preconditions;
+import org.rocksdb.*;
 
 /**
  * An implementation of {@link ConfigurableRocksDBOptionsFactory} using options provided by {@link
@@ -86,7 +84,7 @@ public class DefaultConfigurableOptionsFactory implements ConfigurableRocksDBOpt
 
     @Override
     public VectorColumnFamilyOptions createVectorColumnOptions(
-        VectorColumnFamilyOptions currentOptions, Collection<AutoCloseable> handlesToClose) {
+            VectorColumnFamilyOptions currentOptions, Collection<AutoCloseable> handlesToClose) {
 
         throw new UnsupportedOperationException("Use ConfigurableRocksDBOptionsFactory instead.");
     }

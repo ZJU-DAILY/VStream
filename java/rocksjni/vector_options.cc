@@ -4015,6 +4015,30 @@ jboolean Java_org_rocksdb_VectorOptions_atomicFlush(JNIEnv *, jobject,
 
 /*
  * Class:     org_rocksdb_VectorOptions
+ * Method:    setFlushVerifyMemtableCount
+ * Signature: (JZ)V
+ */
+void Java_org_rocksdb_VectorOptions_setFlushVerifyMemtableCount
+    (JNIEnv *, jobject, jlong jhandle, jboolean jvalue) {
+  auto* opt = reinterpret_cast<
+      ROCKSDB_NAMESPACE::VECTORBACKEND_NAMESPACE::VectorOptions*>(jhandle);
+  opt->flush_verify_memtable_count = jvalue == JNI_TRUE;
+}
+
+/*
+ * Class:     org_rocksdb_VectorOptions
+ * Method:    flushVerifyMemtableCount
+ * Signature: (J)Z
+ */
+jboolean Java_org_rocksdb_VectorOptions_flushVerifyMemtableCount
+    (JNIEnv *, jobject, jlong jhandle) {
+  auto* opt = reinterpret_cast<
+      ROCKSDB_NAMESPACE::VECTORBACKEND_NAMESPACE::VectorOptions*>(jhandle);
+  return static_cast<jboolean>(opt->flush_verify_memtable_count);
+}
+
+/*
+ * Class:     org_rocksdb_VectorOptions
  * Method:    setSstPartitionerFactory
  * Signature: (JJ)V
  */

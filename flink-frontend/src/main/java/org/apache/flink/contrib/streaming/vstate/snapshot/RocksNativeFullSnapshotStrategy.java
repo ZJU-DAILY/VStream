@@ -18,6 +18,18 @@
 
 package org.apache.flink.contrib.streaming.vstate.snapshot;
 
+import java.io.File;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import javax.annotation.Nonnegative;
+import javax.annotation.Nonnull;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.contrib.streaming.vstate.RocksDBKeyedStateBackend;
 import org.apache.flink.contrib.streaming.vstate.RocksDBKeyedStateBackend.RocksDbKvStateInfo;
@@ -37,22 +49,7 @@ import org.apache.flink.runtime.state.StreamStateHandle;
 import org.apache.flink.runtime.state.metainfo.StateMetaInfoSnapshot;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.ResourceGuard;
-
 import org.rocksdb.RocksDB;
-
-import javax.annotation.Nonnegative;
-import javax.annotation.Nonnull;
-
-import java.io.File;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
 
 /**
  * Snapshot strategy for {@link RocksDBKeyedStateBackend} based on RocksDB's native checkpoints and

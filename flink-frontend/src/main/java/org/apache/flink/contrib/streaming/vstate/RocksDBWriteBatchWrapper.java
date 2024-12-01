@@ -18,22 +18,19 @@
 
 package org.apache.flink.contrib.streaming.vstate;
 
+import java.util.ArrayList;
+import java.util.List;
+import javax.annotation.Nonnegative;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.Preconditions;
-
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 import org.rocksdb.WriteBatch;
 import org.rocksdb.WriteOptions;
-
-import javax.annotation.Nonnegative;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * It's a wrapper class around RocksDB's {@link WriteBatch} for writing in bulk.

@@ -18,14 +18,12 @@
 
 package org.apache.flink.contrib.streaming.vstate;
 
+import java.io.IOException;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.runtime.state.internal.InternalAppendingState;
 import org.apache.flink.util.FlinkRuntimeException;
-
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.RocksDBException;
-
-import java.io.IOException;
 
 abstract class AbstractRocksDBAppendingState<K, N, IN, SV, OUT>
         extends AbstractRocksDBState<K, N, SV>

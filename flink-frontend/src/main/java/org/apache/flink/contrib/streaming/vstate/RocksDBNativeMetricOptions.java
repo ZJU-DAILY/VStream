@@ -18,13 +18,6 @@
 
 package org.apache.flink.contrib.streaming.vstate;
 
-import org.apache.flink.annotation.VisibleForTesting;
-import org.apache.flink.configuration.ConfigOption;
-import org.apache.flink.configuration.ConfigOptions;
-import org.apache.flink.configuration.ReadableConfig;
-
-import org.rocksdb.TickerType;
-
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.Collections;
@@ -32,6 +25,11 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import org.apache.flink.annotation.VisibleForTesting;
+import org.apache.flink.configuration.ConfigOption;
+import org.apache.flink.configuration.ConfigOptions;
+import org.apache.flink.configuration.ReadableConfig;
+import org.rocksdb.TickerType;
 
 /**
  * Enable which RocksDB metrics to forward to Flink's metrics reporter.

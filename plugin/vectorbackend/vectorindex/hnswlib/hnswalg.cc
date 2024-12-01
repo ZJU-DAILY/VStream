@@ -613,7 +613,7 @@ void HierarchicalNSW<dist_t>::markDelete(labeltype label, uint64_t version,
     }
     auto search = label_lookup_.find(label);
     if (search == label_lookup_.end()) {
-      //      throw std::runtime_error("Label not found");
+      return;
     }
     if (version < getVersion(search->second)) {
       return;

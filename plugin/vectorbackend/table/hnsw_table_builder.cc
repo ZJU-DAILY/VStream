@@ -315,8 +315,17 @@ struct HnswTableBuilder::Rep {
       ROCKS_LOG_INFO(ioptions.logger, "db_host_id property will not be set");
     }
 
-    assert(tbo.hnsw);
-    hnsw = std::move(tbo.hnsw);
+    if (tbo.hnsw == nullptr) {
+      hnsw = std::make_shared<hnswlib::HierarchicalNSW<dist_t>>(
+          table_opt.dim, table_opt.space, &arena,
+          table_opt.max_elements, table_opt.M, table_opt.ef_construction,
+          table_opt.random_seed, table_opt.visit_list_pool_size,
+          table_opt.allow_replace_deleted);
+
+    } else {
+      hnsw = tbo.hnsw;
+    }
+    assert(hnsw);
   }
 
   Rep(const Rep&) = delete;

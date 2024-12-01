@@ -18,26 +18,7 @@
 
 package org.apache.flink.contrib.streaming.vstate.restore;
 
-import org.apache.flink.contrib.streaming.vstate.RocksDBKeyedStateBackend.RocksDbKvStateInfo;
-import org.apache.flink.contrib.streaming.vstate.RocksDBNativeMetricMonitor;
-import org.apache.flink.contrib.streaming.vstate.RocksDBNativeMetricOptions;
-import org.apache.flink.contrib.streaming.vstate.RocksDBOperationUtils;
-import org.apache.flink.contrib.streaming.vstate.ttl.RocksDbTtlCompactFiltersManager;
-import org.apache.flink.metrics.MetricGroup;
-import org.apache.flink.runtime.state.RegisteredStateMetaInfoBase;
-import org.apache.flink.runtime.state.metainfo.StateMetaInfoSnapshot;
-import org.apache.flink.util.FileUtils;
-import org.apache.flink.util.IOUtils;
-
-import org.rocksdb.ColumnFamilyDescriptor;
-import org.rocksdb.ColumnFamilyHandle;
-import org.rocksdb.ColumnFamilyOptions;
-import org.rocksdb.DBOptions;
-import org.rocksdb.RocksDB;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.annotation.Nonnull;
+import static org.apache.flink.contrib.streaming.vstate.snapshot.RocksSnapshotUtil.SST_FILE_SUFFIX;
 
 import java.io.File;
 import java.io.IOException;
@@ -50,23 +31,37 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-
-import static org.apache.flink.contrib.streaming.vstate.snapshot.RocksSnapshotUtil.SST_FILE_SUFFIX;
+import javax.annotation.Nonnull;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.flink.contrib.streaming.vstate.RocksDBKeyedStateBackend.RocksDbKvStateInfo;
+import org.apache.flink.contrib.streaming.vstate.RocksDBNativeMetricMonitor;
+import org.apache.flink.contrib.streaming.vstate.RocksDBNativeMetricOptions;
+import org.apache.flink.contrib.streaming.vstate.RocksDBOperationUtils;
+import org.apache.flink.contrib.streaming.vstate.ttl.RocksDbTtlCompactFiltersManager;
+import org.apache.flink.metrics.MetricGroup;
+import org.apache.flink.runtime.state.RegisteredStateMetaInfoBase;
+import org.apache.flink.runtime.state.metainfo.StateMetaInfoSnapshot;
+import org.apache.flink.util.FileUtils;
+import org.apache.flink.util.IOUtils;
+import org.rocksdb.*;
 
 /**
  * Utility for creating a RocksDB instance either from scratch or from restored local state. This
  * will also register {@link RocksDbKvStateInfo} when using {@link #openDB(List, List, Path)}.
  */
+@Slf4j
 class RocksDBHandle implements AutoCloseable {
 
-    protected final Logger logger = LoggerFactory.getLogger(getClass());
-
     private final Function<String, ColumnFamilyOptions> columnFamilyOptionsFactory;
+    private final Function<String, VectorColumnFamilyOptions> vectorCFOptionsFactory;
+    private final Function<String, ColumnFamilyOptions> vectorVersionCFOptionsFactory;
     private final DBOptions dbOptions;
     private final Map<String, RocksDbKvStateInfo> kvStateInformation;
     private final String dbPath;
     private List<ColumnFamilyHandle> columnFamilyHandles;
     private List<ColumnFamilyDescriptor> columnFamilyDescriptors;
+    private List<VectorColumnFamilyHandle> vectorCFHandles;
+    private List<VectorCFDescriptor> vectorCFDescriptors;
     private final RocksDBNativeMetricOptions nativeMetricOptions;
     private final MetricGroup metricGroup;
     // Current places to set compact filter into column family options:
@@ -93,6 +88,8 @@ class RocksDBHandle implements AutoCloseable {
             File instanceRocksDBPath,
             DBOptions dbOptions,
             Function<String, ColumnFamilyOptions> columnFamilyOptionsFactory,
+            Function<String, VectorColumnFamilyOptions> vectorCFOptionsFactory,
+            Function<String, ColumnFamilyOptions> vectorVersionCFOptionsFactory,
             RocksDBNativeMetricOptions nativeMetricOptions,
             MetricGroup metricGroup,
             @Nonnull RocksDbTtlCompactFiltersManager ttlCompactFiltersManager,
@@ -101,6 +98,8 @@ class RocksDBHandle implements AutoCloseable {
         this.dbPath = instanceRocksDBPath.getAbsolutePath();
         this.dbOptions = dbOptions;
         this.columnFamilyOptionsFactory = columnFamilyOptionsFactory;
+        this.vectorCFOptionsFactory = vectorCFOptionsFactory;
+        this.vectorVersionCFOptionsFactory = vectorVersionCFOptionsFactory;
         this.nativeMetricOptions = nativeMetricOptions;
         this.metricGroup = metricGroup;
         this.ttlCompactFiltersManager = ttlCompactFiltersManager;
@@ -129,12 +128,65 @@ class RocksDBHandle implements AutoCloseable {
         }
     }
 
+    void reopenDB(
+            @Nonnull List<ColumnFamilyDescriptor> columnFamilyDescriptors,
+            @Nonnull List<VectorCFDescriptor> vectorCFDescriptors,
+            @Nonnull List<StateMetaInfoSnapshot> stateMetaInfoSnapshots,
+            @Nonnull Path restoreSourcePath)
+            throws IOException {
+        this.columnFamilyDescriptors = columnFamilyDescriptors;
+        this.vectorCFDescriptors = vectorCFDescriptors;
+        this.columnFamilyHandles = new ArrayList<>(columnFamilyDescriptors.size() + 1);
+        this.vectorCFHandles = new ArrayList<>(vectorCFDescriptors.size() + 1);
+        restoreInstanceDirectoryFromPath(restoreSourcePath);
+        reloadDb();
+        // Register CF handlers
+        int index;
+        index = 0;
+        for (int i = 0; i < stateMetaInfoSnapshots.size(); i++) {
+            if (stateMetaInfoSnapshots.get(i).getName().startsWith("vector-")) {
+                getOrRegisterVectorStateColumnFamilyHandle(
+                        vectorCFHandles.get(index), stateMetaInfoSnapshots.get(i));
+                index++;
+            }
+        }
+        index = 0;
+        for (int i = 0; i < stateMetaInfoSnapshots.size(); i++) {
+            if (!stateMetaInfoSnapshots.get(i).getName().startsWith("vector-")) {
+                getOrRegisterStateColumnFamilyHandle(
+                        columnFamilyHandles.get(index), stateMetaInfoSnapshots.get(i));
+                index++;
+            }
+        }
+    }
+
     private void loadDb() throws IOException {
         db =
                 RocksDBOperationUtils.openDB(
                         dbPath,
                         columnFamilyDescriptors,
                         columnFamilyHandles,
+                        RocksDBOperationUtils.createColumnFamilyOptions(
+                                columnFamilyOptionsFactory, "default"),
+                        dbOptions);
+        // remove the default column family which is located at the first index
+        defaultColumnFamilyHandle = columnFamilyHandles.remove(0);
+        // init native metrics monitor if configured
+        nativeMetricMonitor =
+                nativeMetricOptions.isEnabled()
+                        ? new RocksDBNativeMetricMonitor(
+                                nativeMetricOptions, metricGroup, db, dbOptions.statistics())
+                        : null;
+    }
+
+    private void reloadDb() throws IOException {
+        db =
+                RocksDBOperationUtils.openDB(
+                        dbPath,
+                        columnFamilyDescriptors,
+                        columnFamilyHandles,
+                        vectorCFDescriptors,
+                        vectorCFHandles,
                         RocksDBOperationUtils.createColumnFamilyOptions(
                                 columnFamilyOptionsFactory, "default"),
                         dbOptions);
@@ -185,6 +237,44 @@ class RocksDBHandle implements AutoCloseable {
         return registeredStateMetaInfoEntry;
     }
 
+    RocksDbKvStateInfo getOrRegisterVectorStateColumnFamilyHandle(
+            VectorColumnFamilyHandle columnFamilyHandle,
+            StateMetaInfoSnapshot stateMetaInfoSnapshot) {
+
+        RocksDbKvStateInfo registeredStateMetaInfoEntry =
+                kvStateInformation.get(stateMetaInfoSnapshot.getName());
+
+        if (null == registeredStateMetaInfoEntry) {
+            // create a meta info for the state on restore;
+            // this allows us to retain the state in future snapshots even if it wasn't accessed
+            RegisteredStateMetaInfoBase stateMetaInfo =
+                    RegisteredStateMetaInfoBase.fromMetaInfoSnapshot(stateMetaInfoSnapshot);
+            if (columnFamilyHandle == null) {
+                registeredStateMetaInfoEntry =
+                        RocksDBOperationUtils.createStateInfo(
+                                stateMetaInfo,
+                                db,
+                                columnFamilyOptionsFactory,
+                                ttlCompactFiltersManager,
+                                writeBufferManagerCapacity);
+            } else {
+                registeredStateMetaInfoEntry =
+                        new RocksDbKvStateInfo(columnFamilyHandle, stateMetaInfo);
+            }
+
+            RocksDBOperationUtils.registerKvStateInformation(
+                    kvStateInformation,
+                    nativeMetricMonitor,
+                    stateMetaInfoSnapshot.getName(),
+                    registeredStateMetaInfoEntry);
+        } else {
+            // TODO with eager state registration in place, check here for serializer migration
+            // strategies
+        }
+
+        return registeredStateMetaInfoEntry;
+    }
+
     /**
      * This recreates the new working directory of the recovered RocksDB instance and links/copies
      * the contents from a local state.
@@ -195,7 +285,7 @@ class RocksDBHandle implements AutoCloseable {
 
         if (!new File(dbPath).mkdirs()) {
             String errMsg = "Could not create RocksDB data directory: " + dbPath;
-            logger.error(errMsg);
+            LOG.error(errMsg);
             throw new IOException(errMsg);
         }
 
@@ -214,10 +304,10 @@ class RocksDBHandle implements AutoCloseable {
                                             + "increase the recovery time. In order to avoid this, configure "
                                             + "RocksDB's working directory and the local state directory to be on the same volume.",
                                     fileName);
-                    if (logger.isDebugEnabled()) {
-                        logger.debug(logMessage, ioe);
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug(logMessage, ioe);
                     } else {
-                        logger.info(logMessage);
+                        LOG.info(logMessage);
                     }
                 }
             }
@@ -253,6 +343,14 @@ class RocksDBHandle implements AutoCloseable {
 
     public Function<String, ColumnFamilyOptions> getColumnFamilyOptionsFactory() {
         return columnFamilyOptionsFactory;
+    }
+
+    public Function<String, VectorColumnFamilyOptions> getVectorCFOptionsFactory() {
+        return vectorCFOptionsFactory;
+    }
+
+    public Function<String, ColumnFamilyOptions> getVectorVersionCFOptionsFactory() {
+        return vectorVersionCFOptionsFactory;
     }
 
     public DBOptions getDbOptions() {

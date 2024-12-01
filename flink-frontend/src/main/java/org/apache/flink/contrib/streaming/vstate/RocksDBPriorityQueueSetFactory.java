@@ -17,6 +17,9 @@
 
 package org.apache.flink.contrib.streaming.vstate;
 
+import java.util.Map;
+import java.util.function.Function;
+import javax.annotation.Nonnull;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerSchemaCompatibility;
@@ -34,16 +37,10 @@ import org.apache.flink.runtime.state.heap.HeapPriorityQueueElement;
 import org.apache.flink.runtime.state.heap.KeyGroupPartitionedPriorityQueue;
 import org.apache.flink.util.FlinkRuntimeException;
 import org.apache.flink.util.StateMigrationException;
-
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.ColumnFamilyOptions;
 import org.rocksdb.ReadOptions;
 import org.rocksdb.RocksDB;
-
-import javax.annotation.Nonnull;
-
-import java.util.Map;
-import java.util.function.Function;
 
 /**
  * Encapsulates the logic and resources in connection with creating priority queue state structures,

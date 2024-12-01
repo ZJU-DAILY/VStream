@@ -18,17 +18,14 @@
 
 package org.apache.flink.contrib.streaming.vstate;
 
-import org.apache.flink.configuration.ConfigOption;
-import org.apache.flink.configuration.MemorySize;
-import org.apache.flink.util.CollectionUtil;
-
-import org.rocksdb.CompactionStyle;
-
-import javax.annotation.Nullable;
-
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import javax.annotation.Nullable;
+import org.apache.flink.configuration.ConfigOption;
+import org.apache.flink.configuration.MemorySize;
+import org.apache.flink.util.CollectionUtil;
+import org.rocksdb.CompactionStyle;
 
 /**
  * The {@code PredefinedOptions} are configuration settings for the {@link

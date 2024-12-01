@@ -18,20 +18,6 @@
 
 package org.apache.flink.contrib.streaming.vstate;
 
-import org.apache.flink.configuration.ConfigOption;
-import org.apache.flink.configuration.MemorySize;
-import org.apache.flink.configuration.description.Description;
-import org.apache.flink.util.Preconditions;
-
-import org.rocksdb.CompactionStyle;
-import org.rocksdb.InfoLogLevel;
-
-import java.io.File;
-import java.io.Serializable;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
-
 import static org.apache.flink.configuration.ConfigOptions.key;
 import static org.apache.flink.configuration.description.LinkElement.link;
 import static org.apache.flink.configuration.description.TextElement.code;
@@ -40,6 +26,18 @@ import static org.rocksdb.CompactionStyle.LEVEL;
 import static org.rocksdb.CompactionStyle.NONE;
 import static org.rocksdb.CompactionStyle.UNIVERSAL;
 import static org.rocksdb.InfoLogLevel.INFO_LEVEL;
+
+import java.io.File;
+import java.io.Serializable;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+import org.apache.flink.configuration.ConfigOption;
+import org.apache.flink.configuration.MemorySize;
+import org.apache.flink.configuration.description.Description;
+import org.apache.flink.util.Preconditions;
+import org.rocksdb.CompactionStyle;
+import org.rocksdb.InfoLogLevel;
 
 /**
  * This class contains the configuration options for the {@link EmbeddedRocksDBStateBackend}.
@@ -345,38 +343,32 @@ public class RocksDBConfigurableOptions implements Serializable {
     // VECTOR SEARCH RELATED CONFIGS (unused)
     // --------------------------------------------------------------------------
     public static final ConfigOption<Integer> VECTOR_DIM =
-        key("state.backend.rocksdb.vector.dim")
-            .intType()
-            .defaultValue(2)
-            .withDescription(
-                "Vector dimension. Default 2.");
+            key("state.backend.rocksdb.vector.dim")
+                    .intType()
+                    .defaultValue(2)
+                    .withDescription("Vector dimension. Default 2.");
 
     public static final ConfigOption<Integer> HNSW_M =
-        key("state.backend.rocksdb.hnsw.m")
-            .intType()
-            .defaultValue(16)
-            .withDescription(
-                "HNSW M. Default 16");
+            key("state.backend.rocksdb.hnsw.m")
+                    .intType()
+                    .defaultValue(16)
+                    .withDescription("HNSW M. Default 16");
 
     public static final ConfigOption<Integer> HNSW_EF_CONSTRUCTION =
-        key("state.backend.rocksdb.hnsw.efconstruction")
-            .intType()
-            .defaultValue(128)
-            .withDescription(
-                "HNSW efConstruction. Default 128.");
+            key("state.backend.rocksdb.hnsw.efconstruction")
+                    .intType()
+                    .defaultValue(128)
+                    .withDescription("HNSW efConstruction. Default 128.");
 
     public static final ConfigOption<Integer> HNSW_EF =
-        key("state.backend.rocksdb.hnsw.ef")
-            .intType()
-            .defaultValue(75)
-            .withDescription(
-                "HNSW ef. Default 75.");
+            key("state.backend.rocksdb.hnsw.ef")
+                    .intType()
+                    .defaultValue(75)
+                    .withDescription("HNSW ef. Default 75.");
 
     public static final ConfigOption<Long> HNSW_K =
-        key("state.backend.rocksdb.hnsw.k")
-            .longType()
-            .defaultValue(75L)
-            .withDescription(
-                "HNSW K. Default 50.");
-
+            key("state.backend.rocksdb.hnsw.k")
+                    .longType()
+                    .defaultValue(75L)
+                    .withDescription("HNSW K. Default 50.");
 }

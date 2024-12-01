@@ -5,7 +5,9 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import org.jetbrains.annotations.NotNull;
 
+/** This class reads a vector file in SIFT format as {@link FloatVector}s. */
 public class FloatVectorIterator implements Iterator<FloatVector>, Iterable<FloatVector> {
 
     private int count = 0;
@@ -14,11 +16,7 @@ public class FloatVectorIterator implements Iterator<FloatVector>, Iterable<Floa
 
     private final int total;
 
-    public FloatVectorIterator(FvecIterator it) {
-        this(it, Integer.MAX_VALUE);
-    }
-
-    public FloatVectorIterator(FvecIterator it, int total) {
+    private FloatVectorIterator(FvecIterator it, int total) {
         this.it = it;
         this.total = total;
     }
@@ -37,21 +35,60 @@ public class FloatVectorIterator implements Iterator<FloatVector>, Iterable<Floa
         return new FloatVector(count++, arr);
     }
 
+    public int nextId() {
+        return count;
+    }
+
+    /**
+     * Creates a vector iterator.
+     *
+     * @param filename the file to read from
+     * @return a new FloatVectorIterator
+     * @throws IOException if the file cannot be read
+     */
     public static FloatVectorIterator fromFile(String filename) throws IOException {
         return new FloatVectorIterator(FvecIterator.fromFile(filename), Integer.MAX_VALUE);
     }
 
+    /**
+     * Creates a vector iterator that loops the file for a specified number of times.
+     *
+     * @param filename the file to read from
+     * @param numLoops the number of times to loop the file
+     * @return a new FloatVectorIterator
+     * @throws IOException if the file cannot be read
+     */
     public static FloatVectorIterator fromFile(String filename, int numLoops) throws IOException {
-        return new FloatVectorIterator(FvecIterator.fromFile(filename, numLoops), Integer.MAX_VALUE);
+        return new FloatVectorIterator(
+                FvecIterator.fromFile(filename, numLoops), Integer.MAX_VALUE);
     }
 
-    public static FloatVectorIterator fromFile(String filename, int numLoops, int total) throws IOException {
+    /**
+     * Creates a vector iterator that loops the file for a specified number of times.
+     *
+     * @param filename the file to read from
+     * @param numLoops the number of times to loop the file
+     * @param total the total number of vectors to read
+     * @return a new FloatVectorIterator
+     * @throws IOException if the file cannot be read
+     */
+    public static FloatVectorIterator fromFile(String filename, int numLoops, int total)
+            throws IOException {
 
         return new FloatVectorIterator(FvecIterator.fromFile(filename, numLoops), total);
     }
 
+    @NotNull
     @Override
     public Iterator<FloatVector> iterator() {
         return this;
+    }
+
+    public List<FloatVector> toList() {
+        List<FloatVector> vectors = new ArrayList<>();
+        for (FloatVector vector : this) {
+            vectors.add(vector);
+        }
+        return vectors;
     }
 }

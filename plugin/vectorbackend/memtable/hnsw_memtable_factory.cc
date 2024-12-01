@@ -44,7 +44,7 @@ static std::unordered_map<std::string, OptionTypeInfo> hnsw_type_info = {
       OptionVerificationType::kNormal, OptionTypeFlags::kNone}},
 };
 
-HnswMemTableFactory::HnswMemTableFactory(const HnswOptions& hnswOptions)
+HnswMemTableFactory::HnswMemTableFactory(const struct HnswOptions& hnswOptions)
     : hnswOptions_(hnswOptions) {
   RegisterOptions(&hnswOptions_, &hnsw_type_info);
 }

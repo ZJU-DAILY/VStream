@@ -39,9 +39,6 @@ void VectorColumnFamilyOptions::Dump(Logger* log) const {
   ROCKS_LOG_INFO(log,
                  "                     visit_list_pool_size: %" ROCKSDB_PRIszt,
                  visit_list_pool_size);
-  ROCKS_LOG_INFO(log,
-                 "                     visit_list_pool_size: %" ROCKSDB_PRIszt,
-                 visit_list_pool_size);
   ROCKS_LOG_INFO(log, "                       termination_weight: %f",
                  termination_weight);
 }

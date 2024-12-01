@@ -18,6 +18,22 @@
 
 package org.apache.flink.contrib.streaming.vstate.snapshot;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import javax.annotation.Nonnegative;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.state.CheckpointListener;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.contrib.streaming.vstate.RocksDBKeyedStateBackend.RocksDbKvStateInfo;
@@ -47,34 +63,15 @@ import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.FileUtils;
 import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.ResourceGuard;
-
 import org.rocksdb.Checkpoint;
 import org.rocksdb.RocksDB;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.annotation.Nonnegative;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 /**
  * Abstract base class for {@link SnapshotStrategy} implementations for RocksDB state backend.
  *
  * @param <K> type of the backend keys.
  */
+@Slf4j
 public abstract class RocksDBSnapshotStrategyBase<K, R extends SnapshotResources>
         implements CheckpointListener,
                 SnapshotStrategy<
@@ -82,9 +79,10 @@ public abstract class RocksDBSnapshotStrategyBase<K, R extends SnapshotResources
                         RocksDBSnapshotStrategyBase.NativeRocksDBSnapshotResources>,
                 AutoCloseable {
 
-    private static final Logger LOG = LoggerFactory.getLogger(RocksDBSnapshotStrategyBase.class);
+    private static final long DISABLE_FLUSH = -1L;
 
     @Nonnull private final String description;
+
     /** RocksDB instance from the backend. */
     @Nonnull protected RocksDB db;
 
@@ -167,9 +165,17 @@ public abstract class RocksDBSnapshotStrategyBase<K, R extends SnapshotResources
     private void takeDBNativeCheckpoint(@Nonnull SnapshotDirectory outputDirectory)
             throws Exception {
         // create hard links of living files in the output path
-        try (ResourceGuard.Lease ignored = rocksDBResourceGuard.acquireResource();
-                Checkpoint checkpoint = Checkpoint.create(db)) {
-            checkpoint.createCheckpoint(outputDirectory.getDirectory().toString());
+        ResourceGuard.Lease ignored = null;
+        Checkpoint checkpoint = null;
+        try {
+            ignored = rocksDBResourceGuard.acquireResource();
+            LOG.info("Acquired RocksDB resource guard for taking a native checkpoint.");
+            checkpoint = Checkpoint.create(db);
+            LOG.info(
+                    "Checkpoint object created; ready to take checkpoint in {}.",
+                    outputDirectory.getDirectory().toString());
+            checkpoint.createCheckpoint(outputDirectory.getDirectory().toString(), DISABLE_FLUSH);
+            LOG.info("Created RocksDB checkpoint in {}.", outputDirectory);
         } catch (Exception ex) {
             try {
                 outputDirectory.cleanup();
@@ -177,6 +183,13 @@ public abstract class RocksDBSnapshotStrategyBase<K, R extends SnapshotResources
                 ex = ExceptionUtils.firstOrSuppressed(cleanupEx, ex);
             }
             throw ex;
+        } finally {
+            if (ignored != null) {
+                ignored.close();
+            }
+            if (checkpoint != null) {
+                checkpoint.close();
+            }
         }
     }
 

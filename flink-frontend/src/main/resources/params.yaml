@@ -1,55 +1,97 @@
-hdfsAddress: "hdfs://10.214.151.20:9000"
+---
+hdfsAddress: "hdfs://node23:9000"
 hdfsUser: "auroflow"
-sourcePath: "/user/auroflow/vector_search/dataset/vectors/bigann_100M_base.txt"
-queryPath: "/user/auroflow/vector_search/dataset/vectors/bigann_query.txt"
+flinkJobManagerHost: "node11"
+flinkJobManagerPort: 4978
+sourcePath: "/user/auroflow/vector_search/dataset/vectors/bigann_base.bvecs"
+queryPath: "/user/auroflow/vector_search/dataset/vectors/bigann_query.bvecs"
 vectorDim: 128
-# To control the insert rate in a staged manner, set the thresholds for the number of vectors inserted, where the rate changes
-insertThrottleThresholds: [0, 80000000]
-# The insert rates at each stage
-insertRates: [15000, 8000]
-# The rate observed by the system
-fakeInsertRate: 8000
-# To control the query rate in a staged manner, set the thresholds for the number of queries, where the rate changes
-queryThrottleThresholds: [0, 533]
-# The query rates at each stage
-queryRates: [-10, -2]
-# Loop the queries
-queryExecuteLoop: 1
+insertSkip: 0
+insertLimitPerLoop: 1000000000
+insertLoops: 1
+insertThrottleThresholds:
+- 0
+insertRates:
+- 9500
+observedInsertRates:
+- 9500
+insertReadBulkSize: 125
+deleteRatio: 0.1
+waitingIndexStrategy: "none"
+indexWaitRatios:
+- 0
+queryThrottleMode: "staged"
+queryThrottleInsertThreshold: 900000000
+initialQueryRate: 100
+newQueryRate: 100
+queryRatePollingPath: "/flink/etc/query-rate"
+queryThrottleThresholds:
+- 0
+queryRates:
+- 100
+queryLoops: 100
+queryReadBulkSize: 125
 k: 10
-parallelism: 160 # 12 #
-reduceParallelism: 1 # 1 #
-numCopies: 1
+parallelism: 160
+reduceParallelism: 1
 maxTTL: 2400000
-partitioner: "lsh+hilbert"  # supports ["lsh+hilbert", "simple"]
+partitioner: "lsh+hilbert"
+kmeansWindowSize: 60000
+kmeansReplicationFactor: 8
+kmeansMaxHistorySize: 60000
+kmeansMaxIter: 10
+sfMinVectorValue: -128
+sfMaxVectorValue: 128
+sfNumBits: 4
+sfReplicationFactor: 16
+sfWindowSize: 480000
 proximity: 1
 metricType: "L2"
-lshNumFamilies: 8  # number of hash families, This controls the fanout for each vector and query.
-lshNumHashes: 10  # number of hash functions in each family
-lshBucketWidth: 5  # hash bucket width
-lshNumHilbertBits: 7  # number of bits used for hilbert curve
-lshPartitionUpdateInterval: 7200000  # interval for partition update in millis
-lshHilbertMaxRetainedElements: 1000000 # number of vectors retained to obtain the next partition scheme
+lshNumFamilies: 8
+lshNumHashes: 10
+lshBucketWidth: 5
+lshNumSpaceFillingBits: 7
+lshPartitionUpdateInterval: 7200000
+lshHilbertMaxRetainedElements: 1000000
 hnswM: 16
 hnswEfSearch: 16
 hnswEfConstruction: 128
-rocksDBMaxElementsPerHnswTable: 250000 # 250000 #
-rocksDBSSTableSize: 8589934592  # Default: 8196 MB
-rocksDBBlockSize: 131072  # Default: 128 KB
-rocksDBBlockCacheSize: 26214400  # 25 MB
-rocksDBMaxBackgroundJobs: 11  # flushes & compaction
-rocksDBFlushThreshold: 2
-rocksDBMaxWriteBufferNumber: 5
+rocksDBStoragePrefix: "/home/auroflow/storage/rocksdb/rocksdb-backend-"
+rocksDBMaxElementsPerHnswTable: 250000
+rocksDBSSTableSize: 8589934592
+rocksDBBlockSize: 131072
+rocksDBBlockCacheSize: 26214400
+rocksDBMaxBackgroundJobs: 11
+rocksDBFlushThreshold: 5
+rocksDBMaxWriteBufferNumber: 7
 rocksDBTerminationWeight: 0.01
 rocksDBTerminationFactor: 0.8
 rocksDBTerminationThreshold: 0
 rocksDBTerminationLowerBound: 0
 rocksDBBlockRestartInterval: 4
+rocksDBSkipSST: false
+rocksDBInfoLogLevel: "INFO_LEVEL"
 milvusCollectionName: "vector_collection"
 milvusHost: "10.214.242.182"
 milvusPort: 19530
 milvusNumShards: 4
 milvusInsertBufferCapacity: 1000
 milvusQueryBufferCapacity: 10
+chromaCollectionNamePrefix: "vector_collection"
+chromaAddressFile: "/home/auroflow/code/vector-search/VStream/flink-frontend/src/main/resources/chroma_addresses.txt"
+chromaInsertBatchSize: 1000
+chromaHnswBatchSize: 10000
+chromaHnswSyncThreshold: 1000000
+chromaHnswResizeFactor: 1.2
+chromaHnswNumThreads: 16
+chromaQueryBatchSize: 10
+chromaClearData: true
+chromaMultiInstancesOnTM: true
+qdrantHost: "node182"
+qdrantPort: 6334
+qdrantCollectionName: "vector_collection"
+qdrantInsertBatchSize: 1000
+qdrantQueryBatchSize: 10
 groundTruthPath: "/home/auroflow/code/vector-search/data/sift/sift_groundtruth.ivecs"
-fileSinkPath: "hdfs://10.214.151.20:9000/user/auroflow/vector_search/rocksdb-logs"
+fileSinkPath: "hdfs:///user/auroflow/vector_search/rocksdb-logs"
 sortInterval: 100

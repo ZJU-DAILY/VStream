@@ -1150,6 +1150,17 @@ public class DBOptions extends RocksObject
   }
 
   @Override
+  public DBOptions setFlushVerifyMemtableCount(final boolean value) {
+    setFlushVerifyMemtableCount(nativeHandle_, value);
+    return this;
+  }
+
+  @Override
+  public boolean flushVerifyMemtableCount() {
+    return flushVerifyMemtableCount(nativeHandle_);
+  }
+
+  @Override
   public DBOptions setAvoidUnnecessaryBlockingIO(final boolean avoidUnnecessaryBlockingIO) {
     setAvoidUnnecessaryBlockingIO(nativeHandle_, avoidUnnecessaryBlockingIO);
     return this;
@@ -1464,6 +1475,9 @@ public class DBOptions extends RocksObject
   private native void setAtomicFlush(final long handle,
       final boolean atomicFlush);
   private native boolean atomicFlush(final long handle);
+  private native void setFlushVerifyMemtableCount(final long handle,
+      final boolean value);
+  private native boolean flushVerifyMemtableCount(final long handle);
   private static native void setAvoidUnnecessaryBlockingIO(
       final long handle, final boolean avoidBlockingIO);
   private static native boolean avoidUnnecessaryBlockingIO(final long handle);

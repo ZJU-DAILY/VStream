@@ -18,11 +18,10 @@
 
 package org.apache.flink.contrib.streaming.vstate;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
 import java.util.Iterator;
 import java.util.TreeSet;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /** Implementation of a lexicographically ordered set of byte-arrays, based on a {@link TreeSet}. */
 public class TreeOrderedSetCache

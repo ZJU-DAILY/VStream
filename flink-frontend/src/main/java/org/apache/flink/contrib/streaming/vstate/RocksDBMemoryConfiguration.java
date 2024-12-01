@@ -18,16 +18,14 @@
 
 package org.apache.flink.contrib.streaming.vstate;
 
+import static org.apache.flink.util.Preconditions.checkArgument;
+
+import java.io.Serializable;
+import javax.annotation.Nullable;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.MemorySize;
 import org.apache.flink.configuration.ReadableConfig;
 import org.apache.flink.util.Preconditions;
-
-import javax.annotation.Nullable;
-
-import java.io.Serializable;
-
-import static org.apache.flink.util.Preconditions.checkArgument;
 
 /** The settings regarding RocksDBs memory usage. */
 public final class RocksDBMemoryConfiguration implements Serializable {

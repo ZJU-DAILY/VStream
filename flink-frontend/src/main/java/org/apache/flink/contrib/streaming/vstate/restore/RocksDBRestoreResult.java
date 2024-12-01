@@ -18,15 +18,13 @@
 
 package org.apache.flink.contrib.streaming.vstate.restore;
 
-import org.apache.flink.contrib.streaming.vstate.RocksDBNativeMetricMonitor;
-import org.apache.flink.runtime.state.IncrementalKeyedStateHandle.HandleAndLocalPath;
-
-import org.rocksdb.ColumnFamilyHandle;
-import org.rocksdb.RocksDB;
-
 import java.util.Collection;
 import java.util.SortedMap;
 import java.util.UUID;
+import org.apache.flink.contrib.streaming.vstate.RocksDBNativeMetricMonitor;
+import org.apache.flink.runtime.state.IncrementalKeyedStateHandle.HandleAndLocalPath;
+import org.rocksdb.ColumnFamilyHandle;
+import org.rocksdb.RocksDB;
 
 /** Entity holding result of RocksDB instance restore. */
 public class RocksDBRestoreResult {

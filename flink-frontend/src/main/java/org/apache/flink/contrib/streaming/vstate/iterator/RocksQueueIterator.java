@@ -18,15 +18,14 @@
 
 package org.apache.flink.contrib.streaming.vstate.iterator;
 
+import java.io.IOException;
+import java.util.Iterator;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.core.memory.DataOutputSerializer;
 import org.apache.flink.runtime.state.CompositeKeySerializationUtils;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.heap.HeapPriorityQueueStateSnapshot;
 import org.apache.flink.util.FlinkRuntimeException;
-
-import java.io.IOException;
-import java.util.Iterator;
 
 /** An iterator over heap timers that produces rocks compatible binary format. */
 public final class RocksQueueIterator implements SingleStateIterator {

@@ -1,15 +1,14 @@
 package cn.edu.zju.daily.util;
 
-import org.junit.jupiter.api.Test;
+import static java.util.stream.Collectors.toList;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
-
-import static java.util.stream.Collectors.toList;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import org.junit.jupiter.api.Test;
 
 public class ParametersTest {
 
@@ -21,7 +20,8 @@ public class ParametersTest {
 
         // Read the file, check get_hnsw_k
         List<String> lines = Files.readAllLines(Paths.get(path));
-        List<String> hnswKLine = lines.stream().filter(line -> line.startsWith("hnswK: ")).collect(toList());
+        List<String> hnswKLine =
+                lines.stream().filter(line -> line.startsWith("hnswK: ")).collect(toList());
 
         if (hnswKLine.size() != 1) {
             throw new RuntimeException("hnswK line not found");

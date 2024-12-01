@@ -1479,6 +1479,32 @@ Status ColumnFamilyData::ValidateOptions(
   return s;
 }
 
+Status ColumnFamilyData::ValidateOptions(
+    const DBOptions& db_options,
+    const VECTORBACKEND_NAMESPACE::VectorColumnFamilyOptions& vcf_options) {
+  if (vcf_options.dim == 0) {
+    return Status::InvalidArgument("dim must be positive");
+  }
+
+  if (vcf_options.max_elements == 0) {
+    return Status::InvalidArgument("max_elements must be positive");
+  }
+
+  if (vcf_options.M == 0) {
+    return Status::InvalidArgument("M must be positive");
+  }
+
+  if (vcf_options.ef_construction == 0) {
+    return Status::InvalidArgument("ef_construction must be positive");
+  }
+
+  if (vcf_options.visit_list_pool_size == 0) {
+    return Status::InvalidArgument("visit_list_pool_size must be positive");
+  }
+  return ValidateOptions(
+      db_options, *static_cast<const ColumnFamilyOptions*>(&vcf_options));
+}
+
 Status ColumnFamilyData::SetOptions(
     const DBOptions& db_opts,
     const std::unordered_map<std::string, std::string>& options_map) {

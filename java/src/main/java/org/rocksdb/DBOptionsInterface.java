@@ -1559,6 +1559,10 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    */
   boolean atomicFlush();
 
+  T setFlushVerifyMemtableCount(final boolean value);
+
+  boolean flushVerifyMemtableCount();
+
   /**
    * If true, working thread may avoid doing unnecessary and long-latency
    * operation (such as deleting obsolete files directly or deleting memtable)

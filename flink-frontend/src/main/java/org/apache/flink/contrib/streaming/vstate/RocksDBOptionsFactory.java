@@ -18,9 +18,8 @@
 
 package org.apache.flink.contrib.streaming.vstate;
 
-import org.rocksdb.*;
-
 import java.util.Collection;
+import org.rocksdb.*;
 
 /**
  * A factory for {@link DBOptions} and {@link ColumnFamilyOptions} to be passed to the {@link
@@ -32,11 +31,11 @@ import java.util.Collection;
  * <pre>{@code
  * rocksDbBackend.setRocksDBOptions(new RocksDBOptionsFactory() {
  *
- * 	public DBOptions createDBOptions(DBOptions currentOptions, Collection<AutoCloseable> handlesToClose) {
+ * 	public DBOptions createDBOptions(DBOptions currentOptions, ChromaCollection<AutoCloseable> handlesToClose) {
  * 		return currentOptions.setMaxOpenFiles(1024);
  * 	}
  *
- * 	public ColumnFamilyOptions createColumnOptions(ColumnFamilyOptions currentOptions, Collection<AutoCloseable> handlesToClose) {
+ * 	public ColumnFamilyOptions createColumnOptions(ColumnFamilyOptions currentOptions, ChromaCollection<AutoCloseable> handlesToClose) {
  * 		BloomFilter bloomFilter = new BloomFilter();
  * 			handlesToClose.add(bloomFilter);
  *
@@ -94,7 +93,25 @@ public interface RocksDBOptionsFactory extends java.io.Serializable {
      * @return The options object on which the additional options are set.
      */
     VectorColumnFamilyOptions createVectorColumnOptions(
-        VectorColumnFamilyOptions currentOptions, Collection<AutoCloseable> handlesToClose);
+            VectorColumnFamilyOptions currentOptions, Collection<AutoCloseable> handlesToClose);
+
+    /**
+     * This method should set the additional options on top of the current options object. The
+     * current options object may contain pre-defined options based on flags that have been
+     * configured on the state backend.
+     *
+     * <p>It is important to set the options on the current object and return the result from the
+     * setter methods, otherwise the pre-defined options may get lost.
+     *
+     * @param currentOptions The options object with the pre-defined options.
+     * @param handlesToClose The collection to register newly created {@link
+     *     org.rocksdb.RocksObject}s.
+     * @return The options object on which the additional options are set.
+     */
+    default ColumnFamilyOptions createVectorVersionColumnOptions(
+            ColumnFamilyOptions currentOptions, Collection<AutoCloseable> handlesToClose) {
+        return currentOptions;
+    }
 
     /**
      * This method should enable certain RocksDB metrics to be forwarded to Flink's metrics
@@ -161,7 +178,7 @@ public interface RocksDBOptionsFactory extends java.io.Serializable {
      * @return The options object on which the additional options are set.
      */
     default VectorSearchOptions createVectorSearchOptions(
-        VectorSearchOptions currentOptions, Collection<AutoCloseable> handlesToClose) {
+            VectorSearchOptions currentOptions, Collection<AutoCloseable> handlesToClose) {
         return currentOptions;
     }
 }

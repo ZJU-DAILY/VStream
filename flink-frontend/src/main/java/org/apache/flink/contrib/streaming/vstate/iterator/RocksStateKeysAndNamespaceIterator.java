@@ -18,17 +18,15 @@
 
 package org.apache.flink.contrib.streaming.vstate.iterator;
 
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+import java.util.Objects;
+import javax.annotation.Nonnull;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.contrib.streaming.vstate.RocksIteratorWrapper;
 import org.apache.flink.runtime.state.CompositeKeySerializationUtils;
 import org.apache.flink.util.FlinkRuntimeException;
-
-import javax.annotation.Nonnull;
-
-import java.util.Iterator;
-import java.util.NoSuchElementException;
-import java.util.Objects;
 
 /**
  * Adapter class to bridge between {@link RocksIteratorWrapper} and {@link Iterator} to iterate over

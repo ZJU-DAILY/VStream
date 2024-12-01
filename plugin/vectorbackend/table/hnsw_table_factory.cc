@@ -228,9 +228,25 @@ TableBuilder* HnswTableFactory::NewTableBuilder(
 
 Status HnswTableFactory::ValidateOptions(
     const rocksdb::DBOptions& db_opts,
-    const rocksdb::ColumnFamilyOptions& cf_opts) const {
-  Status s = BlockBasedTableFactory::ValidateOptions(db_opts, cf_opts);
-  return s;
+
+    const rocksdb::ColumnFamilyOptions& vcf_opts) const {
+  if (table_options_.dim == 0) {
+    return Status::InvalidArgument("dim must be positive");
+  }
+  if (table_options_.space != hnswlib::SpaceType::L2 &&
+      table_options_.space != hnswlib::SpaceType::IP) {
+    return Status::InvalidArgument("space must be L2 or IP");
+  }
+  if (table_options_.M == 0) {
+    return Status::InvalidArgument("M must be positive");
+  }
+  if (table_options_.ef_construction == 0) {
+    return Status::InvalidArgument("ef_construction must be positive");
+  }
+  if (table_options_.visit_list_pool_size == 0) {
+    return Status::InvalidArgument("visit_list_pool_size must be positive");
+  }
+  return BlockBasedTableFactory::ValidateOptions(db_opts, vcf_opts);
 }
 
 std::string HnswTableFactory::GetPrintableOptions() const {

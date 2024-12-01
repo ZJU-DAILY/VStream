@@ -18,19 +18,17 @@
 
 package org.apache.flink.contrib.streaming.vstate.restore;
 
+import java.io.File;
+import java.util.Map;
+import java.util.function.Function;
+import javax.annotation.Nonnull;
 import org.apache.flink.contrib.streaming.vstate.RocksDBKeyedStateBackend.RocksDbKvStateInfo;
 import org.apache.flink.contrib.streaming.vstate.RocksDBNativeMetricOptions;
 import org.apache.flink.contrib.streaming.vstate.ttl.RocksDbTtlCompactFiltersManager;
 import org.apache.flink.metrics.MetricGroup;
-
 import org.rocksdb.ColumnFamilyOptions;
 import org.rocksdb.DBOptions;
-
-import javax.annotation.Nonnull;
-
-import java.io.File;
-import java.util.Map;
-import java.util.function.Function;
+import org.rocksdb.VectorColumnFamilyOptions;
 
 /** Encapsulates the process of initiating a RocksDB instance without restore. */
 public class RocksDBNoneRestoreOperation<K> implements RocksDBRestoreOperation {
@@ -41,6 +39,8 @@ public class RocksDBNoneRestoreOperation<K> implements RocksDBRestoreOperation {
             File instanceRocksDBPath,
             DBOptions dbOptions,
             Function<String, ColumnFamilyOptions> columnFamilyOptionsFactory,
+            Function<String, VectorColumnFamilyOptions> vectorCFOptionsFactory,
+            Function<String, ColumnFamilyOptions> vectorVersionCFOptionsFactory,
             RocksDBNativeMetricOptions nativeMetricOptions,
             MetricGroup metricGroup,
             @Nonnull RocksDbTtlCompactFiltersManager ttlCompactFiltersManager,
@@ -51,6 +51,8 @@ public class RocksDBNoneRestoreOperation<K> implements RocksDBRestoreOperation {
                         instanceRocksDBPath,
                         dbOptions,
                         columnFamilyOptionsFactory,
+                        vectorCFOptionsFactory,
+                        vectorVersionCFOptionsFactory,
                         nativeMetricOptions,
                         metricGroup,
                         ttlCompactFiltersManager,

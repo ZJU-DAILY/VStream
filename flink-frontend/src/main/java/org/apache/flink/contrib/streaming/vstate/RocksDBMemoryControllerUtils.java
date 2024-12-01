@@ -18,23 +18,19 @@
 
 package org.apache.flink.contrib.streaming.vstate;
 
+import java.io.Serializable;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.annotation.VisibleForTesting;
-
 import org.rocksdb.Cache;
 import org.rocksdb.LRUCache;
 import org.rocksdb.WriteBufferManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.Serializable;
 
 /**
  * Utils to create {@link Cache} and {@link WriteBufferManager} which are used to control total
  * memory usage of RocksDB.
  */
+@Slf4j
 public class RocksDBMemoryControllerUtils {
-    private static final Logger LOG = LoggerFactory.getLogger(RocksDBMemoryControllerUtils.class);
-
     /**
      * Allocate memory controllable RocksDB shared resources.
      *

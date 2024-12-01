@@ -18,6 +18,12 @@
 
 package org.apache.flink.contrib.streaming.vstate;
 
+import static org.apache.flink.contrib.streaming.vstate.EmbeddedRocksDBStateBackend.PriorityQueueStateType.ROCKSDB;
+import static org.apache.flink.contrib.streaming.vstate.PredefinedOptions.DEFAULT;
+import static org.apache.flink.contrib.streaming.vstate.PredefinedOptions.FLASH_SSD_OPTIMIZED;
+import static org.apache.flink.contrib.streaming.vstate.PredefinedOptions.SPINNING_DISK_OPTIMIZED;
+import static org.apache.flink.contrib.streaming.vstate.PredefinedOptions.SPINNING_DISK_OPTIMIZED_HIGH_MEM;
+
 import org.apache.flink.annotation.docs.Documentation;
 import org.apache.flink.configuration.ClusterOptions;
 import org.apache.flink.configuration.ConfigOption;
@@ -25,12 +31,6 @@ import org.apache.flink.configuration.ConfigOptions;
 import org.apache.flink.configuration.MemorySize;
 import org.apache.flink.configuration.description.Description;
 import org.apache.flink.configuration.description.TextElement;
-
-import static org.apache.flink.contrib.streaming.vstate.EmbeddedRocksDBStateBackend.PriorityQueueStateType.ROCKSDB;
-import static org.apache.flink.contrib.streaming.vstate.PredefinedOptions.DEFAULT;
-import static org.apache.flink.contrib.streaming.vstate.PredefinedOptions.FLASH_SSD_OPTIMIZED;
-import static org.apache.flink.contrib.streaming.vstate.PredefinedOptions.SPINNING_DISK_OPTIMIZED;
-import static org.apache.flink.contrib.streaming.vstate.PredefinedOptions.SPINNING_DISK_OPTIMIZED_HIGH_MEM;
 
 /** Configuration options for the RocksDB backend. */
 public class RocksDBOptions {

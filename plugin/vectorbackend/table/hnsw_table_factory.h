@@ -32,7 +32,7 @@ extern TableFactory* NewHnswTableFactory(const HnswTableOptions& options);
 
 class HnswTableFactory : public BlockBasedTableFactory {
  public:
-  explicit HnswTableFactory(HnswTableOptions table_option = HnswTableOptions());
+  explicit HnswTableFactory(HnswTableOptions table_option = {});
   ~HnswTableFactory() override = default;
 
   // Method to allow CheckedCast to work for this class
@@ -57,6 +57,8 @@ class HnswTableFactory : public BlockBasedTableFactory {
   std::string GetPrintableOptions() const override;
 
   TailPrefetchStats* tail_prefetch_stats() { return &tail_prefetch_stats_; }
+
+  const HnswTableOptions& table_options() const { return table_options_; }
 
  private:
   HnswTableOptions table_options_;

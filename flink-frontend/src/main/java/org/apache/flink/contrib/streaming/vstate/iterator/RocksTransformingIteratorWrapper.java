@@ -18,12 +18,10 @@
 
 package org.apache.flink.contrib.streaming.vstate.iterator;
 
+import javax.annotation.Nonnull;
 import org.apache.flink.contrib.streaming.vstate.RocksIteratorWrapper;
 import org.apache.flink.runtime.state.StateSnapshotTransformer;
-
 import org.rocksdb.RocksIterator;
-
-import javax.annotation.Nonnull;
 
 /**
  * Wrapper around {@link RocksIterator} that applies a given {@link StateSnapshotTransformer} to the

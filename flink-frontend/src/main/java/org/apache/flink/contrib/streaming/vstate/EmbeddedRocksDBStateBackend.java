@@ -18,6 +18,29 @@
 
 package org.apache.flink.contrib.streaming.vstate;
 
+import static org.apache.flink.configuration.description.TextElement.text;
+import static org.apache.flink.contrib.streaming.vstate.RocksDBConfigurableOptions.RESTORE_OVERLAP_FRACTION_THRESHOLD;
+import static org.apache.flink.contrib.streaming.vstate.RocksDBConfigurableOptions.WRITE_BATCH_SIZE;
+import static org.apache.flink.contrib.streaming.vstate.RocksDBOptions.CHECKPOINT_TRANSFER_THREAD_NUM;
+import static org.apache.flink.contrib.streaming.vstate.RocksDBOptions.TIMER_SERVICE_FACTORY;
+import static org.apache.flink.util.Preconditions.checkArgument;
+import static org.apache.flink.util.Preconditions.checkNotNull;
+
+import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
+import java.util.Random;
+import java.util.UUID;
+import java.util.function.Supplier;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.ExecutionConfig;
@@ -26,7 +49,6 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.configuration.CheckpointingOptions;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.configuration.DescribedEnum;
 import org.apache.flink.configuration.IllegalConfigurationException;
 import org.apache.flink.configuration.ReadableConfig;
 import org.apache.flink.configuration.description.InlineElement;
@@ -56,35 +78,8 @@ import org.apache.flink.util.FileUtils;
 import org.apache.flink.util.FlinkRuntimeException;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.TernaryBoolean;
-
 import org.rocksdb.NativeLibraryLoader;
 import org.rocksdb.RocksDB;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
-import java.io.File;
-import java.io.IOException;
-import java.lang.reflect.Field;
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
-import java.util.Random;
-import java.util.UUID;
-import java.util.function.Supplier;
-
-import static org.apache.flink.configuration.description.TextElement.text;
-import static org.apache.flink.contrib.streaming.vstate.RocksDBConfigurableOptions.RESTORE_OVERLAP_FRACTION_THRESHOLD;
-import static org.apache.flink.contrib.streaming.vstate.RocksDBConfigurableOptions.WRITE_BATCH_SIZE;
-import static org.apache.flink.contrib.streaming.vstate.RocksDBOptions.CHECKPOINT_TRANSFER_THREAD_NUM;
-import static org.apache.flink.contrib.streaming.vstate.RocksDBOptions.TIMER_SERVICE_FACTORY;
-import static org.apache.flink.util.Preconditions.checkArgument;
-import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
  * A {@link org.apache.flink.runtime.state.StateBackend} that stores its state in an embedded {@code
@@ -98,12 +93,11 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * #setRocksDBOptions(RocksDBOptionsFactory)}.
  */
 @PublicEvolving
+@Slf4j
 public class EmbeddedRocksDBStateBackend extends AbstractManagedMemoryStateBackend
         implements ConfigurableStateBackend {
 
     private static final long serialVersionUID = 1L;
-
-    private static final Logger LOG = LoggerFactory.getLogger(EmbeddedRocksDBStateBackend.class);
 
     /** The number of (re)tries for loading the RocksDB JNI library. */
     private static final int ROCKSDB_LIB_LOADING_ATTEMPTS = 3;
@@ -180,6 +174,7 @@ public class EmbeddedRocksDBStateBackend extends AbstractManagedMemoryStateBacke
 
     /** Factory for Write Buffer Manager and Block Cache. */
     private RocksDBMemoryFactory rocksDBMemoryFactory;
+
     // ------------------------------------------------------------------------
 
     /** Creates a new {@code EmbeddedRocksDBStateBackend} for storing local state. */
@@ -492,6 +487,7 @@ public class EmbeddedRocksDBStateBackend extends AbstractManagedMemoryStateBacke
                                 resourceContainer,
                                 stateName -> resourceContainer.getColumnOptions(),
                                 stateName -> resourceContainer.getVectorColumnOptions(),
+                                stateName -> resourceContainer.getVectorVersionColumnOptions(),
                                 kvStateRegistry,
                                 keySerializer,
                                 numberOfKeyGroups,
@@ -960,9 +956,10 @@ public class EmbeddedRocksDBStateBackend extends AbstractManagedMemoryStateBacke
                         rocksLibFolder.mkdirs();
 
                         // explicitly load the JNI dependency if it has not been loaded before
-//                        nativeLibraryLoaderSupplier
-//                                .get()
-//                                .loadLibrary(rocksLibFolder.getAbsolutePath());
+                        //                        nativeLibraryLoaderSupplier
+                        //                                .get()
+                        //
+                        // .loadLibrary(rocksLibFolder.getAbsolutePath());
 
                         // this initialization here should validate that the loading succeeded
                         RocksDB.loadLibrary();
@@ -1006,7 +1003,7 @@ public class EmbeddedRocksDBStateBackend extends AbstractManagedMemoryStateBacke
     // ---------------------------------------------------------------------------------------------
 
     /** The options to chose for the type of priority queue state. */
-    public enum PriorityQueueStateType implements DescribedEnum {
+    public enum PriorityQueueStateType {
         HEAP(text("Heap-based")),
         ROCKSDB(text("Implementation based on RocksDB"));
 
@@ -1016,7 +1013,6 @@ public class EmbeddedRocksDBStateBackend extends AbstractManagedMemoryStateBacke
             this.description = description;
         }
 
-        @Override
         public InlineElement getDescription() {
             return description;
         }

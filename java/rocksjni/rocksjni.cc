@@ -15,6 +15,7 @@
 #include <memory>
 #include <string>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 #include "include/org_rocksdb_RocksDB.h"
@@ -97,7 +98,10 @@ jlongArray rocksdb_open_helper(
         const ROCKSDB_NAMESPACE::DBOptions&, const std::string&,
         const std::vector<ROCKSDB_NAMESPACE::ColumnFamilyDescriptor>&,
         std::vector<ROCKSDB_NAMESPACE::ColumnFamilyHandle*>*,
-        ROCKSDB_NAMESPACE::DB**)>
+        ROCKSDB_NAMESPACE::DB**,
+        const std::vector<
+            ROCKSDB_NAMESPACE::VECTORBACKEND_NAMESPACE::VectorCFDescriptor>&,
+        std::vector<ROCKSDB_NAMESPACE::ColumnFamilyHandle*>*)>
         open_fn) {
   const char* db_path = env->GetStringUTFChars(jdb_path, nullptr);
   if (db_path == nullptr) {
@@ -140,7 +144,7 @@ jlongArray rocksdb_open_helper(
   std::vector<ROCKSDB_NAMESPACE::ColumnFamilyHandle*> cf_handles;
   ROCKSDB_NAMESPACE::DB* db = nullptr;
   ROCKSDB_NAMESPACE::Status s =
-      open_fn(*opt, db_path, column_families, &cf_handles, &db);
+      open_fn(*opt, db_path, column_families, &cf_handles, &db, {}, nullptr);
 
   // we have now finished with db_path
   env->ReleaseStringUTFChars(jdb_path, db_path);
@@ -157,6 +161,125 @@ jlongArray rocksdb_open_helper(
   results[0] = GET_CPLUSPLUS_POINTER(db);
   for (int i = 1; i <= len_cols; i++) {
     results[i] = GET_CPLUSPLUS_POINTER(cf_handles[i - 1]);
+  }
+
+  jlongArray jresults = env->NewLongArray(resultsLen);
+  if (jresults == nullptr) {
+    // exception thrown: OutOfMemoryError
+    return nullptr;
+  }
+
+  env->SetLongArrayRegion(jresults, 0, resultsLen, results.get());
+  if (env->ExceptionCheck()) {
+    // exception thrown: ArrayIndexOutOfBoundsException
+    env->DeleteLocalRef(jresults);
+    return nullptr;
+  }
+
+  return jresults;
+}
+
+jlongArray rocksdb_open_helper(
+    JNIEnv* env, jlong jopt_handle, jstring jdb_path,
+    jobjectArray jcolumn_names, jlongArray jcolumn_options,
+    jobjectArray jvector_column_names, jlongArray jvector_column_options,
+    std::function<ROCKSDB_NAMESPACE::Status(
+        const ROCKSDB_NAMESPACE::DBOptions&, const std::string&,
+        const std::vector<ROCKSDB_NAMESPACE::ColumnFamilyDescriptor>&,
+        std::vector<ROCKSDB_NAMESPACE::ColumnFamilyHandle*>*,
+        ROCKSDB_NAMESPACE::DB**,
+        const std::vector<
+            ROCKSDB_NAMESPACE::VECTORBACKEND_NAMESPACE::VectorCFDescriptor>&,
+        std::vector<ROCKSDB_NAMESPACE::ColumnFamilyHandle*>*)>
+        open_fn) {
+  const char* db_path = env->GetStringUTFChars(jdb_path, nullptr);
+  if (db_path == nullptr) {
+    // exception thrown: OutOfMemoryError
+    return nullptr;
+  }
+
+  const jsize len_cols = env->GetArrayLength(jcolumn_names);
+  const jsize len_vec_cols = env->GetArrayLength(jvector_column_names);
+  jlong* jco = env->GetLongArrayElements(jcolumn_options, nullptr);
+  jlong* jvco = env->GetLongArrayElements(jvector_column_options, nullptr);
+  if (jco == nullptr) {
+    // exception thrown: OutOfMemoryError
+    env->ReleaseStringUTFChars(jdb_path, db_path);
+    return nullptr;
+  }
+  if (jvco == nullptr) {
+    // exception thrown: OutOfMemoryError
+    env->ReleaseStringUTFChars(jdb_path, db_path);
+    env->ReleaseLongArrayElements(jcolumn_options, jco, JNI_ABORT);
+    return nullptr;
+  }
+
+  std::vector<ROCKSDB_NAMESPACE::ColumnFamilyDescriptor> column_families;
+  std::vector<ROCKSDB_NAMESPACE::VECTORBACKEND_NAMESPACE::VectorCFDescriptor>
+      vector_column_families;
+  jboolean has_exception = JNI_FALSE;
+  ROCKSDB_NAMESPACE::JniUtil::byteStrings<std::string>(
+      env, jcolumn_names,
+      [](const char* str_data, const size_t str_len) {
+        return std::string(str_data, str_len);
+      },
+      [&jco, &column_families](size_t idx, std::string cf_name) {
+        ROCKSDB_NAMESPACE::ColumnFamilyOptions* cf_options =
+            reinterpret_cast<ROCKSDB_NAMESPACE::ColumnFamilyOptions*>(jco[idx]);
+        column_families.push_back(
+            ROCKSDB_NAMESPACE::ColumnFamilyDescriptor(cf_name, *cf_options));
+      },
+      &has_exception);
+  ROCKSDB_NAMESPACE::JniUtil::byteStrings<std::string>(
+      env, jvector_column_names,
+      [](const char* str_data, const size_t str_len) {
+        return std::string(str_data, str_len);
+      },
+      [&jvco, &vector_column_families](size_t idx, std::string vcf_name) {
+        auto* vcf_options =
+            reinterpret_cast<ROCKSDB_NAMESPACE::VECTORBACKEND_NAMESPACE::
+                                 VectorColumnFamilyOptions*>(jvco[idx]);
+        vector_column_families.emplace_back(std::move(vcf_name), *vcf_options);
+      },
+      &has_exception);
+
+  env->ReleaseLongArrayElements(jcolumn_options, jco, JNI_ABORT);
+  env->ReleaseLongArrayElements(jvector_column_options, jvco, JNI_ABORT);
+
+  if (has_exception == JNI_TRUE) {
+    // exception occurred
+    env->ReleaseStringUTFChars(jdb_path, db_path);
+    return nullptr;
+  }
+
+  auto* opt = reinterpret_cast<ROCKSDB_NAMESPACE::DBOptions*>(jopt_handle);
+  std::vector<ROCKSDB_NAMESPACE::ColumnFamilyHandle*> cf_handles;
+  std::vector<ROCKSDB_NAMESPACE::ColumnFamilyHandle*> vcf_handles;
+  ROCKSDB_NAMESPACE::DB* db = nullptr;
+  ROCKSDB_NAMESPACE::Status s =
+      open_fn(*opt, db_path, column_families, &cf_handles, &db,
+              vector_column_families, &vcf_handles);
+
+  // we have now finished with db_path
+  env->ReleaseStringUTFChars(jdb_path, db_path);
+
+  // check if open operation was successful
+  if (!s.ok()) {
+    ROCKSDB_NAMESPACE::RocksDBExceptionJni::ThrowNew(env, s);
+    return nullptr;
+  }
+
+  const jsize resultsLen =
+      1 + len_cols + len_vec_cols;  // db handle + column family handles +
+                                    // vector column family handles
+  std::unique_ptr<jlong[]> results =
+      std::unique_ptr<jlong[]>(new jlong[resultsLen]);
+  results[0] = GET_CPLUSPLUS_POINTER(db);
+  for (int i = 1; i <= len_cols; i++) {
+    results[i] = GET_CPLUSPLUS_POINTER(cf_handles[i - 1]);
+  }
+  for (int i = 1 + len_cols; i < resultsLen; i++) {
+    results[i] = GET_CPLUSPLUS_POINTER(vcf_handles[i - 1 - len_cols]);
   }
 
   jlongArray jresults = env->NewLongArray(resultsLen);
@@ -193,7 +316,10 @@ jlongArray Java_org_rocksdb_RocksDB_openROnly__JLjava_lang_String_2_3_3B_3JZ(
           const std::vector<ROCKSDB_NAMESPACE::ColumnFamilyDescriptor>&
               column_families,
           std::vector<ROCKSDB_NAMESPACE::ColumnFamilyHandle*>* handles,
-          ROCKSDB_NAMESPACE::DB** db) {
+          ROCKSDB_NAMESPACE::DB** db,
+          const std::vector<
+              ROCKSDB_NAMESPACE::VECTORBACKEND_NAMESPACE::VectorCFDescriptor>&,
+          std::vector<ROCKSDB_NAMESPACE::ColumnFamilyHandle*>*) {
         return ROCKSDB_NAMESPACE::DB::OpenForReadOnly(
             options, db_path, column_families, handles, db,
             error_if_wal_file_exists);
@@ -214,7 +340,33 @@ jlongArray Java_org_rocksdb_RocksDB_open__JLjava_lang_String_2_3_3B_3J(
           const ROCKSDB_NAMESPACE::DBOptions&, const std::string&,
           const std::vector<ROCKSDB_NAMESPACE::ColumnFamilyDescriptor>&,
           std::vector<ROCKSDB_NAMESPACE::ColumnFamilyHandle*>*,
-          ROCKSDB_NAMESPACE::DB**)) &
+          ROCKSDB_NAMESPACE::DB**,
+          const std::vector<
+              ROCKSDB_NAMESPACE::VECTORBACKEND_NAMESPACE::VectorCFDescriptor>&,
+          std::vector<ROCKSDB_NAMESPACE::ColumnFamilyHandle*>*)) &
+          ROCKSDB_NAMESPACE::DB::Open);
+}
+
+/*
+ * Class:     org_rocksdb_RocksDB
+ * Method:    open
+ * Signature: (JLjava/lang/String;[[B[J[[B[J)[J
+ */
+jlongArray Java_org_rocksdb_RocksDB_open__JLjava_lang_String_2_3_3B_3J_3_3B_3J(
+    JNIEnv* env, jclass, jlong jopt_handle, jstring jdb_path,
+    jobjectArray jcolumn_names, jlongArray jcolumn_options,
+    jobjectArray jvector_column_names, jlongArray jvector_column_options) {
+  return rocksdb_open_helper(
+      env, jopt_handle, jdb_path, jcolumn_names, jcolumn_options,
+      jvector_column_names, jvector_column_options,
+      (ROCKSDB_NAMESPACE::Status(*)(
+          const ROCKSDB_NAMESPACE::DBOptions&, const std::string&,
+          const std::vector<ROCKSDB_NAMESPACE::ColumnFamilyDescriptor>&,
+          std::vector<ROCKSDB_NAMESPACE::ColumnFamilyHandle*>*,
+          ROCKSDB_NAMESPACE::DB**,
+          const std::vector<
+              ROCKSDB_NAMESPACE::VECTORBACKEND_NAMESPACE::VectorCFDescriptor>&,
+          std::vector<ROCKSDB_NAMESPACE::ColumnFamilyHandle*>*)) &
           ROCKSDB_NAMESPACE::DB::Open);
 }
 
@@ -273,7 +425,10 @@ Java_org_rocksdb_RocksDB_openAsSecondary__JLjava_lang_String_2Ljava_lang_String_
           const std::vector<ROCKSDB_NAMESPACE::ColumnFamilyDescriptor>&
               column_families,
           std::vector<ROCKSDB_NAMESPACE::ColumnFamilyHandle*>* handles,
-          ROCKSDB_NAMESPACE::DB** db) {
+          ROCKSDB_NAMESPACE::DB** db,
+          const std::vector<
+              ROCKSDB_NAMESPACE::VECTORBACKEND_NAMESPACE::VectorCFDescriptor>&,
+          std::vector<ROCKSDB_NAMESPACE::ColumnFamilyHandle*>*) {
         return ROCKSDB_NAMESPACE::DB::OpenAsSecondary(
             options, db_path, secondary_db_path, column_families, handles, db);
       });
@@ -1693,7 +1848,7 @@ jint Java_org_rocksdb_RocksDB_get__JJ_3BII_3BIIJ(
 inline void multi_get_helper_release_keys(std::vector<jbyte*>& keys_to_free) {
   auto end = keys_to_free.end();
   for (auto it = keys_to_free.begin(); it != end; ++it) {
-    delete[] * it;
+    delete[] *it;
   }
   keys_to_free.clear();
 }
